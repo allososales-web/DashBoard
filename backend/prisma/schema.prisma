@@ -190,6 +190,7 @@ model Store {
   issues         Issue[]
   staffs         Staff[]
   schedules      Schedule[]
+  workRecords    WorkRecord[]
   deliveries     Delivery[]
   auditLogs      AuditLog[]
 
@@ -197,15 +198,27 @@ model Store {
 }
 
 model StoreAuth {
-  id        String   @id @default(uuid()) @db.Uuid
-  storeId   String   @unique @map("store_id") @db.Uuid
-  pinHash   String   @map("pin_hash")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  updatedBy String?  @map("updated_by") @db.Uuid
+  id             String    @id @default(uuid()) @db.Uuid
+  storeId        String    @unique @map("store_id") @db.Uuid
+  pinHash        String    @map("pin_hash")
+  isFirstLogin   Boolean   @default(true) @map("is_first_login")
+  pinChangedAt   DateTime? @map("pin_changed_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  updatedBy      String?   @map("updated_by") @db.Uuid
 
   store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@map("store_auth")
+}
+
+model HqAuth {
+  id           String    @id @default(uuid()) @db.Uuid
+  pinHash      String    @map("pin_hash")
+  isFirstLogin Boolean   @default(true) @map("is_first_login")
+  pinChangedAt DateTime? @map("pin_changed_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("hq_auth")
 }
 
 // ─────────────────────────────────────────────
@@ -413,8 +426,9 @@ model Staff {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  store     Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store     Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
   schedules Schedule[]
+  workRecords WorkRecord[]
 
   @@map("staffs")
 }
@@ -434,6 +448,30 @@ model Schedule {
   staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@map("schedules")
+}
+
+model WorkRecord {
+  id         String    @id @default(uuid()) @db.Uuid
+  storeId    String    @map("store_id") @db.Uuid
+  staffId    String    @map("staff_id") @db.Uuid
+  workDate   DateTime  @map("work_date") @db.Date
+  startTime  String?   @map("start_time")
+  endTime    String?   @map("end_time")
+  totalHours Decimal?  @map("total_hours") @db.Decimal(4, 2)
+  isOff      Boolean   @default(false) @map("is_off")
+  offReason  String?   @map("off_reason")
+  year       Int
+  month      Int
+  notes      String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, staffId, workDate])
+  @@index([storeId, year, month])
+  @@map("work_records")
 }
 
 model Delivery {

@@ -1,15 +1,14 @@
-import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { storesApi } from '../services/stores';
 
 const navItems = [
-  { to: 'dashboard', label: '대시보드', icon: '📊' },
-  { to: 'quotes', label: '견적', icon: '📝' },
+  { to: 'dashboard', label: '대시보드', icon: '◈' },
+  { to: 'work-records', label: '근무기록', icon: '⏱' },
+  { to: 'quotes', label: '견적', icon: '📋' },
   { to: 'contracts', label: '계약', icon: '📄' },
   { to: 'consults', label: '상담', icon: '💬' },
   { to: 'memos', label: '메모', icon: '📌' },
-  { to: 'issues', label: '이슈', icon: '⚠️' },
+  { to: 'issues', label: '이슈', icon: '⚡' },
   { to: 'staffs', label: '직원', icon: '👤' },
   { to: 'schedules', label: '스케줄', icon: '📅' },
   { to: 'deliveries', label: '배송', icon: '🚚' },
@@ -17,53 +16,65 @@ const navItems = [
 
 export default function StoreLayout() {
   const { storeId } = useParams<{ storeId: string }>();
-  const { user, logout } = useAuth();
+  const { storeName, logout } = useAuth();
   const navigate = useNavigate();
-  const [storeName, setStoreName] = useState<string>(() => {
-    return user?.stores.find((s) => s.storeId === storeId)?.storeName ?? '';
-  });
-
-  useEffect(() => {
-    if (storeName || !storeId) return;
-    storesApi.getOne(storeId).then((s) => setStoreName(s.name)).catch(() => setStoreName('매장'));
-  }, [storeId, storeName]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       {/* Sidebar */}
-      <aside style={{ width: 220, background: '#1e293b', color: '#fff', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '20px 16px', borderBottom: '1px solid #334155' }}>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>{storeName}</div>
-          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>{user?.name}</div>
+      <aside style={{
+        width: 220,
+        background: 'rgba(8,8,24,0.85)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRight: '1px solid var(--glass-border)',
+        display: 'flex', flexDirection: 'column',
+        flexShrink: 0,
+        position: 'sticky', top: 0, height: '100vh',
+        overflowY: 'auto',
+      }}>
+        <div style={{ padding: '20px 16px', borderBottom: '1px solid var(--glass-border)' }}>
+          <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: '-0.03em', background: 'linear-gradient(135deg, #fff, var(--accent2))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Alloso
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {storeName}
+          </div>
         </div>
-        <nav style={{ flex: 1, padding: '12px 0' }}>
+
+        <nav style={{ flex: 1, padding: '8px 0' }}>
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={`/store/${storeId}/${item.to}`}
               style={({ isActive }) => ({
-                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px',
-                color: isActive ? '#fff' : '#94a3b8', background: isActive ? '#334155' : 'transparent',
-                textDecoration: 'none', fontSize: 14, transition: 'background 0.15s',
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 16px', margin: '2px 8px', borderRadius: 10,
+                color: isActive ? '#fff' : 'var(--text-muted)',
+                background: isActive ? 'rgba(124,106,247,0.2)' : 'transparent',
+                borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+                textDecoration: 'none', fontSize: 13, fontWeight: isActive ? 600 : 400,
+                transition: 'all 0.15s',
               })}
             >
-              <span>{item.icon}</span>
+              <span style={{ fontSize: 15 }}>{item.icon}</span>
               <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>
-        <div style={{ padding: 16, borderTop: '1px solid #334155' }}>
-          <button onClick={() => navigate('/stores')} style={{ width: '100%', padding: '8px 0', background: '#475569', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 13, marginBottom: 8 }}>
+
+        <div style={{ padding: '12px 8px', borderTop: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <button onClick={() => navigate('/')} className="btn btn-ghost" style={{ width: '100%', fontSize: 12, padding: '8px 0' }}>
             매장 변경
           </button>
-          <button onClick={logout} style={{ width: '100%', padding: '8px 0', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 13 }}>
+          <button onClick={logout} className="btn btn-danger" style={{ width: '100%', fontSize: 12, padding: '8px 0' }}>
             로그아웃
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
-      <main style={{ flex: 1, background: '#f8fafc', padding: 24, overflowY: 'auto' }}>
+      {/* Main */}
+      <main style={{ flex: 1, padding: 28, overflowY: 'auto', minHeight: '100vh' }}>
         <Outlet />
       </main>
     </div>

@@ -1,7 +1,8 @@
-import { Controller, Post, Get, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpCode, HttpStatus, Param } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { PinLoginDto, ChangePinDto, ResetPinDto } from './dto/pin-login.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
@@ -15,6 +16,37 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Public()
+  @Get('stores')
+  async getStoreList() {
+    return this.authService.getStoreList();
+  }
+
+  @Public()
+  @Post('pin-login')
+  @HttpCode(HttpStatus.OK)
+  async pinLogin(@Body() dto: PinLoginDto) {
+    return this.authService.pinLogin(dto);
+  }
+
+  @Post('change-pin')
+  @HttpCode(HttpStatus.OK)
+  async changePin(@CurrentUser() user: AuthenticatedUser, @Body() dto: ChangePinDto) {
+    const storeId = user.storePermissions?.[0]?.storeId ?? 'HQ';
+    return this.authService.changePin(storeId, dto);
+  }
+
+  @Post('reset-pin')
+  @HttpCode(HttpStatus.OK)
+  async resetPin(@Body() dto: ResetPinDto) {
+    return this.authService.resetPin(dto);
+  }
+
+  @Get('pins')
+  async getAllPins() {
+    return this.authService.getAllPins();
   }
 
   @Public()

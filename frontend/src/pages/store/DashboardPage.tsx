@@ -31,116 +31,92 @@ export default function DashboardPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['metrics', storeId, year, month] }),
   });
 
-  if (isLoading) return <div>로딩 중...</div>;
-  if (error) return <div style={{ color: '#e53e3e' }}>데이터를 불러올 수 없습니다.</div>;
+  if (isLoading) return <div style={{ color: 'var(--text-muted)', padding: 40, textAlign: 'center' }}>불러오는 중...</div>;
+  if (error) return <div style={{ color: 'var(--danger)', padding: 20 }}>데이터를 불러올 수 없습니다.</div>;
 
   const m = data?.metrics;
   const g = data?.goal;
 
-  const cardStyle: React.CSSProperties = { background: '#fff', padding: 20, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' };
-  const labelStyle: React.CSSProperties = { fontSize: 13, color: '#6b7280', marginBottom: 4 };
-  const valueStyle: React.CSSProperties = { fontSize: 24, fontWeight: 700 };
-
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h2 style={{ margin: 0, fontSize: 22 }}>대시보드</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 800 }}>대시보드</h2>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={{ padding: '6px 10px', borderRadius: 4, border: '1px solid #d1d5db' }}>
+          <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={{ width: 100 }}>
             {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}년</option>)}
           </select>
-          <select value={month} onChange={(e) => setMonth(Number(e.target.value))} style={{ padding: '6px 10px', borderRadius: 4, border: '1px solid #d1d5db' }}>
+          <select value={month} onChange={(e) => setMonth(Number(e.target.value))} style={{ width: 80 }}>
             {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{m}월</option>)}
           </select>
-          <button onClick={() => recalcMutation.mutate()} disabled={recalcMutation.isPending}
-            style={{ padding: '6px 14px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 13 }}>
+          <button className="btn btn-primary" style={{ fontSize: 12, padding: '8px 14px' }} onClick={() => recalcMutation.mutate()} disabled={recalcMutation.isPending}>
             {recalcMutation.isPending ? '계산 중...' : 'KPI 재계산'}
           </button>
         </div>
       </div>
 
-      {recalcMutation.isError && (
-        <div style={{ background: '#fef2f2', color: '#dc2626', padding: '10px 16px', borderRadius: 6, marginBottom: 12, fontSize: 13 }}>
-          KPI 재계산 실패: {(recalcMutation.error as any)?.response?.data?.message || '서버 오류가 발생했습니다.'}
-        </div>
-      )}
-
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
-        <div style={cardStyle}>
-          <div style={labelStyle}>견적 수</div>
-          <div style={valueStyle}>{m?.quoteCount ?? 0}</div>
-        </div>
-        <div style={cardStyle}>
-          <div style={labelStyle}>계약 수</div>
-          <div style={valueStyle}>{m?.contractCount ?? 0}</div>
-        </div>
-        <div style={cardStyle}>
-          <div style={labelStyle}>계약 매출</div>
-          <div style={valueStyle}>{Number(m?.contractAmount ?? 0).toLocaleString()}원</div>
-        </div>
-        <div style={cardStyle}>
-          <div style={labelStyle}>전환율</div>
-          <div style={valueStyle}>{(Number(m?.conversionRate ?? 0) * 100).toFixed(1)}%</div>
-        </div>
-        <div style={cardStyle}>
-          <div style={labelStyle}>평균 주문</div>
-          <div style={valueStyle}>{Number(m?.avgOrderValue ?? 0).toLocaleString()}원</div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 20 }}>
+        {[
+          { label: '견적 수', value: `${m?.quoteCount ?? 0}건` },
+          { label: '계약 수', value: `${m?.contractCount ?? 0}건` },
+          { label: '계약 매출', value: `${Number(m?.contractAmount ?? 0).toLocaleString()}원` },
+          { label: '전환율', value: `${(Number(m?.conversionRate ?? 0) * 100).toFixed(1)}%` },
+          { label: '평균 주문', value: `${Number(m?.avgOrderValue ?? 0).toLocaleString()}원` },
+        ].map((card) => (
+          <div key={card.label} className="glass" style={{ padding: 18 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 800 }}>{card.value}</div>
+          </div>
+        ))}
       </div>
 
       {/* Goal Achievement */}
       {g && (
-        <div style={{ ...cardStyle, marginBottom: 24 }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 16 }}>목표 달성률</h3>
+        <div className="glass" style={{ padding: 20, marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, color: 'var(--text-muted)' }}>목표 달성률</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-            <div>
-              <div style={labelStyle}>매출 달성률</div>
-              <div style={{ fontSize: 20, fontWeight: 600, color: g.achievementRate.amountRate >= 100 ? '#10b981' : '#f59e0b' }}>
-                {g.achievementRate.amountRate.toFixed(1)}%
+            {[
+              { label: '매출', rate: g.achievementRate.amountRate, target: `${Number(g.targetAmount).toLocaleString()}원` },
+              { label: '계약', rate: g.achievementRate.contractRate, target: `${g.targetContracts}건` },
+              { label: '상담', rate: g.achievementRate.consultRate, target: `${g.targetConsults}건` },
+            ].map((item) => (
+              <div key={item.label}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>{item.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: item.rate >= 100 ? 'var(--success)' : 'var(--warning)' }}>
+                  {item.rate.toFixed(1)}%
+                </div>
+                <div style={{ marginTop: 6, height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(item.rate, 100)}%`, background: item.rate >= 100 ? 'var(--success)' : 'var(--accent)', borderRadius: 2, transition: 'width 0.5s' }} />
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>목표: {item.target}</div>
               </div>
-              <div style={{ fontSize: 12, color: '#9ca3af' }}>목표: {Number(g.targetAmount).toLocaleString()}원</div>
-            </div>
-            <div>
-              <div style={labelStyle}>계약 달성률</div>
-              <div style={{ fontSize: 20, fontWeight: 600, color: g.achievementRate.contractRate >= 100 ? '#10b981' : '#f59e0b' }}>
-                {g.achievementRate.contractRate.toFixed(1)}%
-              </div>
-              <div style={{ fontSize: 12, color: '#9ca3af' }}>목표: {g.targetContracts}건</div>
-            </div>
-            <div>
-              <div style={labelStyle}>상담 달성률</div>
-              <div style={{ fontSize: 20, fontWeight: 600, color: g.achievementRate.consultRate >= 100 ? '#10b981' : '#f59e0b' }}>
-                {g.achievementRate.consultRate.toFixed(1)}%
-              </div>
-              <div style={{ fontSize: 12, color: '#9ca3af' }}>목표: {g.targetConsults}건</div>
-            </div>
+            ))}
           </div>
         </div>
       )}
 
       {/* Collection Breakdown */}
       {m?.collectionBreakdown && (
-        <div style={cardStyle}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 16 }}>컬렉션별 매출</h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="glass" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', fontSize: 13, fontWeight: 600 }}>컬렉션별 매출</div>
+          <table>
             <thead>
-              <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-                <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: 13 }}>컬렉션</th>
-                <th style={{ textAlign: 'right', padding: '8px 12px', fontSize: 13 }}>계약 수</th>
-                <th style={{ textAlign: 'right', padding: '8px 12px', fontSize: 13 }}>아이템 수</th>
-                <th style={{ textAlign: 'right', padding: '8px 12px', fontSize: 13 }}>매출</th>
+              <tr>
+                <th>컬렉션</th>
+                <th style={{ textAlign: 'right' }}>계약 수</th>
+                <th style={{ textAlign: 'right' }}>아이템</th>
+                <th style={{ textAlign: 'right' }}>매출</th>
               </tr>
             </thead>
             <tbody>
               {Object.entries(COLLECTION_LABELS).map(([key, label]) => {
                 const item = m.collectionBreakdown[key as Collection];
                 return (
-                  <tr key={key} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                    <td style={{ padding: '8px 12px', fontSize: 14 }}>{label}</td>
-                    <td style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14 }}>{item?.contractCount ?? 0}</td>
-                    <td style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14 }}>{item?.itemCount ?? 0}</td>
-                    <td style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14 }}>{Number(item?.totalAmount ?? 0).toLocaleString()}원</td>
+                  <tr key={key}>
+                    <td style={{ fontWeight: 500 }}>{label}</td>
+                    <td style={{ textAlign: 'right' }}>{item?.contractCount ?? 0}</td>
+                    <td style={{ textAlign: 'right' }}>{item?.itemCount ?? 0}</td>
+                    <td style={{ textAlign: 'right' }}>{Number(item?.totalAmount ?? 0).toLocaleString()}원</td>
                   </tr>
                 );
               })}

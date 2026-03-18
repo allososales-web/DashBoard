@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
@@ -7,6 +7,7 @@ import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { Role, PermissionLevel } from '../../common/types/roles.enum';
 import { LoginDto } from './dto/login.dto';
 import { TokenResponseDto } from './dto/token-response.dto';
+import { PinLoginDto, ChangePinDto, ResetPinDto } from './dto/pin-login.dto';
 
 @Injectable()
 export class AuthService {
@@ -185,13 +186,27 @@ export class AuthService {
   }
 
   async getMe(userId: string) {
+    // PIN 기반 토큰: sub가 'HQ' 또는 storeId(UUID)
+    if (userId === 'HQ') {
+      return { id: 'HQ', username: 'HQ', name: 'Alloso 본사', role: 'HQ_ADMIN', stores: [] };
+    }
+
+    // storeId로 먼저 확인 (PIN 로그인한 매장)
+    const store = await this.prisma.store.findUnique({ where: { id: userId } }).catch(() => null);
+    if (store) {
+      return {
+        id: store.id,
+        username: store.code,
+        name: store.name,
+        role: 'STORE_MANAGER',
+        stores: [{ storeId: store.id, storeName: store.name, permissionLevel: 'MANAGE' }],
+      };
+    }
+
+    // 일반 User 로그인
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        storePermissions: {
-          include: { store: true },
-        },
-      },
+      include: { storePermissions: { include: { store: true } } },
     });
 
     if (!user) {
@@ -207,6 +222,140 @@ export class AuthService {
         storeId: sp.storeId,
         storeName: sp.store.name,
         permissionLevel: sp.permissionLevel as string,
+      })),
+    };
+  }
+
+  // ─── PIN 기반 인증 ───
+
+  async getStoreList() {
+    const stores = await this.prisma.store.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, code: true, region: true },
+      orderBy: { code: 'asc' },
+    });
+    return stores;
+  }
+
+  async pinLogin(dto: PinLoginDto) {
+    const isHq = dto.storeId === 'HQ';
+
+    if (isHq) {
+      const hqAuth = await this.prisma.hqAuth.findFirst();
+      if (!hqAuth) throw new UnauthorizedException('HQ not configured');
+
+      const valid = await bcrypt.compare(dto.pin, hqAuth.pinHash);
+      if (!valid) throw new UnauthorizedException('PIN이 올바르지 않습니다');
+
+      const token = this.jwtService.sign({
+        sub: 'HQ',
+        role: 'HQ_ADMIN',
+        storePermissions: [],
+      });
+
+      return {
+        accessToken: token,
+        isFirstLogin: hqAuth.isFirstLogin,
+        role: 'HQ_ADMIN',
+        storeId: 'HQ',
+        storeName: 'Alloso 본사',
+      };
+    } else {
+      const storeAuth = await this.prisma.storeAuth.findUnique({
+        where: { storeId: dto.storeId },
+        include: { store: true },
+      });
+
+      if (!storeAuth) throw new UnauthorizedException('매장 정보를 찾을 수 없습니다');
+
+      const valid = await bcrypt.compare(dto.pin, storeAuth.pinHash);
+      if (!valid) throw new UnauthorizedException('PIN이 올바르지 않습니다');
+
+      const token = this.jwtService.sign({
+        sub: dto.storeId,
+        role: 'STORE_MANAGER',
+        storePermissions: [{ storeId: dto.storeId, level: 'MANAGE' }],
+      });
+
+      return {
+        accessToken: token,
+        isFirstLogin: storeAuth.isFirstLogin,
+        role: 'STORE_MANAGER',
+        storeId: dto.storeId,
+        storeName: storeAuth.store.name,
+      };
+    }
+  }
+
+  async changePin(storeId: string, dto: ChangePinDto) {
+    const isHq = storeId === 'HQ';
+
+    if (isHq) {
+      const hqAuth = await this.prisma.hqAuth.findFirst();
+      if (!hqAuth) throw new BadRequestException('HQ not configured');
+
+      const valid = await bcrypt.compare(dto.currentPin, hqAuth.pinHash);
+      if (!valid) throw new UnauthorizedException('현재 PIN이 올바르지 않습니다');
+
+      const newHash = await bcrypt.hash(dto.newPin, 10);
+      await this.prisma.hqAuth.update({
+        where: { id: hqAuth.id },
+        data: { pinHash: newHash, isFirstLogin: false, pinChangedAt: new Date() },
+      });
+    } else {
+      const storeAuth = await this.prisma.storeAuth.findUnique({ where: { storeId } });
+      if (!storeAuth) throw new BadRequestException('매장 정보를 찾을 수 없습니다');
+
+      const valid = await bcrypt.compare(dto.currentPin, storeAuth.pinHash);
+      if (!valid) throw new UnauthorizedException('현재 PIN이 올바르지 않습니다');
+
+      const newHash = await bcrypt.hash(dto.newPin, 10);
+      await this.prisma.storeAuth.update({
+        where: { storeId },
+        data: { pinHash: newHash, isFirstLogin: false, pinChangedAt: new Date() },
+      });
+    }
+
+    return { message: 'PIN이 변경되었습니다' };
+  }
+
+  async resetPin(dto: ResetPinDto) {
+    const newHash = await bcrypt.hash(dto.newPin, 10);
+
+    if (dto.storeId === 'HQ') {
+      const hqAuth = await this.prisma.hqAuth.findFirst();
+      if (!hqAuth) throw new BadRequestException('HQ not configured');
+      await this.prisma.hqAuth.update({
+        where: { id: hqAuth.id },
+        data: { pinHash: newHash, isFirstLogin: true, pinChangedAt: new Date() },
+      });
+    } else {
+      await this.prisma.storeAuth.update({
+        where: { storeId: dto.storeId },
+        data: { pinHash: newHash, isFirstLogin: true, pinChangedAt: new Date() },
+      });
+    }
+
+    return { message: 'PIN이 초기화되었습니다' };
+  }
+
+  async getAllPins() {
+    const stores = await this.prisma.store.findMany({
+      where: { isActive: true },
+      include: { storeAuth: true },
+      orderBy: { code: 'asc' },
+    });
+
+    const hqAuth = await this.prisma.hqAuth.findFirst();
+
+    return {
+      hq: { storeId: 'HQ', storeName: 'Alloso 본사', isFirstLogin: hqAuth?.isFirstLogin ?? true, pinChangedAt: hqAuth?.pinChangedAt },
+      stores: stores.map((s) => ({
+        storeId: s.id,
+        storeName: s.name,
+        storeCode: s.code,
+        isFirstLogin: s.storeAuth?.isFirstLogin ?? true,
+        pinChangedAt: s.storeAuth?.pinChangedAt,
       })),
     };
   }

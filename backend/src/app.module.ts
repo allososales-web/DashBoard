@@ -14,15 +14,14 @@ import { IssuesModule } from './modules/issues/issues.module';
 import { StaffsModule } from './modules/staffs/staffs.module';
 import { SchedulesModule } from './modules/schedules/schedules.module';
 import { DeliveriesModule } from './modules/deliveries/deliveries.module';
+import { WorkRecordsModule } from './modules/work-records/work-records.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     AuthModule,
     StoresModule,
@@ -36,6 +35,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     StaffsModule,
     SchedulesModule,
     DeliveriesModule,
+    WorkRecordsModule,
   ],
   controllers: [],
   providers: [

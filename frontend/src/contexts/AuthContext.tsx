@@ -1,83 +1,47 @@
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import { AuthState, UserInfo, LoginRequest } from '../types/auth.types';
-import { authApi } from '../services/auth';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
-interface AuthContextType extends AuthState {
-  login: (dto: LoginRequest) => Promise<void>;
-  logout: () => Promise<void>;
-  selectStore: (storeId: string) => void;
+export interface PinAuthState {
+  accessToken: string | null;
+  role: 'HQ_ADMIN' | 'STORE_MANAGER' | null;
+  storeId: string | null;
+  storeName: string | null;
+  isFirstLogin: boolean;
+  isAuthenticated: boolean;
+}
+
+interface AuthContextType extends PinAuthState {
+  setAuth: (data: Omit<PinAuthState, 'isAuthenticated'>) => void;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const STORAGE_KEY = 'pin_auth';
+
+function loadState(): PinAuthState {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return { ...JSON.parse(raw), isAuthenticated: true };
+  } catch {}
+  return { accessToken: null, role: null, storeId: null, storeName: null, isFirstLogin: false, isAuthenticated: false };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>(() => {
-    const user = localStorage.getItem('user');
-    const accessToken = localStorage.getItem('accessToken');
-    const refreshToken = localStorage.getItem('refreshToken');
-    const selectedStoreId = localStorage.getItem('selectedStoreId');
-    return {
-      user: user ? JSON.parse(user) : null,
-      accessToken,
-      refreshToken,
-      isAuthenticated: !!accessToken,
-      selectedStoreId,
-    };
-  });
+  const [state, setState] = useState<PinAuthState>(loadState);
 
-  // On mount: if we have an accessToken, call /auth/me to validate & refresh user info
-  useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) return;
-
-    authApi
-      .getMe()
-      .then((freshUser) => {
-        localStorage.setItem('user', JSON.stringify(freshUser));
-        setState((prev) => ({ ...prev, user: freshUser }));
-      })
-      .catch(() => {
-        // Token invalid and refresh also failed (interceptor handles 401 → redirect)
-        // If we reach here, the interceptor already cleared storage and redirected
-      });
+  const setAuth = useCallback((data: Omit<PinAuthState, 'isAuthenticated'>) => {
+    const next: PinAuthState = { ...data, isAuthenticated: !!data.accessToken };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    setState(next);
   }, []);
 
-  const login = useCallback(async (dto: LoginRequest) => {
-    const res = await authApi.login(dto);
-    const userInfo: UserInfo = res.user;
-    localStorage.setItem('accessToken', res.accessToken);
-    localStorage.setItem('refreshToken', res.refreshToken);
-    localStorage.setItem('user', JSON.stringify(userInfo));
-    setState({
-      user: userInfo,
-      accessToken: res.accessToken,
-      refreshToken: res.refreshToken,
-      isAuthenticated: true,
-      selectedStoreId: null,
-    });
-  }, []);
-
-  const logout = useCallback(async () => {
-    try {
-      const rt = localStorage.getItem('refreshToken');
-      if (rt) await authApi.logout(rt);
-    } catch {
-      // ignore
-    }
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    localStorage.removeItem('selectedStoreId');
-    setState({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false, selectedStoreId: null });
-  }, []);
-
-  const selectStore = useCallback((storeId: string) => {
-    localStorage.setItem('selectedStoreId', storeId);
-    setState((prev) => ({ ...prev, selectedStoreId: storeId }));
+  const logout = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    setState({ accessToken: null, role: null, storeId: null, storeName: null, isFirstLogin: false, isAuthenticated: false });
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, selectStore }}>
+    <AuthContext.Provider value={{ ...state, setAuth, logout }}>
       {children}
     </AuthContext.Provider>
   );
