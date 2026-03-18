@@ -11,8 +11,9 @@ async function bootstrap() {
 
   // ─── CORS ───
   const corsOrigin = configService.get<string>('CORS_ORIGIN', 'http://localhost:5173');
+  const originConfig = corsOrigin === '*' ? true : corsOrigin.split(',').map((o) => o.trim());
   app.enableCors({
-    origin: corsOrigin.split(',').map((o) => o.trim()),
+    origin: originConfig,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
