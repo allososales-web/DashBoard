@@ -4,11 +4,13 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ChannelType } from '@prisma/client';
 import { StoresService } from './stores.service';
 import { StoreListQueryDto } from './dto/store-list-query.dto';
 import { CreateStoreDto } from './dto/create-store.dto';
@@ -50,5 +52,42 @@ export class StoresController {
   @Roles(Role.HQ_ADMIN)
   deactivate(@Param('storeId') storeId: string) {
     return this.storesService.deactivate(storeId);
+  }
+
+  // 전체 매장 운영 현황 (관리자용)
+  @Get('admin/all')
+  @Roles(Role.HQ_ADMIN)
+  findAllForAdmin() {
+    return this.storesService.findAllForAdmin();
+  }
+
+  // 매장 운영 설정 업데이트
+  @Patch(':storeId/settings')
+  @Roles(Role.HQ_ADMIN)
+  updateSettings(
+    @Param('storeId') storeId: string,
+    @Body() dto: { showOnLogin?: boolean; displayName?: string; defaultChannel?: ChannelType },
+  ) {
+    return this.storesService.updateStoreSettings(storeId, dto);
+  }
+
+  // 채널 오버라이드 설정
+  @Post(':storeId/channel-override')
+  @Roles(Role.HQ_ADMIN)
+  upsertChannelOverride(
+    @Param('storeId') storeId: string,
+    @Body() dto: { year: number; month: number; channel: ChannelType },
+  ) {
+    return this.storesService.upsertChannelOverride(storeId, dto.year, dto.month, dto.channel);
+  }
+
+  // 채널 오버라이드 삭제
+  @Delete(':storeId/channel-override')
+  @Roles(Role.HQ_ADMIN)
+  deleteChannelOverride(
+    @Param('storeId') storeId: string,
+    @Body() dto: { year: number; month: number },
+  ) {
+    return this.storesService.deleteChannelOverride(storeId, dto.year, dto.month);
   }
 }

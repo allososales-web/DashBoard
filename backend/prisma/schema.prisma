@@ -91,6 +91,15 @@ enum DeliveryStatus {
   FAILED
 }
 
+enum ChannelType {
+  ROAD
+  DEPARTMENT
+  MALL
+  STARFIELD
+  POPUP
+  OTHER
+}
+
 enum NoticePriority {
   NORMAL
   IMPORTANT
@@ -167,34 +176,53 @@ model RefreshToken {
 // ─────────────────────────────────────────────
 
 model Store {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  code      String   @unique
-  address   String?
-  phone     String?
-  region    String?
-  isActive  Boolean  @default(true) @map("is_active")
-  settings  Json?    @default("{}")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id             String      @id @default(uuid()) @db.Uuid
+  name           String
+  code           String      @unique
+  address        String?
+  phone          String?
+  region         String?
+  isActive       Boolean     @default(true) @map("is_active")
+  showOnLogin    Boolean     @default(false) @map("show_on_login")
+  displayName    String?     @map("display_name")
+  defaultChannel ChannelType @default(ROAD) @map("default_channel")
+  settings       Json?       @default("{}")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
 
   // Relations
-  permissions    UserStorePermission[]
-  storeAuth      StoreAuth?
-  monthlyMetrics MonthlyMetric[]
-  monthlyGoals   MonthlyGoal[]
-  consults       Consult[]
-  quotes         Quote[]
-  contracts      Contract[]
-  memos          Memo[]
-  issues         Issue[]
-  staffs         Staff[]
-  schedules      Schedule[]
-  workRecords    WorkRecord[]
-  deliveries     Delivery[]
-  auditLogs      AuditLog[]
+  permissions      UserStorePermission[]
+  storeAuth        StoreAuth?
+  monthlyMetrics   MonthlyMetric[]
+  monthlyGoals     MonthlyGoal[]
+  consults         Consult[]
+  quotes           Quote[]
+  contracts        Contract[]
+  memos            Memo[]
+  issues           Issue[]
+  staffs           Staff[]
+  schedules        Schedule[]
+  workRecords      WorkRecord[]
+  deliveries       Delivery[]
+  auditLogs        AuditLog[]
+  channelOverrides StoreChannelOverride[]
 
   @@map("stores")
+}
+
+model StoreChannelOverride {
+  id        String      @id @default(uuid()) @db.Uuid
+  storeId   String      @map("store_id") @db.Uuid
+  year      Int
+  month     Int
+  channel   ChannelType
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, year, month])
+  @@map("store_channel_overrides")
 }
 
 model StoreAuth {

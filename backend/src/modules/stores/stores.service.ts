@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ChannelType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StoreListQueryDto } from './dto/store-list-query.dto';
 import { CreateStoreDto } from './dto/create-store.dto';
@@ -94,5 +95,64 @@ export class StoresService {
       where: { id: storeId },
       data: { isActive: false },
     });
+  }
+
+  // 전체 매장 목록 (운영 현황용 - 페이지네이션 없이 전체)
+  async findAllForAdmin() {
+    return this.prisma.store.findMany({
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        region: true,
+        isActive: true,
+        showOnLogin: true,
+        displayName: true,
+        defaultChannel: true,
+        storeAuth: {
+          select: {
+            plainPin: true,
+            isFirstLogin: true,
+            pinChangedAt: true,
+          },
+        },
+        channelOverrides: {
+          select: { id: true, year: true, month: true, channel: true },
+          orderBy: [{ year: 'desc' }, { month: 'desc' }],
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  // 매장 운영 설정 업데이트 (showOnLogin, displayName, defaultChannel)
+  async updateStoreSettings(
+    storeId: string,
+    dto: { showOnLogin?: boolean; displayName?: string; defaultChannel?: ChannelType },
+  ) {
+    await this.findOne(storeId);
+    return this.prisma.store.update({
+      where: { id: storeId },
+      data: dto,
+    });
+  }
+
+  // 채널 오버라이드 설정
+  async upsertChannelOverride(storeId: string, year: number, month: number, channel: ChannelType) {
+    await this.findOne(storeId);
+    return this.prisma.storeChannelOverride.upsert({
+      where: { storeId_year_month: { storeId, year, month } },
+      update: { channel },
+      create: { storeId, year, month, channel },
+    });
+  }
+
+  // 채널 오버라이드 삭제
+  async deleteChannelOverride(storeId: string, year: number, month: number) {
+    await this.findOne(storeId);
+    await this.prisma.storeChannelOverride.deleteMany({
+      where: { storeId, year, month },
+    });
+    return { message: '오버라이드가 삭제되었습니다' };
   }
 }
