@@ -201,6 +201,7 @@ model StoreAuth {
   id             String    @id @default(uuid()) @db.Uuid
   storeId        String    @unique @map("store_id") @db.Uuid
   pinHash        String    @map("pin_hash")
+  plainPin       String?   @map("plain_pin")
   isFirstLogin   Boolean   @default(true) @map("is_first_login")
   pinChangedAt   DateTime? @map("pin_changed_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
@@ -214,6 +215,7 @@ model StoreAuth {
 model HqAuth {
   id           String    @id @default(uuid()) @db.Uuid
   pinHash      String    @map("pin_hash")
+  plainPin     String?   @map("plain_pin")
   isFirstLogin Boolean   @default(true) @map("is_first_login")
   pinChangedAt DateTime? @map("pin_changed_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")

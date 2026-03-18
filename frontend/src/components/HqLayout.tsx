@@ -24,7 +24,7 @@ export default function HqLayout() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>본사 관리자</span>
-          <button onClick={() => navigate('/')} className="btn btn-ghost" style={{ fontSize: 12, padding: '6px 14px' }}>매장 변경</button>
+          <button onClick={() => { logout(); navigate('/'); }} className="btn btn-ghost" style={{ fontSize: 12, padding: '6px 14px' }}>매장 변경</button>
           <button onClick={logout} className="btn btn-danger" style={{ fontSize: 12, padding: '6px 14px' }}>로그아웃</button>
         </div>
       </header>

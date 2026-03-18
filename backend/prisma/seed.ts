@@ -11,11 +11,15 @@ async function main() {
   const existingHq = await prisma.hqAuth.findFirst();
   if (!existingHq) {
     await prisma.hqAuth.create({
-      data: { pinHash: hqPinHash, isFirstLogin: true },
+      data: { pinHash: hqPinHash, plainPin: '9999', isFirstLogin: true },
     });
     console.log('Created HQ auth (PIN: 9999)');
   } else {
-    console.log('HQ auth already exists, skipping');
+    await prisma.hqAuth.update({
+      where: { id: existingHq.id },
+      data: { plainPin: existingHq.plainPin ?? '9999' },
+    });
+    console.log('HQ auth already exists, updated plainPin');
   }
 
   // 2. Create stores with PINs
@@ -42,11 +46,15 @@ async function main() {
     if (!existing) {
       const pinHash = await bcrypt.hash(s.pin, 10);
       await prisma.storeAuth.create({
-        data: { storeId: store.id, pinHash, isFirstLogin: true },
+        data: { storeId: store.id, pinHash, plainPin: s.pin, isFirstLogin: true },
       });
       console.log(`Created store: ${store.name} (PIN: ${s.pin})`);
     } else {
-      console.log(`Store ${store.name} auth already exists, skipping`);
+      await prisma.storeAuth.update({
+        where: { storeId: store.id },
+        data: { plainPin: existing.plainPin ?? s.pin },
+      });
+      console.log(`Store ${store.name} auth already exists, updated plainPin`);
     }
   }
 

@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../services/api';
 
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
 export default function HqWorkRecordsTab() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [selectedStore, setSelectedStore] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   const { data: storesData = [], isLoading } = useQuery({
     queryKey: ['hq-work-records', year, month],
@@ -14,102 +16,162 @@ export default function HqWorkRecordsTab() {
   });
 
   const stores = storesData as any[];
-  const displayStore = selectedStore ? stores.find((s: any) => s.id === selectedStore) : null;
 
+  // 일자별 총 근무 인원 계산
   const daysInMonth = new Date(year, month, 0).getDate();
-  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
+
+  const dailyTotals: Record<number, { total: number; stores: { name: string; count: number; staffs: string[] }[] }> = {};
+  for (let d = 1; d <= daysInMonth; d++) {
+    const storeBreakdown: { name: string; count: number; staffs: string[] }[] = [];
+    let total = 0;
+    stores.forEach((s: any) => {
+      const working = (s.staffs ?? []).filter((staff: any) =>
+        (staff.workRecords ?? []).some((r: any) => {
+          const rd = new Date(r.workDate).getDate();
+          return rd === d && !r.isOff;
+        })
+      );
+      if (working.length > 0) {
+        storeBreakdown.push({ name: s.name, count: working.length, staffs: working.map((st: any) => st.name) });
+        total += working.length;
+      }
+    });
+    dailyTotals[d] = { total, stores: storeBreakdown };
+  }
+
+  const calendarCells: (number | null)[] = [];
+  for (let i = 0; i < firstDayOfWeek; i++) calendarCells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) calendarCells.push(d);
+
+  const selectedInfo = selectedDay ? dailyTotals[selectedDay] : null;
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+      {/* 헤더 */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, alignItems: 'center' }}>
         <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={{ width: 100 }}>
           {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}년</option>)}
         </select>
         <select value={month} onChange={(e) => setMonth(Number(e.target.value))} style={{ width: 80 }}>
           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{m}월</option>)}
         </select>
-        <select value={selectedStore ?? ''} onChange={(e) => setSelectedStore(e.target.value || null)} style={{ width: 160 }}>
-          <option value="">전체 매장</option>
-          {stores.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
+        <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 8 }}>
+          날짜를 클릭하면 점별 근무 인원을 확인할 수 있어요
+        </span>
       </div>
 
-      {isLoading ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>불러오는 중...</div>
-      ) : selectedStore && displayStore ? (
-        <StoreWorkTable store={displayStore} days={days} year={year} month={month} />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {stores.map((s: any) => (
-            <div key={s.id} className="glass" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600 }}>{s.name}</span>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>직원 {s.staffs?.length ?? 0}명</span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start' }}>
+        {/* 캘린더 */}
+        <div className="glass" style={{ padding: 20 }}>
+          <div style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>{year}년 {month}월 일자별 근무 현황</div>
+          {isLoading ? (
+            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>불러오는 중...</div>
+          ) : (
+            <>
+              {/* 요일 헤더 */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
+                {WEEKDAYS.map((d, i) => (
+                  <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, padding: '6px 0', color: i === 0 ? '#f87171' : i === 6 ? '#60a5fa' : 'var(--text-muted)' }}>
+                    {d}
+                  </div>
+                ))}
               </div>
-              <div style={{ padding: '12px 20px', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                {(s.staffs ?? []).map((staff: any) => {
-                  const workDays = staff.workRecords?.filter((r: any) => !r.isOff).length ?? 0;
-                  const offDays = staff.workRecords?.filter((r: any) => r.isOff).length ?? 0;
-                  const totalHours = staff.workRecords?.reduce((sum: number, r: any) => sum + Number(r.totalHours ?? 0), 0) ?? 0;
+              {/* 날짜 셀 */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+                {calendarCells.map((day, idx) => {
+                  if (!day) return <div key={`empty-${idx}`} />;
+                  const info = dailyTotals[day];
+                  const isSelected = selectedDay === day;
+                  const dow = (firstDayOfWeek + day - 1) % 7;
+                  const isSun = dow === 0;
+                  const isSat = dow === 6;
+                  const hasWorkers = info.total > 0;
                   return (
-                    <div key={staff.id} className="glass-sm" style={{ padding: '10px 14px', minWidth: 140 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{staff.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>근무 {workDays}일 · 휴무 {offDays}일</div>
-                      <div style={{ fontSize: 11, color: 'var(--accent2)' }}>{totalHours.toFixed(1)}시간</div>
+                    <div
+                      key={day}
+                      onClick={() => setSelectedDay(isSelected ? null : day)}
+                      style={{
+                        borderRadius: 10,
+                        padding: '8px 4px',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        background: isSelected ? 'rgba(200,149,108,0.25)' : hasWorkers ? 'rgba(255,255,255,0.04)' : 'transparent',
+                        border: isSelected ? '1px solid var(--accent)' : '1px solid transparent',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <div style={{ fontSize: 12, fontWeight: 600, color: isSun ? '#f87171' : isSat ? '#60a5fa' : '#fff', marginBottom: 4 }}>
+                        {day}
+                      </div>
+                      {hasWorkers ? (
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', lineHeight: 1 }}>
+                          {info.total}명
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)' }}>-</div>
+                      )}
                     </div>
                   );
                 })}
-                {(!s.staffs || s.staffs.length === 0) && (
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>등록된 직원 없음</div>
-                )}
               </div>
-            </div>
-          ))}
+            </>
+          )}
         </div>
-      )}
-    </div>
-  );
-}
 
-function StoreWorkTable({ store, days, year, month }: { store: any; days: number[]; year: number; month: number }) {
-  return (
-    <div className="glass" style={{ padding: 0, overflow: 'auto' }}>
-      <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--glass-border)', fontWeight: 600 }}>
-        {store.name} — {year}년 {month}월 근무표
+        {/* 점별 근무 인원 섹터 */}
+        <div className="glass" style={{ padding: 20 }}>
+          <div style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>
+            {selectedDay ? `${month}월 ${selectedDay}일 점별 근무` : '점별 근무 인원'}
+          </div>
+          {!selectedDay ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>
+              캘린더에서 날짜를 선택하세요
+            </div>
+          ) : selectedInfo && selectedInfo.total > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4 }}>
+                총 <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{selectedInfo.total}명</span> 근무
+              </div>
+              {selectedInfo.stores.map((s) => (
+                <div key={s.name} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontWeight: 600, fontSize: 13 }}>{s.name}</span>
+                    <span style={{ fontSize: 12, color: 'var(--accent)' }}>{s.count}명</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {s.staffs.map((name) => (
+                      <span key={name} style={{ fontSize: 11, background: 'rgba(200,149,108,0.15)', color: 'var(--accent)', borderRadius: 6, padding: '3px 8px' }}>
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>
+              이 날 근무 기록 없음
+            </div>
+          )}
+
+          {/* 전체 매장 요약 */}
+          <div style={{ marginTop: 24, borderTop: '1px solid var(--glass-border)', paddingTop: 16 }}>
+            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 12 }}>이달 매장별 총 근무</div>
+            {stores.map((s: any) => {
+              const totalWorkDays = (s.staffs ?? []).reduce((sum: number, staff: any) => {
+                return sum + (staff.workRecords ?? []).filter((r: any) => !r.isOff).length;
+              }, 0);
+              return (
+                <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 13 }}>
+                  <span>{s.name}</span>
+                  <span style={{ color: 'var(--accent)' }}>{totalWorkDays}일</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
-      <table style={{ minWidth: 800 }}>
-        <thead>
-          <tr>
-            <th style={{ minWidth: 100 }}>직원</th>
-            {days.map((d) => <th key={d} style={{ textAlign: 'center', minWidth: 36, padding: '8px 4px', fontSize: 11 }}>{d}</th>)}
-            <th style={{ textAlign: 'right' }}>합계</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(store.staffs ?? []).map((staff: any) => {
-            const recordMap: Record<number, any> = {};
-            (staff.workRecords ?? []).forEach((r: any) => {
-              const d = new Date(r.workDate).getDate();
-              recordMap[d] = r;
-            });
-            const totalHours = Object.values(recordMap).reduce((sum: number, r: any) => sum + Number(r.totalHours ?? 0), 0);
-            return (
-              <tr key={staff.id}>
-                <td style={{ fontWeight: 500, fontSize: 13 }}>{staff.name}</td>
-                {days.map((d) => {
-                  const r = recordMap[d];
-                  return (
-                    <td key={d} style={{ textAlign: 'center', padding: '6px 2px', fontSize: 11 }}>
-                      {r ? (r.isOff ? <span style={{ color: 'var(--warning)' }}>휴</span> : <span style={{ color: 'var(--success)' }}>●</span>) : <span style={{ color: 'rgba(255,255,255,0.15)' }}>-</span>}
-                    </td>
-                  );
-                })}
-                <td style={{ textAlign: 'right', fontSize: 12, color: 'var(--accent2)' }}>{totalHours.toFixed(1)}h</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
     </div>
   );
 }

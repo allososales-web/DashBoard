@@ -4,6 +4,8 @@ export interface KpiResult {
   storeId: string;
   year: number;
   month: number;
+  visitCount?: number;
+  consultCount?: number;
   quoteCount: number;
   contractCount: number;
   contractAmount: number | string;

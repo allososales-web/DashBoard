@@ -1,0 +1,143 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../../services/api';
+
+const PERIOD_OPTIONS = [
+  { value: 'month', label: '이달' },
+  { value: 'q1', label: '1분기' },
+  { value: 'q2', label: '2분기' },
+  { value: 'q3', label: '3분기' },
+  { value: 'q4', label: '4분기' },
+  { value: 'h1', label: '상반기' },
+  { value: 'h2', label: '하반기' },
+  { value: 'year', label: '연간' },
+];
+
+export default function HqStoreStatusTab() {
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [period, setPeriod] = useState('month');
+
+  const { data: allMetrics = [], isLoading } = useQuery({
+    queryKey: ['hq-all-metrics', year, month],
+    queryFn: () => api.get(`/dashboard/all?year=${year}&month=${month}`).then(r => r.data).catch(() => []),
+  });
+
+  const stores = allMetrics as any[];
+  const totalAmount = stores.reduce((s: number, st: any) => s + Number(st.contractAmount ?? 0), 0);
+  const sortedByAmount = [...stores].sort((a, b) => Number(b.contractAmount) - Number(a.contractAmount));
+  const sortedByQuote = [...stores].sort((a, b) => (b.quoteCount ?? 0) - (a.quoteCount ?? 0));
+  const sortedByConsult = [...stores].sort((a, b) => (b.consultCount ?? 0) - (a.consultCount ?? 0));
+
+  // 인사이트 생성
+  const insights: string[] = [];
+  if (stores.length >= 2) {
+    const top = sortedByAmount[0];
+    const bottom = sortedByAmount[sortedByAmount.length - 1];
+    if (top) insights.push(`매출 1위 ${top.storeName ?? '매장'}이 전체의 ${totalAmount > 0 ? ((Number(top.contractAmount) / totalAmount) * 100).toFixed(1) : 0}%를 차지합니다.`);
+    if (bottom && bottom.storeName !== top?.storeName) insights.push(`${bottom.storeName ?? '하위 매장'}의 매출이 가장 낮습니다. 원인 파악이 필요합니다.`);
+    const quoteTop = sortedByQuote[0];
+    const amountRank = sortedByAmount.findIndex(s => s.storeId === quoteTop?.storeId) + 1;
+    if (quoteTop && amountRank > 2) insights.push(`${quoteTop.storeName ?? '매장'}은 견적 1위이나 매출 ${amountRank}위입니다. 구매 전환율 개선이 필요합니다.`);
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+        <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={{ width: 100 }}>
+          {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}년</option>)}
+        </select>
+        <select value={month} onChange={(e) => setMonth(Number(e.target.value))} style={{ width: 80 }}>
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{m}월</option>)}
+        </select>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {PERIOD_OPTIONS.map(opt => (
+            <button key={opt.value} className={`btn ${period === opt.value ? 'btn-primary' : 'btn-ghost'}`} style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => setPeriod(opt.value)}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>불러오는 중...</div>
+      ) : (
+        <>
+          {/* TOP 순위 */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+            {[
+              { title: '판매 TOP', data: sortedByAmount, valueKey: 'contractAmount', unit: '원', format: (v: any) => `${Number(v).toLocaleString()}원` },
+              { title: '견적 TOP', data: sortedByQuote, valueKey: 'quoteCount', unit: '건', format: (v: any) => `${v ?? 0}건` },
+              { title: '상담 TOP', data: sortedByConsult, valueKey: 'consultCount', unit: '건', format: (v: any) => `${v ?? 0}건` },
+            ].map((ranking) => (
+              <div key={ranking.title} className="glass" style={{ padding: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>{ranking.title}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {ranking.data.slice(0, 5).map((s: any, i: number) => (
+                    <div key={s.storeId} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: i === 0 ? '#fcd34d' : i === 1 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)', minWidth: 20 }}>{i + 1}</span>
+                      <span style={{ flex: 1, fontSize: 12 }}>{s.storeName ?? `매장 ${i + 1}`}</span>
+                      <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{ranking.format(s[ranking.valueKey])}</span>
+                    </div>
+                  ))}
+                  {ranking.data.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>데이터 없음</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 인사이트 */}
+          {insights.length > 0 && (
+            <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>인사이트</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {insights.map((ins, i) => (
+                  <div key={i} style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 12px', background: 'rgba(200,149,108,0.08)', borderRadius: 8, borderLeft: '3px solid var(--accent)' }}>
+                    💡 {ins}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 매장별 핵심 수치 */}
+          <div className="glass" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', fontSize: 13, fontWeight: 700 }}>매장별 핵심 수치</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>매장</th>
+                  <th style={{ textAlign: 'right' }}>매출</th>
+                  <th style={{ textAlign: 'right' }}>계약</th>
+                  <th style={{ textAlign: 'right' }}>견적</th>
+                  <th style={{ textAlign: 'right' }}>전환율</th>
+                  <th style={{ textAlign: 'right' }}>사업부 비중</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedByAmount.map((s: any) => {
+                  const pct = totalAmount > 0 ? ((Number(s.contractAmount) / totalAmount) * 100).toFixed(1) : '0.0';
+                  const conv = s.quoteCount > 0 ? ((s.contractCount / s.quoteCount) * 100).toFixed(1) : '0.0';
+                  return (
+                    <tr key={s.storeId}>
+                      <td style={{ fontWeight: 500 }}>{s.storeName ?? '-'}</td>
+                      <td style={{ textAlign: 'right' }}>{Number(s.contractAmount ?? 0).toLocaleString()}원</td>
+                      <td style={{ textAlign: 'right' }}>{s.contractCount ?? 0}건</td>
+                      <td style={{ textAlign: 'right' }}>{s.quoteCount ?? 0}건</td>
+                      <td style={{ textAlign: 'right', color: Number(conv) >= 50 ? 'var(--success)' : 'var(--warning)' }}>{conv}%</td>
+                      <td style={{ textAlign: 'right', color: 'var(--accent)' }}>{pct}%</td>
+                    </tr>
+                  );
+                })}
+                {stores.length === 0 && (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>데이터 없음</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

@@ -300,7 +300,7 @@ export class AuthService {
       const newHash = await bcrypt.hash(dto.newPin, 10);
       await this.prisma.hqAuth.update({
         where: { id: hqAuth.id },
-        data: { pinHash: newHash, isFirstLogin: false, pinChangedAt: new Date() },
+        data: { pinHash: newHash, plainPin: dto.newPin, isFirstLogin: false, pinChangedAt: new Date() },
       });
     } else {
       const storeAuth = await this.prisma.storeAuth.findUnique({ where: { storeId } });
@@ -312,7 +312,7 @@ export class AuthService {
       const newHash = await bcrypt.hash(dto.newPin, 10);
       await this.prisma.storeAuth.update({
         where: { storeId },
-        data: { pinHash: newHash, isFirstLogin: false, pinChangedAt: new Date() },
+        data: { pinHash: newHash, plainPin: dto.newPin, isFirstLogin: false, pinChangedAt: new Date() },
       });
     }
 
@@ -327,12 +327,12 @@ export class AuthService {
       if (!hqAuth) throw new BadRequestException('HQ not configured');
       await this.prisma.hqAuth.update({
         where: { id: hqAuth.id },
-        data: { pinHash: newHash, isFirstLogin: true, pinChangedAt: new Date() },
+        data: { pinHash: newHash, plainPin: dto.newPin, isFirstLogin: true, pinChangedAt: new Date() },
       });
     } else {
       await this.prisma.storeAuth.update({
         where: { storeId: dto.storeId },
-        data: { pinHash: newHash, isFirstLogin: true, pinChangedAt: new Date() },
+        data: { pinHash: newHash, plainPin: dto.newPin, isFirstLogin: true, pinChangedAt: new Date() },
       });
     }
 
@@ -349,13 +349,20 @@ export class AuthService {
     const hqAuth = await this.prisma.hqAuth.findFirst();
 
     return {
-      hq: { storeId: 'HQ', storeName: 'Alloso 본사', isFirstLogin: hqAuth?.isFirstLogin ?? true, pinChangedAt: hqAuth?.pinChangedAt },
+      hq: {
+        storeId: 'HQ',
+        storeName: 'Alloso 본사',
+        isFirstLogin: hqAuth?.isFirstLogin ?? true,
+        pinChangedAt: hqAuth?.pinChangedAt,
+        currentPin: hqAuth?.plainPin ?? null,
+      },
       stores: stores.map((s) => ({
         storeId: s.id,
         storeName: s.name,
         storeCode: s.code,
         isFirstLogin: s.storeAuth?.isFirstLogin ?? true,
         pinChangedAt: s.storeAuth?.pinChangedAt,
+        currentPin: s.storeAuth?.plainPin ?? null,
       })),
     };
   }

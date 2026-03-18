@@ -10,6 +10,7 @@ export default function HqAdminTab() {
   const [ownCurrentPin, setOwnCurrentPin] = useState('');
   const [ownNewPin, setOwnNewPin] = useState('');
   const [msg, setMsg] = useState('');
+  const [showPins, setShowPins] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['hq-pins'],
@@ -68,8 +69,20 @@ export default function HqAdminTab() {
       <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: changingOwnPin ? 16 : 0 }}>
           <div>
-            <div style={{ fontWeight: 600, marginBottom: 2 }}>본사 PIN</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>본사 PIN</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: 6, color: 'var(--accent)', fontFamily: 'monospace' }}>
+                {showPins ? (hq?.currentPin ?? '****') : '••••'}
+              </div>
+              <button
+                className="btn btn-ghost"
+                style={{ fontSize: 11, padding: '3px 8px' }}
+                onClick={() => setShowPins(!showPins)}
+              >
+                {showPins ? '숨기기' : '보기'}
+              </button>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
               {hq?.isFirstLogin ? '⚠ 초기 PIN 미변경' : `마지막 변경: ${hq?.pinChangedAt ? new Date(hq.pinChangedAt).toLocaleDateString('ko') : '-'}`}
             </div>
           </div>
@@ -78,7 +91,7 @@ export default function HqAdminTab() {
           </button>
         </div>
         {changingOwnPin && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 16 }}>
             <div style={{ flex: 1, minWidth: 120 }}>
               <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>현재 PIN</label>
               <input type="password" maxLength={4} value={ownCurrentPin} onChange={(e) => setOwnCurrentPin(e.target.value.replace(/\D/g, ''))} placeholder="현재 PIN" />
@@ -98,15 +111,21 @@ export default function HqAdminTab() {
       <div className="glass" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
         <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontWeight: 600 }}>매장 PIN 관리</span>
-          <button className="btn btn-danger" style={{ fontSize: 12 }} onClick={() => { if (confirm('전체 매장 PIN을 초기화하시겠습니까?')) resetAllMutation.mutate(); }} disabled={resetAllMutation.isPending}>
-            전체 초기화
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setShowPins(!showPins)}>
+              {showPins ? '🙈 PIN 숨기기' : '👁 PIN 보기'}
+            </button>
+            <button className="btn btn-danger" style={{ fontSize: 12 }} onClick={() => { if (confirm('전체 매장 PIN을 초기화하시겠습니까?')) resetAllMutation.mutate(); }} disabled={resetAllMutation.isPending}>
+              전체 초기화
+            </button>
+          </div>
         </div>
         <table>
           <thead>
             <tr>
               <th>매장</th>
               <th>코드</th>
+              <th>현재 PIN</th>
               <th>상태</th>
               <th>마지막 변경</th>
               <th style={{ textAlign: 'right' }}>관리</th>
@@ -117,6 +136,11 @@ export default function HqAdminTab() {
               <tr key={s.storeId}>
                 <td style={{ fontWeight: 500 }}>{s.storeName}</td>
                 <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{s.storeCode}</td>
+                <td>
+                  <span style={{ fontFamily: 'monospace', fontSize: 16, fontWeight: 700, letterSpacing: 4, color: 'var(--accent)' }}>
+                    {showPins ? (s.currentPin ?? '----') : '••••'}
+                  </span>
+                </td>
                 <td>
                   {s.isFirstLogin
                     ? <span className="badge" style={{ background: 'rgba(245,158,11,0.2)', color: '#fcd34d' }}>초기 PIN</span>
