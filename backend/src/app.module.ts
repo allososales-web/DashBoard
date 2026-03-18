@@ -15,6 +15,7 @@ import { StaffsModule } from './modules/staffs/staffs.module';
 import { SchedulesModule } from './modules/schedules/schedules.module';
 import { DeliveriesModule } from './modules/deliveries/deliveries.module';
 import { WorkRecordsModule } from './modules/work-records/work-records.module';
+import { HqModule } from './modules/hq/hq.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
@@ -36,6 +37,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     SchedulesModule,
     DeliveriesModule,
     WorkRecordsModule,
+    HqModule,
   ],
   controllers: [],
   providers: [

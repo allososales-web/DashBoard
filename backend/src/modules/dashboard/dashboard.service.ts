@@ -92,6 +92,49 @@ export class DashboardService {
     return results;
   }
 
+  async getAllStoresMetrics(year: number, month: number) {
+    const stores = await this.prisma.store.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, code: true },
+      orderBy: { name: 'asc' },
+    });
+
+    const startOfMonth = new Date(year, month - 1, 1);
+    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const results = await Promise.all(
+      stores.map(async (store) => {
+        try {
+          const metrics = await this.kpiCalculator.calculateMonthlyKpi(store.id, year, month);
+          const consultCount = await this.prisma.consult.count({
+            where: { storeId: store.id, createdAt: { gte: startOfMonth, lte: endOfMonth } },
+          });
+          return {
+            storeName: store.name,
+            storeCode: store.code,
+            ...metrics,
+            storeId: store.id,
+            consultCount,
+          };
+        } catch {
+          return {
+            storeId: store.id,
+            storeName: store.name,
+            storeCode: store.code,
+            quoteCount: 0,
+            contractCount: 0,
+            contractAmount: 0,
+            conversionRate: 0,
+            avgOrderValue: 0,
+            consultCount: 0,
+          };
+        }
+      }),
+    );
+
+    return results;
+  }
+
   private async getGoalComparison(
     storeId: string,
     year: number,

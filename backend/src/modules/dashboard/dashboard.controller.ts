@@ -12,6 +12,24 @@ import { Roles } from '../../common/decorators';
 import { Role } from '../../common/types/roles.enum';
 import { StoreAccessGuard } from '../../common/guards/store-access.guard';
 
+// HQ 전체 매장 대시보드 (별도 컨트롤러)
+@Controller('dashboard')
+export class HqDashboardController {
+  constructor(private readonly dashboardService: DashboardService) {}
+
+  @Get('all')
+  @Roles(Role.HQ_ADMIN)
+  getAllMetrics(
+    @Query('year') year: string,
+    @Query('month') month: string,
+  ) {
+    const now = new Date();
+    const y = year ? parseInt(year, 10) : now.getFullYear();
+    const m = month ? parseInt(month, 10) : now.getMonth() + 1;
+    return this.dashboardService.getAllStoresMetrics(y, m);
+  }
+}
+
 @Controller('stores/:storeId')
 @UseGuards(StoreAccessGuard)
 export class DashboardController {
