@@ -34,11 +34,9 @@ export class AuthController {
   @Post('change-pin')
   @HttpCode(HttpStatus.OK)
   async changePin(@CurrentUser() user: AuthenticatedUser, @Body() dto: ChangePinDto) {
-    // PIN 토큰: storePermissions는 Map<string, PermissionLevel>
-    const firstStoreId = user.storePermissions instanceof Map
-      ? user.storePermissions.keys().next().value
-      : undefined;
-    const storeId = firstStoreId ?? 'HQ';
+    const storeId = user.storePermissions instanceof Map
+      ? (user.storePermissions.keys().next().value as string | undefined) ?? 'HQ'
+      : 'HQ';
     return this.authService.changePin(storeId, dto);
   }
 
