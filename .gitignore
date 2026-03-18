@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment files (NEVER commit)
+.env
+.env.local
+backend/.env.production
+!.env.example
+
+# Frontend .env.production is safe to commit (no secrets, only VITE_API_BASE_URL)
+# backend/.env.production must NEVER be committed (contains DB credentials, JWT secrets)
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.sw?
