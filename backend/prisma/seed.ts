@@ -123,11 +123,7 @@ const ALL_STORES: { name: string; code: string; channel: ChannelType; showOnLogi
   { name: 'X_인터파크2', code: '204930', channel: 'MALL', showOnLogin: false },
 ];
 
-// 로그인 화면에 표시되는 직영 매장 (PIN 발급 대상)
-const LOGIN_STORES = [
-  { name: '강남 플래그십', code: 'GANGNAM-01', pin: '1111' },
-  { name: '판교점', code: 'PANGYO-01', pin: '1112' },
-];
+// 로그인 화면에 표시되는 직영 매장 목록은 ALL_STORES의 showOnLogin: true 항목으로 관리됩니다
 
 async function main() {
   console.log('Seeding database...');
@@ -159,29 +155,18 @@ async function main() {
   }
   console.log(`Upserted ${ALL_STORES.length} stores`);
 
-  // 3. 로그인 화면 표시 매장 PIN 설정
-  for (const s of LOGIN_STORES) {
-    const store = await prisma.store.upsert({
-      where: { code: s.code },
-      update: { showOnLogin: true, displayName: s.name },
-      create: {
-        name: s.name,
-        code: s.code,
-        showOnLogin: true,
-        displayName: s.name,
-        defaultChannel: 'ROAD',
-        isActive: true,
-      },
-    });
+  // 3. showOnLogin=true 매장에 storeAuth PIN 자동 설정 (없는 경우만)
+  const activeStores = await prisma.store.findMany({ where: { showOnLogin: true, isActive: true } });
+  for (const store of activeStores) {
     const existing = await prisma.storeAuth.findUnique({ where: { storeId: store.id } });
     if (!existing) {
-      const pinHash = await bcrypt.hash(s.pin, 10);
-      await prisma.storeAuth.create({ data: { storeId: store.id, pinHash, plainPin: s.pin, isFirstLogin: true } });
-      console.log(`Created store auth: ${store.name} (PIN: ${s.pin})`);
-    } else {
-      await prisma.storeAuth.update({ where: { storeId: store.id }, data: { plainPin: existing.plainPin ?? s.pin } });
+      const defaultPin = store.code.replace(/\D/g, '').slice(-4).padStart(4, '1');
+      const pinHash = await bcrypt.hash(defaultPin, 10);
+      await prisma.storeAuth.create({ data: { storeId: store.id, pinHash, plainPin: defaultPin, isFirstLogin: true } });
+      console.log(`Created storeAuth for ${store.name} (PIN: ${defaultPin})`);
     }
   }
+  console.log(`Checked storeAuth for ${activeStores.length} active stores`);
 
   // 4. Admin user
   const passwordHash = await bcrypt.hash('admin1234', 10);

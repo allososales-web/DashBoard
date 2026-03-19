@@ -68,13 +68,18 @@ export class WorkRecordsService {
     await (this.prisma as any).workRecord.deleteMany({ where: { storeId, year, month } });
 
     for (const rec of records) {
-      if (!rec.staffName) continue;
+      if (!rec.staffName || rec.staffName.trim() === '') continue;
       // staff upsert by name
-      let staff = await (this.prisma as any).staff.findFirst({ where: { storeId, name: rec.staffName } });
+      let staff = await (this.prisma as any).staff.findFirst({ where: { storeId, name: rec.staffName.trim() } });
       if (!staff) {
-        staff = await (this.prisma as any).staff.create({ data: { storeId, name: rec.staffName, isActive: true } });
+        staff = await (this.prisma as any).staff.create({ data: { storeId, name: rec.staffName.trim(), isActive: true } });
       }
       const workDate = new Date(rec.workDate);
+      // 중복 방지: 같은 staffId + workDate 조합 skip
+      const existing = await (this.prisma as any).workRecord.findFirst({
+        where: { storeId, staffId: staff.id, workDate },
+      });
+      if (existing) continue;
       await (this.prisma as any).workRecord.create({
         data: {
           storeId,

@@ -336,9 +336,11 @@ export class AuthService {
         data: { pinHash: newHash, plainPin: dto.newPin, isFirstLogin: true, pinChangedAt: new Date() },
       });
     } else {
-      await this.prisma.storeAuth.update({
+      // storeAuth가 없는 매장도 처리 (upsert)
+      await this.prisma.storeAuth.upsert({
         where: { storeId: dto.storeId },
-        data: { pinHash: newHash, plainPin: dto.newPin, isFirstLogin: true, pinChangedAt: new Date() },
+        update: { pinHash: newHash, plainPin: dto.newPin, isFirstLogin: true, pinChangedAt: new Date() },
+        create: { storeId: dto.storeId, pinHash: newHash, plainPin: dto.newPin, isFirstLogin: true, pinChangedAt: new Date() },
       });
     }
 
@@ -366,6 +368,7 @@ export class AuthService {
         storeId: s.id,
         storeName: s.name,
         storeCode: s.code,
+        showOnLogin: s.showOnLogin,
         isFirstLogin: s.storeAuth?.isFirstLogin ?? true,
         pinChangedAt: s.storeAuth?.pinChangedAt,
         currentPin: s.storeAuth?.plainPin ?? null,
