@@ -217,10 +217,10 @@ export default function HqGoalEventTab() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontSize: 14, fontWeight: 700 }}>전사 이슈 캘린더</div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <button className="btn-secondary" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => { if (calMonth === 1) { setCalYear(y => y-1); setCalMonth(12); } else setCalMonth(m => m-1); }}>‹</button>
+              <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => { if (calMonth === 1) { setCalYear(y => y-1); setCalMonth(12); } else setCalMonth(m => m-1); }}>‹</button>
               <span style={{ fontWeight: 600, fontSize: 13, minWidth: 80, textAlign: "center" }}>{calYear}년 {calMonth}월</span>
-              <button className="btn-secondary" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => { if (calMonth === 12) { setCalYear(y => y+1); setCalMonth(1); } else setCalMonth(m => m+1); }}>›</button>
-              <button className="btn-primary" style={{ fontSize: 12, padding: "6px 12px" }} onClick={() => setShowEventForm(true)}>+ 이슈 추가</button>
+              <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => { if (calMonth === 12) { setCalYear(y => y+1); setCalMonth(1); } else setCalMonth(m => m+1); }}>›</button>
+              <button className="btn btn-primary" style={{ fontSize: 12, padding: "6px 12px" }} onClick={() => setShowEventForm(true)}>+ 이슈 추가</button>
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
@@ -269,9 +269,25 @@ export default function HqGoalEventTab() {
                   <input className="input" value={eventForm.description} onChange={e => setEventForm(f => ({...f, description: e.target.value}))} placeholder="설명 (선택)" />
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <button className="btn-primary" style={{ fontSize: 12 }} onClick={() => createEvent.mutate(eventForm)} disabled={!eventForm.title || !eventForm.startDate}>등록</button>
-                <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => setShowEventForm(false)}>취소</button>
+              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                <button
+                  className="btn btn-primary"
+                  style={{ flex: 1, fontSize: 13, padding: "10px 0" }}
+                  onClick={() => createEvent.mutate({
+                    ...eventForm,
+                    endDate: eventForm.endDate || eventForm.startDate,
+                  })}
+                  disabled={!eventForm.title || !eventForm.startDate || createEvent.isPending}
+                >
+                  {createEvent.isPending ? "등록 중..." : "등록"}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ flex: 1, fontSize: 13, padding: "10px 0" }}
+                  onClick={() => { setShowEventForm(false); setEventForm({ title: "", description: "", startDate: "", endDate: "" }); }}
+                >
+                  취소
+                </button>
               </div>
             </div>
           )}
@@ -289,7 +305,7 @@ export default function HqGoalEventTab() {
         <div className="glass" style={{ padding: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontSize: 14, fontWeight: 700 }}>이슈 이력</div>
-            <button className="btn-ghost" style={{ fontSize: 11, padding: "4px 8px" }} onClick={() => setShowHistory(h => !h)}>
+            <button className="btn btn-ghost" style={{ fontSize: 11, padding: "4px 8px" }} onClick={() => setShowHistory(h => !h)}>
               {showHistory ? "접기" : "전체보기"}
             </button>
           </div>
@@ -327,7 +343,7 @@ export default function HqGoalEventTab() {
                 </span>
               ))}
             </div>
-            <button className="btn-primary" style={{ fontSize: 12, padding: "6px 14px" }} onClick={syncDeliveryCalendar} disabled={delSyncing}>
+            <button className="btn btn-primary" style={{ fontSize: 12, padding: "6px 14px" }} onClick={syncDeliveryCalendar} disabled={delSyncing}>
               {delSyncing ? "동기화 중..." : "전 매장 동기화"}
             </button>
           </div>
@@ -396,7 +412,7 @@ export default function HqGoalEventTab() {
             <select value={goalYear} onChange={e => { setGoalYear(Number(e.target.value)); setGoalInputs({}); }} style={{ fontSize: 12, padding: "4px 8px" }}>
               {[2024,2025,2026,2027].map(y => <option key={y} value={y}>{y}년</option>)}
             </select>
-            <button className="btn-primary" style={{ fontSize: 12, padding: "6px 14px" }} onClick={saveAndSyncGoals} disabled={goalSaving}>
+            <button className="btn btn-primary" style={{ fontSize: 12, padding: "6px 14px" }} onClick={saveAndSyncGoals} disabled={goalSaving}>
               {goalSaving ? "저장 중..." : "저장 및 전 매장 동기화"}
             </button>
           </div>
