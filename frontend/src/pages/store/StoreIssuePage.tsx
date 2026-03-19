@@ -13,16 +13,7 @@ export default function StoreIssuePage() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [newMemo, setNewMemo] = useState('');
   const [newMemoTitle, setNewMemoTitle] = useState('');
-  const [newEvent, setNewEvent] = useState('');
-  const [newEventDate, setNewEventDate] = useState('');
   const qc = useQueryClient();
-
-  // 납기 데이터
-  const { data: deliveries = [] } = useQuery({
-    queryKey: ['deliveries', storeId],
-    queryFn: () => api.get(`/deliveries?storeId=${storeId}&status=SCHEDULED`).then(r => r.data?.data ?? []).catch(() => []),
-    enabled: !!storeId,
-  });
 
   // 이슈 데이터
   const { data: issues = [] } = useQuery({
@@ -52,18 +43,6 @@ export default function StoreIssuePage() {
       setNewMemo('');
     },
   });
-
-  // 납기 D-day 계산
-  const todayStr = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-  const dayAfter = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-  const dayAfterStr = dayAfter.toISOString().split('T')[0];
-
-  const deliveryList = deliveries as any[];
-  const todayDeliveries = deliveryList.filter((d: any) => d.scheduledDate?.startsWith(todayStr));
-  const tomorrowDeliveries = deliveryList.filter((d: any) => d.scheduledDate?.startsWith(tomorrowStr));
-  const dayAfterDeliveries = deliveryList.filter((d: any) => d.scheduledDate?.startsWith(dayAfterStr));
 
   // 캘린더
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -97,40 +76,6 @@ export default function StoreIssuePage() {
           <select value={month} onChange={(e) => setMonth(Number(e.target.value))} style={{ width: 80 }}>
             {Array.from({ length: 12 }, (_, i) => i + 1).map((mo) => <option key={mo} value={mo}>{mo}월</option>)}
           </select>
-        </div>
-      </div>
-
-      {/* 납기 D-day 섹터 */}
-      <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 16 }}>납기 일정 확인</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-          {[
-            { label: '오늘', items: todayDeliveries, color: '#f87171' },
-            { label: '내일', items: tomorrowDeliveries, color: '#fcd34d' },
-            { label: '모레', items: dayAfterDeliveries, color: '#6ee7b7' },
-          ].map((group) => (
-            <div key={group.label} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>{group.label}</span>
-                <span style={{ fontSize: 18, fontWeight: 800, color: group.color }}>{group.items.length}건</span>
-              </div>
-              {group.items.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {group.items.slice(0, 3).map((d: any) => (
-                    <div key={d.id} style={{ fontSize: 11, color: 'var(--text-muted)', padding: '4px 8px', background: 'rgba(255,255,255,0.04)', borderRadius: 6 }}>
-                      {d.customerName} · {d.address ?? '주소 미입력'}
-                    </div>
-                  ))}
-                  {group.items.length > 3 && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>+{group.items.length - 3}건 더</div>}
-                </div>
-              ) : (
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>납기 없음</div>
-              )}
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(200,149,108,0.1)', borderRadius: 8, fontSize: 12, color: 'var(--accent)' }}>
-          ⚠ 납기 전날 고객 연락 및 배송 정보 재확인을 권장합니다
         </div>
       </div>
 
