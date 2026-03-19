@@ -19,7 +19,7 @@ export default function StoreLayout() {
       {/* Sidebar */}
       <aside style={{
         width: 200,
-        background: 'rgba(26,20,16,0.92)',
+        background: 'rgba(13,10,20,0.94)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         borderRight: '1px solid var(--glass-border)',
@@ -46,7 +46,7 @@ export default function StoreLayout() {
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '12px 16px', margin: '2px 8px', borderRadius: 10,
                 color: isActive ? '#fff' : 'var(--text-muted)',
-                background: isActive ? 'rgba(200,149,108,0.2)' : 'transparent',
+                background: isActive ? 'rgba(192,132,252,0.18)' : 'transparent',
                 borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
                 textDecoration: 'none', fontSize: 13, fontWeight: isActive ? 600 : 400,
                 transition: 'all 0.15s',

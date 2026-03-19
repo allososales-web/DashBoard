@@ -24,13 +24,13 @@ const CHANNEL_LABELS: Record<string, string> = {
   OTHER: '기타',
 };
 const CHANNEL_COLORS: Record<string, string> = {
-  HQ: '#7c6af7',
-  ROAD: '#c8956c',
-  DEPARTMENT: '#7c6af7',
-  MALL: '#10b981',
-  STARFIELD: '#f59e0b',
-  POPUP: '#ef4444',
-  OTHER: '#6b7280',
+  HQ: '#c084fc',
+  ROAD: '#fb923c',
+  DEPARTMENT: '#f0abfc',
+  MALL: '#34d399',
+  STARFIELD: '#fbbf24',
+  POPUP: '#f87171',
+  OTHER: '#94a3b8',
 };
 
 export default function LoginPage() {
@@ -298,7 +298,7 @@ export default function LoginPage() {
               disabled={pin.length !== 4 || submitting}
               style={{
                 width: '100%', marginTop: 16, height: 52, borderRadius: 10,
-                background: pin.length === 4 ? 'var(--accent)' : 'rgba(200,149,108,0.3)',
+                background: pin.length === 4 ? 'linear-gradient(135deg, #c084fc, #f0abfc)' : 'rgba(192,132,252,0.2)',
                 border: 'none', color: '#fff', fontSize: 15, fontWeight: 700,
                 cursor: pin.length === 4 ? 'pointer' : 'default',
                 transition: 'background 0.15s',

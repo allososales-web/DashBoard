@@ -11,7 +11,7 @@ export default function HqLayout() {
       {/* Top bar */}
       <header style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(8,8,24,0.85)',
+        background: 'rgba(13,10,20,0.88)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         borderBottom: '1px solid var(--glass-border)',
