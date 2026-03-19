@@ -121,19 +121,32 @@ export default function HqGoalEventTab() {
   // ── 이벤트 뮤테이션 ──
   const createEvent = useMutation({
     mutationFn: (dto: typeof eventForm) => api.post("/hq/events", dto).then(r => r.data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["hq-events"] }); setShowEventForm(false); setEventForm({ title: "", description: "", startDate: "", endDate: "" }); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hq-events"] });
+      setShowEventForm(false);
+      setEventForm({ title: "", description: "", startDate: "", endDate: "" });
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message ?? err?.message ?? "등록 실패";
+      alert(`이슈 등록 실패: ${msg}`);
+    },
   });
   const deleteEvent = useMutation({
     mutationFn: (id: string) => api.delete(`/hq/events/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["hq-events"] }),
   });
 
-  // 캘린더 날짜별 이벤트 매핑
+  // 캘린더 날짜별 이벤트 매핑 (UTC 파싱 방지: slice(0,10)으로 날짜 문자열만 사용)
   const eventDates = useMemo(() => {
     const map: Record<string, HqEvent[]> = {};
     events.forEach(ev => {
-      const start = new Date(ev.startDate);
-      const end = new Date(ev.endDate);
+      const startStr = ev.startDate?.slice(0, 10);
+      const endStr = ev.endDate?.slice(0, 10);
+      if (!startStr) return;
+      const [sy, sm, sd] = startStr.split("-").map(Number);
+      const [ey, em, ed] = (endStr ?? startStr).split("-").map(Number);
+      const start = new Date(sy, sm - 1, sd);
+      const end = new Date(ey, em - 1, ed);
       for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         const k = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
         if (!map[k]) map[k] = [];
@@ -225,7 +238,7 @@ export default function HqGoalEventTab() {
               <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => { if (calMonth === 1) { setCalYear(y => y-1); setCalMonth(12); } else setCalMonth(m => m-1); }}>‹</button>
               <span style={{ fontWeight: 600, fontSize: 13, minWidth: 80, textAlign: "center" }}>{calYear}년 {calMonth}월</span>
               <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => { if (calMonth === 12) { setCalYear(y => y+1); setCalMonth(1); } else setCalMonth(m => m+1); }}>›</button>
-              <button className="btn btn-primary" style={{ fontSize: 12, padding: "6px 12px" }} onClick={() => setShowEventForm(true)}>+ 이슈 추가</button>
+              <button className="btn btn-primary" style={{ fontSize: 12, padding: "7px 14px", borderRadius: 10 }} onClick={() => setShowEventForm(true)}>+ 이슈 추가</button>
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
@@ -254,44 +267,60 @@ export default function HqGoalEventTab() {
             })}
           </div>
           {showEventForm && (
-            <div style={{ marginTop: 16, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>새 이슈 등록</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ marginTop: 16, background: "rgba(192,132,252,0.06)", borderRadius: 12, padding: 20, border: "1px solid rgba(192,132,252,0.2)" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14, color: "var(--accent)" }}>새 이슈 등록</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div style={{ gridColumn: "1/-1" }}>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>이슈명</div>
-                  <input className="input" value={eventForm.title} onChange={e => setEventForm(f => ({...f, title: e.target.value}))} placeholder="이슈 제목" />
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600 }}>이슈명 *</div>
+                  <input className="input" value={eventForm.title} onChange={e => setEventForm(f => ({...f, title: e.target.value}))} placeholder="이슈 제목을 입력하세요" />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>시작일</div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600 }}>시작일 *</div>
                   <input className="input" type="date" value={eventForm.startDate} onChange={e => setEventForm(f => ({...f, startDate: e.target.value}))} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>종료일</div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600 }}>종료일 <span style={{ fontWeight: 400 }}>(미입력 시 시작일과 동일)</span></div>
                   <input className="input" type="date" value={eventForm.endDate} onChange={e => setEventForm(f => ({...f, endDate: e.target.value}))} />
                 </div>
                 <div style={{ gridColumn: "1/-1" }}>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>설명</div>
-                  <input className="input" value={eventForm.description} onChange={e => setEventForm(f => ({...f, description: e.target.value}))} placeholder="설명 (선택)" />
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600 }}>설명 <span style={{ fontWeight: 400 }}>(선택)</span></div>
+                  <input className="input" value={eventForm.description} onChange={e => setEventForm(f => ({...f, description: e.target.value}))} placeholder="이슈에 대한 설명을 입력하세요" />
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
                 <button
-                  className="btn btn-primary"
-                  style={{ flex: 1, fontSize: 13, padding: "10px 0" }}
                   onClick={() => createEvent.mutate({
                     ...eventForm,
                     endDate: eventForm.endDate || eventForm.startDate,
                   })}
                   disabled={!eventForm.title || !eventForm.startDate || createEvent.isPending}
+                  style={{
+                    flex: 1, fontSize: 13, padding: "11px 0", borderRadius: 10, border: "none",
+                    cursor: !eventForm.title || !eventForm.startDate || createEvent.isPending ? "not-allowed" : "pointer",
+                    background: !eventForm.title || !eventForm.startDate || createEvent.isPending
+                      ? "rgba(192,132,252,0.2)"
+                      : "linear-gradient(135deg, #c084fc, #f0abfc, #fb923c)",
+                    color: "#fff", fontWeight: 700,
+                    boxShadow: !eventForm.title || !eventForm.startDate || createEvent.isPending
+                      ? "none"
+                      : "0 4px 16px rgba(192,132,252,0.4)",
+                    transition: "all 0.2s",
+                    opacity: createEvent.isPending ? 0.6 : 1,
+                  }}
                 >
-                  {createEvent.isPending ? "등록 중..." : "등록"}
+                  {createEvent.isPending ? "등록 중..." : "✓ 등록"}
                 </button>
                 <button
-                  className="btn btn-ghost"
-                  style={{ flex: 1, fontSize: 13, padding: "10px 0" }}
                   onClick={() => { setShowEventForm(false); setEventForm({ title: "", description: "", startDate: "", endDate: "" }); }}
+                  style={{
+                    flex: 1, fontSize: 13, padding: "11px 0", borderRadius: 10,
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(192,132,252,0.2)",
+                    color: "var(--text-muted)", fontWeight: 600, cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
                 >
-                  취소
+                  ✕ 취소
                 </button>
               </div>
             </div>
