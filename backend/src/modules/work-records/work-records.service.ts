@@ -74,7 +74,9 @@ export class WorkRecordsService {
       if (!staff) {
         staff = await (this.prisma as any).staff.create({ data: { storeId, name: rec.staffName.trim(), isActive: true } });
       }
-      const workDate = new Date(rec.workDate);
+      // YYYY-MM-DD 형식을 로컬 날짜로 파싱 (UTC 오프셋 문제 방지)
+      const [wy, wm, wd] = rec.workDate.split('-').map(Number);
+      const workDate = new Date(wy, wm - 1, wd);
       // 중복 방지: 같은 staffId + workDate 조합 skip
       const existing = await (this.prisma as any).workRecord.findFirst({
         where: { storeId, staffId: staff.id, workDate },
