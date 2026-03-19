@@ -1,51 +1,66 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { HqService } from './hq.service';
-import { Roles } from '../../common/decorators';
+import { Roles, CurrentUser } from '../../common/decorators';
 import { Role } from '../../common/types/roles.enum';
+import { CreateNoticeDto } from './dto/create-notice.dto';
+import { UpdateNoticeDto } from './dto/update-notice.dto';
+import { CreateEventDto } from './dto/create-event.dto';
+import { UpdateEventDto } from './dto/update-event.dto';
+import { CreateDeliveryRuleDto } from './dto/create-delivery-rule.dto';
+import { UpdateDeliveryRuleDto } from './dto/update-delivery-rule.dto';
+import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 
 @Controller('hq')
 export class HqController {
   constructor(private readonly hqService: HqService) {}
 
-  // Notices
+  // ─── Notices ───
+
   @Get('notices')
-  getNotices() {
-    return this.hqService.getNotices();
+  findAllNotices() {
+    return this.hqService.findAllNotices();
   }
 
   @Post('notices')
   @Roles(Role.HQ_ADMIN)
-  createNotice(@Body() dto: any) {
-    return this.hqService.createNotice(dto);
+  createNotice(
+    @Body() dto: CreateNoticeDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.hqService.createNotice(dto, user.id);
   }
 
   @Put('notices/:id')
   @Roles(Role.HQ_ADMIN)
-  updateNotice(@Param('id') id: string, @Body() dto: any) {
+  updateNotice(@Param('id') id: string, @Body() dto: UpdateNoticeDto) {
     return this.hqService.updateNotice(id, dto);
   }
 
   @Delete('notices/:id')
   @Roles(Role.HQ_ADMIN)
-  deleteNotice(@Param('id') id: string) {
-    return this.hqService.deleteNotice(id);
+  removeNotice(@Param('id') id: string) {
+    return this.hqService.removeNotice(id);
   }
 
-  // Events
+  // ─── Events ───
+
   @Get('events')
-  getEvents() {
-    return this.hqService.getEvents();
+  findAllEvents() {
+    return this.hqService.findAllEvents();
   }
 
   @Post('events')
   @Roles(Role.HQ_ADMIN)
-  createEvent(@Body() dto: any) {
-    return this.hqService.createEvent(dto);
+  createEvent(
+    @Body() dto: CreateEventDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.hqService.createEvent(dto, user.id);
   }
 
   @Put('events/:id')
   @Roles(Role.HQ_ADMIN)
-  updateEvent(@Param('id') id: string, @Body() dto: any) {
+  updateEvent(@Param('id') id: string, @Body() dto: UpdateEventDto) {
     return this.hqService.updateEvent(id, dto);
   }
 
@@ -55,25 +70,30 @@ export class HqController {
     return this.hqService.deleteEvent(id);
   }
 
-  // Delivery Rules
+  // ─── Delivery Rules ───
+
   @Get('delivery-rules')
-  getDeliveryRules() {
-    return this.hqService.getDeliveryRules();
+  findAllDeliveryRules() {
+    return this.hqService.findAllDeliveryRules();
   }
 
   @Post('delivery-rules')
   @Roles(Role.HQ_ADMIN)
-  createDeliveryRule(@Body() dto: any) {
-    return this.hqService.upsertDeliveryRule(dto);
+  createDeliveryRule(
+    @Body() dto: CreateDeliveryRuleDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.hqService.createDeliveryRule(dto, user.id);
   }
 
   @Put('delivery-rules/:id')
   @Roles(Role.HQ_ADMIN)
-  updateDeliveryRule(@Param('id') id: string, @Body() dto: any) {
+  updateDeliveryRule(@Param('id') id: string, @Body() dto: UpdateDeliveryRuleDto) {
     return this.hqService.updateDeliveryRule(id, dto);
   }
 
-  // Delivery Calendar (납기 캘린더)
+  // ─── Delivery Calendar (납기 캘린더) ───
+
   @Get('delivery-calendar')
   getDeliveryCalendar(@Query('year') year: string, @Query('month') month: string) {
     return this.hqService.getDeliveryCalendar(Number(year), Number(month));
@@ -81,11 +101,14 @@ export class HqController {
 
   @Post('delivery-calendar')
   @Roles(Role.HQ_ADMIN)
-  upsertDeliveryCalendar(@Body() dto: { year: number; month: number; dayStatuses: Record<number, string> }) {
+  upsertDeliveryCalendar(
+    @Body() dto: { year: number; month: number; dayStatuses: Record<number, string> },
+  ) {
     return this.hqService.upsertDeliveryCalendar(dto.year, dto.month, dto.dayStatuses);
   }
 
-  // HQ Goal (사업부 목표)
+  // ─── HQ Goal (사업부 목표) ───
+
   @Get('goal')
   getHqGoal(@Query('year') year: string, @Query('month') month: string) {
     return this.hqService.getHqGoal(Number(year), Number(month));
@@ -93,11 +116,12 @@ export class HqController {
 
   @Post('goal')
   @Roles(Role.HQ_ADMIN)
-  upsertHqGoal(@Body() dto: { year: number; month: number; goal: { targetAmount: number; targetContracts: number; targetQuotes: number } }) {
+  upsertHqGoal(
+    @Body() dto: { year: number; month: number; goal: { targetAmount: number; targetContracts: number; targetQuotes: number } },
+  ) {
     return this.hqService.upsertHqGoal(dto.year, dto.month, dto.goal);
   }
 
-  // HQ Goals bulk (연간 일괄 저장)
   @Get('goals/annual')
   getAnnualGoals(@Query('year') year: string) {
     return this.hqService.getAnnualGoals(Number(year));
@@ -105,7 +129,9 @@ export class HqController {
 
   @Post('goals/annual')
   @Roles(Role.HQ_ADMIN)
-  upsertAnnualGoals(@Body() dto: { year: number; goals: Record<string, { targetAmount: number; targetContracts: number; targetQuotes: number }> }) {
+  upsertAnnualGoals(
+    @Body() dto: { year: number; goals: Record<string, { targetAmount: number; targetContracts: number; targetQuotes: number }> },
+  ) {
     return this.hqService.upsertAnnualGoals(dto.year, dto.goals);
   }
 }

@@ -135,7 +135,7 @@
     - 폐기된 refreshToken으로 401 반환 테스트
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-- [ ] 4. Checkpoint - 인증/인가 기반 검증
+- [x] 4. Checkpoint - 인증/인가 기반 검증
   - 모든 테스트 통과 확인, 사용자에게 질문이 있으면 확인.
 
 - [x] 5. Stores 모듈 구현
@@ -226,7 +226,7 @@
     - fast-check로 KPI 계산 후 monthly_metrics에 upsert → 재조회 시 동일 값 반환 검증
     - **Validates: Requirements 5.9**
 
-- [ ] 7. Checkpoint - 핵심 인프라 + KPI 엔진 검증
+- [x] 7. Checkpoint - 핵심 인프라 + KPI 엔진 검증
   - 모든 테스트 통과 확인, 사용자에게 질문이 있으면 확인.
 
 - [x] 8. Quotes 모듈 구현
@@ -308,7 +308,7 @@
     - fast-check로 임의의 계약 항목 목록에 대해 totalAmount === Σ(unitPrice × quantity) 검증
     - **Validates: Requirements 8.6**
 
-- [ ] 10. Checkpoint - 핵심 영업 도메인 검증
+- [x] 10. Checkpoint - 핵심 영업 도메인 검증
   - 모든 테스트 통과 확인, 사용자에게 질문이 있으면 확인.
 
 - [x] 11. Consults 모듈 구현
@@ -388,11 +388,11 @@
     - `src/modules/deliveries/dto/create-delivery.dto.ts`: customerName(필수), scheduledDate(필수), contractId(선택), address, notes
     - _Requirements: 17.1, 17.2, 17.3_
 
-- [ ] 18. Checkpoint - 운영 도메인 검증
+- [x] 18. Checkpoint - 운영 도메인 검증
   - 모든 테스트 통과 확인, 사용자에게 질문이 있으면 확인.
 
-- [ ] 19. HQ 모듈 구현
-  - [ ] 19.1 HqService 및 HqController 구현
+- [x] 19. HQ 모듈 구현
+  - [x] 19.1 HqService 및 HqController 구현
     - `src/modules/hq/hq.service.ts`:
     - 공지사항 CRUD: create/findAll/update/remove (HQ_ADMIN for CUD, Authenticated for read)
     - 이벤트 CRUD: create/findAll/update (HQ_ADMIN for CUD, Authenticated for read)
@@ -407,8 +407,8 @@
     - DTO: CreateNoticeDto, CreateEventDto, CreateDeliveryRuleDto 등
     - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5_
 
-- [ ] 20. Insights 모듈 구현
-  - [ ] 20.1 InsightsService 및 InsightsController 구현
+- [x] 20. Insights 모듈 구현
+  - [x] 20.1 InsightsService 및 InsightsController 구현
     - `src/modules/insights/insights.service.ts`:
     - `getStoreComparison(query)`: 매장 간 KPI 비교 (monthly_metrics 기반, 기간/지역 필터)
     - `getKpiTrends(query)`: KPI 트렌드 (월별 추이)
@@ -419,8 +419,8 @@
     - `GET /insights/collections/analysis` (@Roles(HQ_ADMIN)): 컬렉션 분석
     - _Requirements: 19.1, 19.2_
 
-- [ ] 21. Export 모듈 구현
-  - [ ] 21.1 ExportService 및 ExportController 구현
+- [x] 21. Export 모듈 구현
+  - [x] 21.1 ExportService 및 ExportController 구현
     - `src/modules/export/export.service.ts`:
     - `exportStoreResource(storeId, resource, format)`: 매장 리소스 데이터를 CSV/Excel로 변환 (quotes, contracts, consults, staffs 등)
     - `exportHqResource(resource, format)`: HQ 데이터 내보내기
@@ -429,8 +429,8 @@
     - `GET /hq/export/:resource` (@Roles(HQ_ADMIN)): HQ 데이터 내보내기
     - _Requirements: 19.3_
 
-- [ ] 22. AppModule 통합 및 전역 설정 완성
-  - [ ] 22.1 AppModule에 모든 모듈 등록 및 전역 설정 완성
+- [x] 22. AppModule 통합 및 전역 설정 완성
+  - [x] 22.1 AppModule에 모든 모듈 등록 및 전역 설정 완성
     - `src/app.module.ts`: 모든 도메인 모듈 imports 등록
     - APP_GUARD: JwtAuthGuard 전역 등록
     - APP_INTERCEPTOR: AuditLogInterceptor 전역 등록
@@ -438,8 +438,8 @@
     - `src/main.ts`: 글로벌 ValidationPipe (whitelist, forbidNonWhitelisted, transform), CORS, 포트 설정
     - _Requirements: 2.1, 10.1, 20.7_
 
-- [ ] 23. Prisma Seed 스크립트 작성
-  - [ ] 23.1 초기 데이터 시드 구현
+- [x] 23. Prisma Seed 스크립트 작성
+  - [x] 23.1 초기 데이터 시드 구현
     - `prisma/seed.ts`:
     - HQ_ADMIN 계정 생성 (bcrypt 해시 비밀번호)
     - 테스트용 매장 2~3개 생성
@@ -448,7 +448,7 @@
     - `package.json`에 prisma seed 스크립트 등록
     - _Requirements: 20.6, 20.7_
 
-- [ ] 24. Final Checkpoint - 전체 시스템 통합 검증
+- [x] 24. Final Checkpoint - 전체 시스템 통합 검증
   - 모든 테스트 통과 확인, 사용자에게 질문이 있으면 확인.
 
 ## Notes

@@ -201,8 +201,177 @@ async function main() {
     });
   }
 
+  // 6. 테스트용 매장 3개 생성
+  const testStores = [
+    { name: '테스트 매장 1', code: 'STORE01', channel: 'ROAD' as ChannelType, showOnLogin: true, displayName: '테스트 매장 1' },
+    { name: '테스트 매장 2', code: 'STORE02', channel: 'DEPARTMENT' as ChannelType, showOnLogin: true, displayName: '테스트 매장 2' },
+    { name: '테스트 매장 3', code: 'STORE03', channel: 'MALL' as ChannelType, showOnLogin: true, displayName: '테스트 매장 3' },
+  ];
+
+  const createdTestStores = [];
+  for (const s of testStores) {
+    const store = await prisma.store.upsert({
+      where: { code: s.code },
+      update: { showOnLogin: s.showOnLogin, displayName: s.displayName },
+      create: {
+        name: s.name,
+        code: s.code,
+        defaultChannel: s.channel,
+        showOnLogin: s.showOnLogin,
+        displayName: s.displayName,
+        isActive: true,
+      },
+    });
+    createdTestStores.push(store);
+  }
+  console.log(`Created/updated ${createdTestStores.length} test stores`);
+
+  // 7. STORE_MANAGER 계정 생성 + MANAGE 권한
+  const managerPasswordHash = await bcrypt.hash('manager1234', 10);
+  const manager = await prisma.user.upsert({
+    where: { username: 'manager01' },
+    update: {},
+    create: {
+      username: 'manager01',
+      passwordHash: managerPasswordHash,
+      name: '매장 매니저',
+      email: 'manager@alloso.com',
+      role: Role.STORE_MANAGER,
+      isActive: true,
+    },
+  });
+
+  for (const store of createdTestStores) {
+    await prisma.userStorePermission.upsert({
+      where: { userId_storeId: { userId: manager.id, storeId: store.id } },
+      update: {},
+      create: { userId: manager.id, storeId: store.id, permissionLevel: PermissionLevel.MANAGE },
+    });
+  }
+  console.log(`Created STORE_MANAGER: ${manager.username} with MANAGE permissions`);
+
+  // 8. STORE_STAFF 계정 생성 + VIEW 권한
+  const staffPasswordHash = await bcrypt.hash('staff1234', 10);
+  const staff = await prisma.user.upsert({
+    where: { username: 'staff01' },
+    update: {},
+    create: {
+      username: 'staff01',
+      passwordHash: staffPasswordHash,
+      name: '매장 직원',
+      email: 'staff@alloso.com',
+      role: Role.STORE_STAFF,
+      isActive: true,
+    },
+  });
+
+  for (const store of createdTestStores) {
+    await prisma.userStorePermission.upsert({
+      where: { userId_storeId: { userId: staff.id, storeId: store.id } },
+      update: {},
+      create: { userId: staff.id, storeId: store.id, permissionLevel: PermissionLevel.VIEW },
+    });
+  }
+  console.log(`Created STORE_STAFF: ${staff.username} with VIEW permissions`);
+
+  // 9. 샘플 상담/견적/계약 데이터 (각 테스트 매장별 2~3건)
+  const today = new Date();
+  const sampleCustomers = [
+    { name: '김철수', phone: '010-1234-5678' },
+    { name: '이영희', phone: '010-2345-6789' },
+    { name: '박민준', phone: '010-3456-7890' },
+  ];
+
+  for (let storeIdx = 0; storeIdx < createdTestStores.length; storeIdx++) {
+    const store = createdTestStores[storeIdx];
+    const storeNum = storeIdx + 1;
+
+    for (let i = 0; i < sampleCustomers.length; i++) {
+      const customer = sampleCustomers[i];
+      const consultDate = new Date(today);
+      consultDate.setDate(today.getDate() - i * 3);
+
+      // 상담 생성
+      const consult = await prisma.consult.upsert({
+        where: { id: `00000000-0000-0000-${String(storeNum).padStart(4, '0')}-${String(i + 1).padStart(12, '0')}` },
+        update: {},
+        create: {
+          id: `00000000-0000-0000-${String(storeNum).padStart(4, '0')}-${String(i + 1).padStart(12, '0')}`,
+          storeId: store.id,
+          customerName: customer.name,
+          customerPhone: customer.phone,
+          notes: `${store.name} 샘플 상담 ${i + 1}`,
+          status: i === 0 ? 'COMPLETED' : i === 1 ? 'IN_PROGRESS' : 'PENDING',
+          consultDate,
+          createdBy: admin.id,
+        },
+      });
+
+      // 견적 생성
+      const quoteNumber = `Q-S${storeNum}-${String(i + 1).padStart(3, '0')}`;
+      const quote = await prisma.quote.upsert({
+        where: { quoteNumber },
+        update: {},
+        create: {
+          storeId: store.id,
+          consultId: consult.id,
+          quoteNumber,
+          customerName: customer.name,
+          totalAmount: (i + 1) * 1500000,
+          status: i === 0 ? 'ACCEPTED' : i === 1 ? 'SENT' : 'DRAFT',
+          validUntil: new Date(today.getFullYear(), today.getMonth() + 1, 0),
+          createdBy: admin.id,
+          items: {
+            create: {
+              productName: `샘플 제품 ${i + 1}`,
+              collection: ['SATI', 'QUERENCIA', 'MILO'][i] as any,
+              quantity: 1,
+              unitPrice: (i + 1) * 1500000,
+              totalPrice: (i + 1) * 1500000,
+            },
+          },
+        },
+      });
+
+      // 첫 번째 견적은 계약으로 전환
+      if (i === 0) {
+        const contractNumber = `C-S${storeNum}-001`;
+        await prisma.contract.upsert({
+          where: { contractNumber },
+          update: {},
+          create: {
+            storeId: store.id,
+            quoteId: quote.id,
+            contractNumber,
+            customerName: customer.name,
+            totalAmount: 1500000,
+            status: 'ACTIVE',
+            contractDate: consultDate,
+            deliveryDate: new Date(today.getFullYear(), today.getMonth() + 1, 15),
+            notes: `${store.name} 샘플 계약`,
+            createdBy: admin.id,
+            items: {
+              create: {
+                productName: '샘플 제품 1',
+                collection: 'SATI',
+                quantity: 1,
+                unitPrice: 1500000,
+                totalPrice: 1500000,
+              },
+            },
+          },
+        });
+      }
+    }
+    console.log(`Created sample data for ${store.name}`);
+  }
+
   console.log('\n=== Seed Complete ===');
   console.log(`Total stores: ${allStores.length}`);
+  console.log('Test accounts:');
+  console.log('  HQ_ADMIN   - username: admin    / password: admin1234');
+  console.log('  STORE_MANAGER - username: manager01 / password: manager1234');
+  console.log('  STORE_STAFF   - username: staff01   / password: staff1234');
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(() => prisma.$disconnect());

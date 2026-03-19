@@ -1,42 +1,27 @@
-﻿import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../services/api";
 
 type NoticePriority = "NORMAL" | "IMPORTANT" | "URGENT";
+type DeliveryStatus = "available" | "unavailable" | "partial";
 
-interface HqEvent {
-  id: string;
-  title: string;
-  description?: string;
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-}
-
-interface HqNotice {
-  id: string;
-  title: string;
-  content: string;
-  priority: NoticePriority;
-  isPublished: boolean;
-}
+interface HqEvent { id: string; title: string; description?: string; startDate: string; endDate: string; isActive: boolean; }
+interface HqNotice { id: string; title: string; content: string; priority: NoticePriority; isPublished: boolean; createdAt: string; }
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
+const MONTHS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 
-function getKrHolidays(year: number): Set<string> {
-  return new Set([
-    `${year}-01-01`, `${year}-03-01`, `${year}-05-05`,
-    `${year}-06-06`, `${year}-08-15`, `${year}-10-03`,
-    `${year}-10-09`, `${year}-12-25`,
-  ]);
-}
+const KR_HOLIDAYS: Record<string, string> = {
+  "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날",
+  "06-06": "현충일", "08-15": "광복절", "10-03": "개천절",
+  "10-09": "한글날", "12-25": "크리스마스",
+};
 
-function getDayStatus(dateStr: string, holidays: Set<string>): string {
-  const d = new Date(dateStr);
-  const dow = d.getDay();
-  if (holidays.has(dateStr)) return "holiday";
-  if (dow === 0 || dow === 6) return "weekend";
-  return "normal";
+function pad2(n: number) { return String(n).padStart(2, "0"); }
+
+function isHoliday(year: number, month: number, day: number): boolean {
+  const key = `${pad2(month)}-${pad2(day)}`;
+  return key in KR_HOLIDAYS;
 }
 
 function buildCalendar(year: number, month: number): (number | null)[] {
@@ -48,233 +33,435 @@ function buildCalendar(year: number, month: number): (number | null)[] {
   return cells;
 }
 
-function pad2(n: number) { return String(n).padStart(2, "0"); }
+function getDefaultStatus(year: number, month: number, day: number): DeliveryStatus {
+  const dow = new Date(year, month - 1, day).getDay();
+  if (dow === 0 || isHoliday(year, month, day)) return "unavailable";
+  return "available";
+}
+
+const DELIVERY_COLORS: Record<DeliveryStatus, { bg: string; border: string; label: string; text: string }> = {
+  available: { bg: "rgba(16,185,129,0.15)", border: "#10b981", label: "가능", text: "#6ee7b7" },
+  unavailable: { bg: "rgba(239,68,68,0.15)", border: "#ef4444", label: "불가", text: "#fca5a5" },
+  partial: { bg: "rgba(245,158,11,0.15)", border: "#f59e0b", label: "일부", text: "#fcd34d" },
+};
 
 export default function HqGoalEventTab() {
   const qc = useQueryClient();
   const now = new Date();
+
+  // ── 전사 이슈 캘린더 상태 ──
   const [calYear, setCalYear] = useState(now.getFullYear());
   const [calMonth, setCalMonth] = useState(now.getMonth() + 1);
-  const holidays = getKrHolidays(calYear);
-
-  const { data: events = [] } = useQuery<HqEvent[]>({
-    queryKey: ["hq-events"],
-    queryFn: () => api.get("/hq/events").then((r) => r.data),
-  });
-
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
   const [eventForm, setEventForm] = useState({ title: "", description: "", startDate: "", endDate: "" });
+  const [showHistory, setShowHistory] = useState(false);
 
-  const createEvent = useMutation({
-    mutationFn: (dto: typeof eventForm) => api.post("/hq/events", dto).then((r) => r.data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["hq-events"] });
-      setShowEventForm(false);
-      setEventForm({ title: "", description: "", startDate: "", endDate: "" });
-    },
+  // ── 납기 캘린더 상태 ──
+  const [delYear, setDelYear] = useState(now.getFullYear());
+  const [delMonth, setDelMonth] = useState(now.getMonth() + 1);
+  const [delStatuses, setDelStatuses] = useState<Record<string, Record<number, DeliveryStatus>>>({});
+  const [delSyncing, setDelSyncing] = useState(false);
+
+  // ── 사업부 목표 상태 ──
+  const [goalYear, setGoalYear] = useState(now.getFullYear());
+  const [goalInputs, setGoalInputs] = useState<Record<string, { targetAmount: string; targetContracts: string; targetQuotes: string }>>({});
+  const [goalSaving, setGoalSaving] = useState(false);
+
+  // ── 데이터 쿼리 ──
+  const { data: events = [] } = useQuery<HqEvent[]>({
+    queryKey: ["hq-events"],
+    queryFn: () => api.get("/hq/events").then(r => r.data),
   });
 
+  const { data: notices = [] } = useQuery<HqNotice[]>({
+    queryKey: ["hq-notices"],
+    queryFn: () => api.get("/hq/notices").then(r => r.data),
+  });
+
+  const delKey = `${delYear}-${pad2(delMonth)}`;
+  const { data: savedDelCal } = useQuery({
+    queryKey: ["delivery-calendar-hq", delYear, delMonth],
+    queryFn: () => api.get(`/hq/delivery-calendar?year=${delYear}&month=${delMonth}`).then(r => r.data).catch(() => ({})),
+  });
+
+  const { data: annualGoals, refetch: refetchGoals } = useQuery({
+    queryKey: ["hq-annual-goals", goalYear],
+    queryFn: () => api.get(`/hq/goals/annual?year=${goalYear}`).then(r => r.data).catch(() => ({})),
+    onSuccess: (data: any) => {
+      const inputs: typeof goalInputs = {};
+      for (let m = 1; m <= 12; m++) {
+        const k = `${goalYear}-${pad2(m)}`;
+        inputs[k] = {
+          targetAmount: data[k]?.targetAmount ? String(data[k].targetAmount) : "",
+          targetContracts: data[k]?.targetContracts ? String(data[k].targetContracts) : "",
+          targetQuotes: data[k]?.targetQuotes ? String(data[k].targetQuotes) : "",
+        };
+      }
+      setGoalInputs(inputs);
+    },
+  } as any);
+
+  // 납기 캘린더 현재 상태 (저장값 우선, 없으면 기본값)
+  const currentDelStatuses = useMemo(() => {
+    const saved = (savedDelCal ?? {}) as Record<number, string>;
+    const result: Record<number, DeliveryStatus> = {};
+    const daysInMonth = new Date(delYear, delMonth, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      result[d] = (delStatuses[delKey]?.[d] ?? saved[d] ?? getDefaultStatus(delYear, delMonth, d)) as DeliveryStatus;
+    }
+    return result;
+  }, [delYear, delMonth, delStatuses, savedDelCal, delKey]);
+
+  // ── 이벤트 뮤테이션 ──
+  const createEvent = useMutation({
+    mutationFn: (dto: typeof eventForm) => api.post("/hq/events", dto).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["hq-events"] }); setShowEventForm(false); setEventForm({ title: "", description: "", startDate: "", endDate: "" }); },
+  });
   const deleteEvent = useMutation({
     mutationFn: (id: string) => api.delete(`/hq/events/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["hq-events"] }),
   });
 
-  const { data: notices = [] } = useQuery<HqNotice[]>({
-    queryKey: ["hq-notices"],
-    queryFn: () => api.get("/hq/notices").then((r) => r.data),
-  });
-
-  const [showNoticeForm, setShowNoticeForm] = useState(false);
-  const [noticeForm, setNoticeForm] = useState<{ title: string; content: string; priority: NoticePriority }>({
-    title: "", content: "", priority: "NORMAL",
-  });
-
-  const createNotice = useMutation({
-    mutationFn: (dto: typeof noticeForm) =>
-      api.post("/hq/notices", { ...dto, isPublished: true }).then((r) => r.data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["hq-notices"] });
-      setShowNoticeForm(false);
-      setNoticeForm({ title: "", content: "", priority: "NORMAL" });
-    },
-  });
-
-  const deleteNotice = useMutation({
-    mutationFn: (id: string) => api.delete(`/hq/notices/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["hq-notices"] }),
-  });
+  // 캘린더 날짜별 이벤트 매핑
+  const eventDates = useMemo(() => {
+    const map: Record<string, HqEvent[]> = {};
+    events.forEach(ev => {
+      const start = new Date(ev.startDate);
+      const end = new Date(ev.endDate);
+      for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const k = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+        if (!map[k]) map[k] = [];
+        map[k].push(ev);
+      }
+    });
+    return map;
+  }, [events]);
 
   const cells = buildCalendar(calYear, calMonth);
+  const todayStr = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
+  const selectedEvents = selectedDay ? (eventDates[selectedDay] ?? []) : [];
 
-  const eventDates = new Set<string>();
-  events.forEach((ev) => {
-    const start = new Date(ev.startDate);
-    const end = new Date(ev.endDate);
-    for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      eventDates.add(`${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`);
+  // 납기 캘린더 3개월 (당월 앞뒤 1개월)
+  const delMonths = useMemo(() => {
+    const result = [];
+    for (let offset = -1; offset <= 1; offset++) {
+      let y = delYear, m = delMonth + offset;
+      if (m < 1) { y--; m += 12; }
+      if (m > 12) { y++; m -= 12; }
+      result.push({ year: y, month: m });
     }
-  });
+    return result;
+  }, [delYear, delMonth]);
 
-  const prevMonth = () => {
-    if (calMonth === 1) { setCalYear((y) => y - 1); setCalMonth(12); }
-    else setCalMonth((m) => m - 1);
-  };
-  const nextMonth = () => {
-    if (calMonth === 12) { setCalYear((y) => y + 1); setCalMonth(1); }
-    else setCalMonth((m) => m + 1);
-  };
+  function toggleDelStatus(day: number) {
+    const cur = currentDelStatuses[day];
+    const next: DeliveryStatus = cur === "available" ? "unavailable" : cur === "unavailable" ? "partial" : "available";
+    setDelStatuses(prev => ({
+      ...prev,
+      [delKey]: { ...(prev[delKey] ?? {}), [day]: next },
+    }));
+  }
 
-  const todayStr = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+  async function syncDeliveryCalendar() {
+    setDelSyncing(true);
+    try {
+      for (const { year, month } of delMonths) {
+        const k = `${year}-${pad2(month)}`;
+        const daysInMonth = new Date(year, month, 0).getDate();
+        const statuses: Record<number, string> = {};
+        for (let d = 1; d <= daysInMonth; d++) {
+          statuses[d] = (delStatuses[k]?.[d] ?? getDefaultStatus(year, month, d));
+        }
+        await api.post("/hq/delivery-calendar", { year, month, dayStatuses: statuses });
+      }
+      qc.invalidateQueries({ queryKey: ["delivery-calendar"] });
+      alert("납기 캘린더가 전 매장에 동기화되었습니다.");
+    } finally {
+      setDelSyncing(false);
+    }
+  }
+
+  async function saveAndSyncGoals() {
+    setGoalSaving(true);
+    try {
+      const goals: Record<string, any> = {};
+      for (let m = 1; m <= 12; m++) {
+        const k = `${goalYear}-${pad2(m)}`;
+        const inp = goalInputs[k];
+        if (inp?.targetAmount || inp?.targetContracts || inp?.targetQuotes) {
+          goals[k] = {
+            targetAmount: Number(inp.targetAmount || 0),
+            targetContracts: Number(inp.targetContracts || 0),
+            targetQuotes: Number(inp.targetQuotes || 0),
+          };
+        }
+      }
+      await api.post("/hq/goals/annual", { year: goalYear, goals });
+      await refetchGoals();
+      alert("사업부 목표가 저장 및 전 매장에 동기화되었습니다.");
+    } finally {
+      setGoalSaving(false);
+    }
+  }
+
   const priorityLabel = (p: NoticePriority) => p === "URGENT" ? "긴급" : p === "IMPORTANT" ? "중요" : "일반";
   const priorityColor = (p: NoticePriority) => p === "URGENT" ? "#ef4444" : p === "IMPORTANT" ? "#f59e0b" : "#6b7280";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-      <section className="card">
-        <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>월별 목표 관리</h2>
-        <p style={{ color: "#6b7280", fontSize: 14 }}>
-          각 매장의 월별 목표(매출액·계약건수·상담건수)는 <strong>매장별 현황</strong> 탭에서 매장을 선택한 후 설정할 수 있습니다.
-        </p>
-      </section>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
-      <section className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700 }}>행사 캘린더</h2>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button className="btn-secondary" onClick={prevMonth}>‹</button>
-            <span style={{ fontWeight: 600, minWidth: 90, textAlign: "center" }}>{calYear}년 {calMonth}월</span>
-            <button className="btn-secondary" onClick={nextMonth}>›</button>
-            <button className="btn-primary" onClick={() => setShowEventForm(true)}>+ 행사 추가</button>
+      {/* ── 전사 이슈 캘린더 + 이력 ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16 }}>
+        <div className="glass" style={{ padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>전사 이슈 캘린더</div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button className="btn-secondary" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => { if (calMonth === 1) { setCalYear(y => y-1); setCalMonth(12); } else setCalMonth(m => m-1); }}>‹</button>
+              <span style={{ fontWeight: 600, fontSize: 13, minWidth: 80, textAlign: "center" }}>{calYear}년 {calMonth}월</span>
+              <button className="btn-secondary" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => { if (calMonth === 12) { setCalYear(y => y+1); setCalMonth(1); } else setCalMonth(m => m+1); }}>›</button>
+              <button className="btn-primary" style={{ fontSize: 12, padding: "6px 12px" }} onClick={() => setShowEventForm(true)}>+ 이슈 추가</button>
+            </div>
           </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+            {DOW.map((d, i) => <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 600, padding: "4px 0", color: i===0?"#f87171":i===6?"#60a5fa":"var(--text-muted)" }}>{d}</div>)}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+            {cells.map((day, i) => {
+              if (!day) return <div key={i} />;
+              const dateStr = `${calYear}-${pad2(calMonth)}-${pad2(day)}`;
+              const evs = eventDates[dateStr] ?? [];
+              const isToday = dateStr === todayStr;
+              const isSelected = selectedDay === dateStr;
+              const dow = new Date(calYear, calMonth-1, day).getDay();
+              return (
+                <div key={i} onClick={() => setSelectedDay(isSelected ? null : dateStr)} style={{
+                  padding: "6px 2px", textAlign: "center", borderRadius: 8, cursor: "pointer",
+                  background: isSelected ? "rgba(200,149,108,0.25)" : evs.length > 0 ? "rgba(245,158,11,0.1)" : "rgba(255,255,255,0.02)",
+                  border: isSelected ? "1px solid var(--accent)" : isToday ? "1px solid rgba(59,130,246,0.5)" : "1px solid transparent",
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: dow===0?"#f87171":dow===6?"#60a5fa":"#fff" }}>{day}</div>
+                  {evs.length > 0 && <div style={{ display: "flex", justifyContent: "center", gap: 2, marginTop: 2 }}>
+                    {evs.slice(0,3).map((_, ei) => <span key={ei} style={{ width: 4, height: 4, borderRadius: "50%", background: "#fcd34d", display: "inline-block" }} />)}
+                  </div>}
+                </div>
+              );
+            })}
+          </div>
+          {showEventForm && (
+            <div style={{ marginTop: 16, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>새 이슈 등록</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ gridColumn: "1/-1" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>이슈명</div>
+                  <input className="input" value={eventForm.title} onChange={e => setEventForm(f => ({...f, title: e.target.value}))} placeholder="이슈 제목" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>시작일</div>
+                  <input className="input" type="date" value={eventForm.startDate} onChange={e => setEventForm(f => ({...f, startDate: e.target.value}))} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>종료일</div>
+                  <input className="input" type="date" value={eventForm.endDate} onChange={e => setEventForm(f => ({...f, endDate: e.target.value}))} />
+                </div>
+                <div style={{ gridColumn: "1/-1" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>설명</div>
+                  <input className="input" value={eventForm.description} onChange={e => setEventForm(f => ({...f, description: e.target.value}))} placeholder="설명 (선택)" />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                <button className="btn-primary" style={{ fontSize: 12 }} onClick={() => createEvent.mutate(eventForm)} disabled={!eventForm.title || !eventForm.startDate}>등록</button>
+                <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => setShowEventForm(false)}>취소</button>
+              </div>
+            </div>
+          )}
+          {selectedDay && selectedEvents.length > 0 && (
+            <div style={{ marginTop: 12, padding: 12, background: "rgba(245,158,11,0.08)", borderRadius: 8, borderLeft: "3px solid #f59e0b" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>{selectedDay} 이슈</div>
+              {selectedEvents.map(ev => (
+                <div key={ev.id} style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>• {ev.title} {ev.description && `— ${ev.description}`}</div>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 16 }}>
-          {DOW.map((d) => (
-            <div key={d} style={{ textAlign: "center", fontSize: 12, fontWeight: 600, color: "#6b7280", padding: "4px 0" }}>{d}</div>
-          ))}
-          {cells.map((day, i) => {
-            if (!day) return <div key={i} />;
-            const dateStr = `${calYear}-${pad2(calMonth)}-${pad2(day)}`;
-            const status = getDayStatus(dateStr, holidays);
-            const hasEvent = eventDates.has(dateStr);
-            const isToday = dateStr === todayStr;
+        {/* 이력 패널 */}
+        <div className="glass" style={{ padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>이슈 이력</div>
+            <button className="btn-ghost" style={{ fontSize: 11, padding: "4px 8px" }} onClick={() => setShowHistory(h => !h)}>
+              {showHistory ? "접기" : "전체보기"}
+            </button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: showHistory ? "none" : 400, overflowY: "auto" }}>
+            {events.length === 0 && <div style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>이력 없음</div>}
+            {events.map(ev => (
+              <div key={ev.id} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "10px 12px", borderLeft: "3px solid #f59e0b" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>{ev.title}</div>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{ev.startDate?.slice(0,10)} ~ {ev.endDate?.slice(0,10)}</div>
+                    {ev.description && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{ev.description}</div>}
+                  </div>
+                  <button onClick={() => deleteEvent.mutate(ev.id)} style={{ fontSize: 10, color: "#ef4444", background: "none", border: "none", cursor: "pointer", padding: "2px 6px", flexShrink: 0 }}>삭제</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── 납기 일정 관리 (3개월) ── */}
+      <div className="glass" style={{ padding: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>납기 일정 관리</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>당월 기준 앞뒤 1개월 · 클릭으로 상태 변경 · 일요일/공휴일 기본 불가</div>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 12, fontSize: 11 }}>
+              {(Object.entries(DELIVERY_COLORS) as [DeliveryStatus, typeof DELIVERY_COLORS[DeliveryStatus]][]).map(([k, v]) => (
+                <span key={k} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: v.bg, border: `1px solid ${v.border}`, display: "inline-block" }} />
+                  <span style={{ color: "var(--text-muted)" }}>{v.label}</span>
+                </span>
+              ))}
+            </div>
+            <button className="btn-primary" style={{ fontSize: 12, padding: "6px 14px" }} onClick={syncDeliveryCalendar} disabled={delSyncing}>
+              {delSyncing ? "동기화 중..." : "전 매장 동기화"}
+            </button>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center" }}>
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>기준 월:</span>
+          <select value={delYear} onChange={e => setDelYear(Number(e.target.value))} style={{ fontSize: 12, padding: "4px 8px" }}>
+            {[2024,2025,2026,2027].map(y => <option key={y} value={y}>{y}년</option>)}
+          </select>
+          <select value={delMonth} onChange={e => setDelMonth(Number(e.target.value))} style={{ fontSize: 12, padding: "4px 8px" }}>
+            {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+          </select>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+          {delMonths.map(({ year, month }) => {
+            const k = `${year}-${pad2(month)}`;
+            const cells2 = buildCalendar(year, month);
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const statuses: Record<number, DeliveryStatus> = {};
+            for (let d = 1; d <= daysInMonth; d++) {
+              statuses[d] = (delStatuses[k]?.[d] ?? (savedDelCal && k === delKey ? (savedDelCal as any)[d] : undefined) ?? getDefaultStatus(year, month, d)) as DeliveryStatus;
+            }
+            const isCurrent = year === delYear && month === delMonth;
             return (
-              <div key={i} style={{
-                padding: "6px 4px", textAlign: "center", borderRadius: 6, fontSize: 13,
-                background: isToday ? "#eff6ff" : hasEvent ? "#fef3c7" : "transparent",
-                color: status === "holiday" ? "#ef4444" : status === "weekend" ? "#6b7280" : "#111827",
-                border: isToday ? "1px solid #3b82f6" : "1px solid transparent",
-              }}>
-                {day}
-                {hasEvent && <span style={{ display: "block", width: 5, height: 5, borderRadius: "50%", background: "#f59e0b", margin: "2px auto 0" }} />}
+              <div key={k} style={{ background: isCurrent ? "rgba(200,149,108,0.06)" : "rgba(255,255,255,0.02)", borderRadius: 10, padding: 14, border: isCurrent ? "1px solid rgba(200,149,108,0.3)" : "1px solid var(--glass-border)" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, textAlign: "center" }}>{year}년 {month}월 {isCurrent && <span style={{ fontSize: 10, color: "var(--accent)", marginLeft: 4 }}>당월</span>}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1, marginBottom: 2 }}>
+                  {DOW.map((d, i) => <div key={d} style={{ textAlign: "center", fontSize: 9, color: i===0?"#f87171":i===6?"#60a5fa":"var(--text-muted)", padding: "2px 0" }}>{d}</div>)}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1 }}>
+                  {cells2.map((day, idx) => {
+                    if (!day) return <div key={idx} />;
+                    const st = statuses[day];
+                    const dStyle = DELIVERY_COLORS[st];
+                    const dow = new Date(year, month-1, day).getDay();
+                    return (
+                      <div key={idx} onClick={() => {
+                        const cur = statuses[day];
+                        const next: DeliveryStatus = cur === "available" ? "unavailable" : cur === "unavailable" ? "partial" : "available";
+                        setDelStatuses(prev => ({ ...prev, [k]: { ...(prev[k] ?? {}), [day]: next } }));
+                      }} style={{
+                        borderRadius: 4, padding: "4px 1px", textAlign: "center", cursor: "pointer",
+                        background: dStyle.bg, border: `1px solid ${dStyle.border}20`,
+                        transition: "all 0.1s",
+                      }}>
+                        <div style={{ fontSize: 9, fontWeight: 600, color: dow===0?"#f87171":dow===6?"#60a5fa":"#fff" }}>{day}</div>
+                        <div style={{ fontSize: 8, color: dStyle.text }}>{dStyle.label}</div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
         </div>
+      </div>
 
-        {showEventForm && (
-          <div style={{ background: "#f9fafb", borderRadius: 8, padding: 16, marginBottom: 16 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>새 행사 등록</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ fontSize: 12, color: "#6b7280" }}>행사명</label>
-                <input className="input" value={eventForm.title}
-                  onChange={(e) => setEventForm((f) => ({ ...f, title: e.target.value }))} placeholder="행사명 입력" />
-              </div>
-              <div>
-                <label style={{ fontSize: 12, color: "#6b7280" }}>시작일</label>
-                <input className="input" type="date" value={eventForm.startDate}
-                  onChange={(e) => setEventForm((f) => ({ ...f, startDate: e.target.value }))} />
-              </div>
-              <div>
-                <label style={{ fontSize: 12, color: "#6b7280" }}>종료일</label>
-                <input className="input" type="date" value={eventForm.endDate}
-                  onChange={(e) => setEventForm((f) => ({ ...f, endDate: e.target.value }))} />
-              </div>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ fontSize: 12, color: "#6b7280" }}>설명 (선택)</label>
-                <input className="input" value={eventForm.description}
-                  onChange={(e) => setEventForm((f) => ({ ...f, description: e.target.value }))} placeholder="행사 설명" />
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <button className="btn-primary" onClick={() => createEvent.mutate(eventForm)} disabled={!eventForm.title || !eventForm.startDate}>등록</button>
-              <button className="btn-secondary" onClick={() => setShowEventForm(false)}>취소</button>
-            </div>
-          </div>
-        )}
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {events.length === 0 && <p style={{ color: "#9ca3af", fontSize: 14 }}>등록된 행사가 없습니다.</p>}
-          {events.map((ev) => (
-            <div key={ev.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#f9fafb", borderRadius: 8 }}>
-              <div>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>{ev.title}</span>
-                <span style={{ marginLeft: 12, fontSize: 12, color: "#6b7280" }}>{ev.startDate?.slice(0, 10)} ~ {ev.endDate?.slice(0, 10)}</span>
-                {ev.description && <span style={{ marginLeft: 8, fontSize: 12, color: "#9ca3af" }}>{ev.description}</span>}
-              </div>
-              <button className="btn-danger-sm" onClick={() => deleteEvent.mutate(ev.id)}>삭제</button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="card">
+      {/* ── 사업부 월간 목표 설정 ── */}
+      <div className="glass" style={{ padding: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700 }}>공지사항</h2>
-          <button className="btn-primary" onClick={() => setShowNoticeForm(true)}>+ 공지 작성</button>
-        </div>
-
-        {showNoticeForm && (
-          <div style={{ background: "#f9fafb", borderRadius: 8, padding: 16, marginBottom: 16 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>새 공지 작성</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div>
-                <label style={{ fontSize: 12, color: "#6b7280" }}>제목</label>
-                <input className="input" value={noticeForm.title}
-                  onChange={(e) => setNoticeForm((f) => ({ ...f, title: e.target.value }))} placeholder="공지 제목" />
-              </div>
-              <div>
-                <label style={{ fontSize: 12, color: "#6b7280" }}>내용</label>
-                <textarea className="input" rows={3} value={noticeForm.content}
-                  onChange={(e) => setNoticeForm((f) => ({ ...f, content: e.target.value }))}
-                  placeholder="공지 내용" style={{ resize: "vertical" }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 12, color: "#6b7280" }}>중요도</label>
-                <select className="input" value={noticeForm.priority}
-                  onChange={(e) => setNoticeForm((f) => ({ ...f, priority: e.target.value as NoticePriority }))}>
-                  <option value="NORMAL">일반</option>
-                  <option value="IMPORTANT">중요</option>
-                  <option value="URGENT">긴급</option>
-                </select>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <button className="btn-primary" onClick={() => createNotice.mutate(noticeForm)} disabled={!noticeForm.title || !noticeForm.content}>등록</button>
-              <button className="btn-secondary" onClick={() => setShowNoticeForm(false)}>취소</button>
-            </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>사업부 월간 목표 설정</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>연간 목표를 한번에 입력하고 전 매장에 동기화</div>
           </div>
-        )}
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <select value={goalYear} onChange={e => { setGoalYear(Number(e.target.value)); setGoalInputs({}); }} style={{ fontSize: 12, padding: "4px 8px" }}>
+              {[2024,2025,2026,2027].map(y => <option key={y} value={y}>{y}년</option>)}
+            </select>
+            <button className="btn-primary" style={{ fontSize: 12, padding: "6px 14px" }} onClick={saveAndSyncGoals} disabled={goalSaving}>
+              {goalSaving ? "저장 중..." : "저장 및 전 매장 동기화"}
+            </button>
+          </div>
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--glass-border)" }}>
+                <th style={{ padding: "8px 12px", textAlign: "left", color: "var(--text-muted)", fontWeight: 600 }}>월</th>
+                <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>매출 목표 (원)</th>
+                <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>계약 목표 (건)</th>
+                <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>견적 목표 (건)</th>
+                <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>저장값</th>
+              </tr>
+            </thead>
+            <tbody>
+              {MONTHS.map((label, idx) => {
+                const m = idx + 1;
+                const k = `${goalYear}-${pad2(m)}`;
+                const inp = goalInputs[k] ?? { targetAmount: "", targetContracts: "", targetQuotes: "" };
+                const saved = (annualGoals as any)?.[k];
+                return (
+                  <tr key={k} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <td style={{ padding: "8px 12px", fontWeight: 600, color: m === now.getMonth()+1 && goalYear === now.getFullYear() ? "var(--accent)" : "#fff" }}>{label}</td>
+                    <td style={{ padding: "6px 12px" }}>
+                      <input value={inp.targetAmount} onChange={e => setGoalInputs(prev => ({ ...prev, [k]: { ...inp, targetAmount: e.target.value } }))}
+                        placeholder="0" style={{ width: "100%", textAlign: "right", background: "rgba(255,255,255,0.05)", border: "1px solid var(--glass-border)", borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 12 }} />
+                    </td>
+                    <td style={{ padding: "6px 12px" }}>
+                      <input value={inp.targetContracts} onChange={e => setGoalInputs(prev => ({ ...prev, [k]: { ...inp, targetContracts: e.target.value } }))}
+                        placeholder="0" style={{ width: "100%", textAlign: "right", background: "rgba(255,255,255,0.05)", border: "1px solid var(--glass-border)", borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 12 }} />
+                    </td>
+                    <td style={{ padding: "6px 12px" }}>
+                      <input value={inp.targetQuotes} onChange={e => setGoalInputs(prev => ({ ...prev, [k]: { ...inp, targetQuotes: e.target.value } }))}
+                        placeholder="0" style={{ width: "100%", textAlign: "right", background: "rgba(255,255,255,0.05)", border: "1px solid var(--glass-border)", borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 12 }} />
+                    </td>
+                    <td style={{ padding: "8px 12px", textAlign: "right", fontSize: 11, color: "var(--text-muted)" }}>
+                      {saved ? `${Number(saved.targetAmount).toLocaleString()}원 / ${saved.targetContracts}건` : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
+      {/* ── 공지사항 ── */}
+      <div className="glass" style={{ padding: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>공지사항</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {notices.length === 0 && <p style={{ color: "#9ca3af", fontSize: 14 }}>등록된 공지가 없습니다.</p>}
-          {notices.map((n) => (
-            <div key={n.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "12px 14px", background: "#f9fafb", borderRadius: 8 }}>
+          {notices.length === 0 && <div style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>등록된 공지 없음</div>}
+          {notices.map(n => (
+            <div key={n.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "12px 14px", background: "rgba(255,255,255,0.04)", borderRadius: 8 }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: priorityColor(n.priority), background: `${priorityColor(n.priority)}18`, padding: "2px 8px", borderRadius: 99 }}>
-                    {priorityLabel(n.priority)}
-                  </span>
-                  <span style={{ fontWeight: 600, fontSize: 14 }}>{n.title}</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: priorityColor(n.priority), background: `${priorityColor(n.priority)}20`, padding: "2px 8px", borderRadius: 99 }}>{priorityLabel(n.priority)}</span>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>{n.title}</span>
                 </div>
-                <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>{n.content}</p>
+                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{n.content}</div>
               </div>
-              <button className="btn-danger-sm" onClick={() => deleteNotice.mutate(n.id)} style={{ flexShrink: 0, marginLeft: 12 }}>삭제</button>
             </div>
           ))}
         </div>
-      </section>
+      </div>
     </div>
   );
 }
