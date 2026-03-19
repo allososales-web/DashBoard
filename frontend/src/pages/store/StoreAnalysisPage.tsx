@@ -19,20 +19,7 @@ const PERIOD_OPTIONS: { value: PeriodType; label: string }[] = [
   { value: 'custom', label: '커스텀' },
 ];
 
-const LOCAL_NEWS = [
-  { title: '강남구 가구 인테리어 트렌드 2026 — 미니멀 & 내추럴 소재 급부상', date: '2026-03-10', summary: '강남 지역 인테리어 시장에서 천연 소재 소파와 미니멀 디자인 수요가 전년 대비 32% 증가.' },
-  { title: '분당·판교 신규 아파트 입주 물량 증가로 가구 수요 확대 전망', date: '2026-02-28', summary: '2026년 상반기 판교·분당 신규 입주 단지 1만 2천 세대 예정. 소파·거실 가구 수요 동반 상승 기대.' },
-  { title: '소파 시장 프리미엄화 가속 — 200만원 이상 제품 비중 40% 돌파', date: '2026-02-15', summary: '국내 소파 시장에서 200만원 이상 프리미엄 제품 비중이 처음으로 40%를 넘어섰다.' },
-  { title: '가구업계 온라인 전환 가속 — 오프라인 쇼룸 체험 중요성 재부각', date: '2026-01-20', summary: '온라인 가구 구매 증가에도 불구하고 소파 등 대형 가구는 직접 체험 후 구매 비율 78%로 오프라인 쇼룸 경쟁력 유지.' },
-];
 
-function getPeriodMonths(period: PeriodType, year: number, month: number): number {
-  if (period === 'month') return 1;
-  if (period === '3m') return 3;
-  if (period === '6m') return 6;
-  if (period === 'year') return 12;
-  return 1;
-}
 
 export default function StoreAnalysisPage() {
   const { storeId } = useParams<{ storeId: string }>();
@@ -58,7 +45,6 @@ export default function StoreAnalysisPage() {
   const allStores: any[] = allMetrics ?? [];
   const totalAmount = allStores.reduce((sum: number, s: any) => sum + Number(s.contractAmount ?? 0), 0);
   const myAmount = Number(m?.contractAmount ?? 0);
-  const myShare = totalAmount > 0 ? ((myAmount / totalAmount) * 100).toFixed(1) : '0.0';
   const avgOrderValue = (m?.contractCount ?? 0) > 0 ? Math.round(myAmount / (m?.contractCount ?? 1)) : 0;
 
   const breakdown = (m?.collectionBreakdown ?? {}) as Record<string, any>;

@@ -243,7 +243,7 @@ export default function LoginPage() {
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, letterSpacing: '0.08em' }}>선택된 매장</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', minHeight: 28 }}>—</div>
             <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, opacity: 0.3 }}>
-              {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((d, i) => (
+              {Array.from({ length: 12 }).map((_, i) => (
                 <div key={i} style={{ height: 56, borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--glass-border)' }} />
               ))}
             </div>
@@ -342,7 +342,7 @@ export default function LoginPage() {
   );
 }
 
-function StoreRow({ id, name, channel, isSelected, onClick }: {
+function StoreRow({ name, channel, isSelected, onClick }: {
   id: string; name: string; channel: string; isSelected: boolean; onClick: () => void;
 }) {
   const color = CHANNEL_COLORS[channel] ?? '#6b7280';
