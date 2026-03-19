@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { HqService } from './hq.service';
 import { Roles } from '../../common/decorators';
 import { Role } from '../../common/types/roles.enum';
@@ -71,5 +71,41 @@ export class HqController {
   @Roles(Role.HQ_ADMIN)
   updateDeliveryRule(@Param('id') id: string, @Body() dto: any) {
     return this.hqService.updateDeliveryRule(id, dto);
+  }
+
+  // Delivery Calendar (납기 캘린더)
+  @Get('delivery-calendar')
+  getDeliveryCalendar(@Query('year') year: string, @Query('month') month: string) {
+    return this.hqService.getDeliveryCalendar(Number(year), Number(month));
+  }
+
+  @Post('delivery-calendar')
+  @Roles(Role.HQ_ADMIN)
+  upsertDeliveryCalendar(@Body() dto: { year: number; month: number; dayStatuses: Record<number, string> }) {
+    return this.hqService.upsertDeliveryCalendar(dto.year, dto.month, dto.dayStatuses);
+  }
+
+  // HQ Goal (사업부 목표)
+  @Get('goal')
+  getHqGoal(@Query('year') year: string, @Query('month') month: string) {
+    return this.hqService.getHqGoal(Number(year), Number(month));
+  }
+
+  @Post('goal')
+  @Roles(Role.HQ_ADMIN)
+  upsertHqGoal(@Body() dto: { year: number; month: number; goal: { targetAmount: number; targetContracts: number; targetQuotes: number } }) {
+    return this.hqService.upsertHqGoal(dto.year, dto.month, dto.goal);
+  }
+
+  // HQ Goals bulk (연간 일괄 저장)
+  @Get('goals/annual')
+  getAnnualGoals(@Query('year') year: string) {
+    return this.hqService.getAnnualGoals(Number(year));
+  }
+
+  @Post('goals/annual')
+  @Roles(Role.HQ_ADMIN)
+  upsertAnnualGoals(@Body() dto: { year: number; goals: Record<string, { targetAmount: number; targetContracts: number; targetQuotes: number }> }) {
+    return this.hqService.upsertAnnualGoals(dto.year, dto.goals);
   }
 }

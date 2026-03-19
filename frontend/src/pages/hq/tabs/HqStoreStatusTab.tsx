@@ -1,37 +1,95 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../services/api';
 
-const PERIOD_OPTIONS = [
-  { value: 'month', label: '이달', month: 0 },
-  { value: 'q1', label: '1분기', month: 3 },
-  { value: 'q2', label: '2분기', month: 6 },
-  { value: 'q3', label: '3분기', month: 9 },
-  { value: 'q4', label: '4분기', month: 12 },
-  { value: 'h1', label: '상반기', month: 6 },
-  { value: 'h2', label: '하반기', month: 12 },
-  { value: 'year', label: '연간', month: 12 },
+const COLLECTION_LABELS: Record<string, string> = {
+  SATI: 'SATI', QUERENCIA: 'QUERENCIA', MILO: 'MILO',
+  BONUM: 'BONUM', VARD: 'VARD', ELMER: 'ELMER',
+};
+
+type PeriodType = 'month' | 'q1' | 'q2' | 'q3' | 'q4' | 'h1' | 'h2' | 'year' | 'custom';
+
+const PERIOD_OPTIONS: { value: PeriodType; label: string }[] = [
+  { value: 'month', label: '이달' },
+  { value: 'q1', label: '1분기' },
+  { value: 'q2', label: '2분기' },
+  { value: 'q3', label: '3분기' },
+  { value: 'q4', label: '4분기' },
+  { value: 'h1', label: '상반기' },
+  { value: 'h2', label: '하반기' },
+  { value: 'year', label: '연간' },
+  { value: 'custom', label: '커스텀' },
 ];
+
+function getPeriodMonth(period: PeriodType, now: Date): number {
+  if (period === 'month') return now.getMonth() + 1;
+  if (period === 'q1') return 3;
+  if (period === 'q2') return 6;
+  if (period === 'q3') return 9;
+  if (period === 'q4' || period === 'h2' || period === 'year') return 12;
+  if (period === 'h1') return 6;
+  return now.getMonth() + 1;
+}
 
 export default function HqStoreStatusTab() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
-  const [period, setPeriod] = useState('month');
+  const [period, setPeriod] = useState<PeriodType>('month');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
 
-  const primaryMonth = period === 'month'
-    ? now.getMonth() + 1
-    : (PERIOD_OPTIONS.find((o) => o.value === period)?.month ?? now.getMonth() + 1);
+  const primaryMonth = period === 'custom' ? now.getMonth() + 1 : getPeriodMonth(period, now);
 
   const { data: allMetrics = [], isLoading } = useQuery({
     queryKey: ['hq-all-metrics', year, primaryMonth],
-    queryFn: () => api.get(`/dashboard/all?year=${year}&month=${primaryMonth}`).then((r) => r.data).catch(() => []),
+    queryFn: () => api.get(`/dashboard/all?year=${year}&month=${primaryMonth}`).then(r => r.data).catch(() => []),
   });
 
-  const stores = allMetrics as any[];
+  // 운영 매장 목록 (관리자 탭 기준)
+  const { data: storeList = [] } = useQuery({
+    queryKey: ['store-list'],
+    queryFn: () => api.get('/auth/stores').then(r => r.data).catch(() => []),
+  });
+
+  const operatingStoreIds = useMemo(() => {
+    return new Set((storeList as any[]).filter((s: any) => s.isOperating !== false).map((s: any) => s.id));
+  }, [storeList]);
+
+  // 운영 매장만 필터
+  const stores = useMemo(() => {
+    const all = allMetrics as any[];
+    return all.filter((s: any) => operatingStoreIds.size === 0 || operatingStoreIds.has(s.storeId));
+  }, [allMetrics, operatingStoreIds]);
+
   const totalAmount = stores.reduce((s: number, st: any) => s + Number(st.contractAmount ?? 0), 0);
-  const sortedByAmount = [...stores].sort((a, b) => Number(b.contractAmount) - Number(a.contractAmount));
-  const sortedByQuote = [...stores].sort((a, b) => (b.quoteCount ?? 0) - (a.quoteCount ?? 0));
-  const sortedByConsult = [...stores].sort((a, b) => (b.consultCount ?? 0) - (a.consultCount ?? 0));
+  const sortedByAmount = useMemo(() => [...stores].sort((a, b) => Number(b.contractAmount) - Number(a.contractAmount)), [stores]);
+  const sortedByQuote = useMemo(() => [...stores].sort((a, b) => (b.quoteCount ?? 0) - (a.quoteCount ?? 0)), [stores]);
+  const sortedByConsult = useMemo(() => [...stores].sort((a, b) => (b.consultCount ?? 0) - (a.consultCount ?? 0)), [stores]);
+
+  // 품목별 TOP (컬렉션별 집계)
+  const collectionTotals = useMemo(() => {
+    const totals: Record<string, { amount: number; count: number }> = {};
+    stores.forEach((s: any) => {
+      const bd = s.collectionBreakdown ?? {};
+      Object.entries(bd).forEach(([col, val]: [string, any]) => {
+        if (!totals[col]) totals[col] = { amount: 0, count: 0 };
+        totals[col].amount += Number(val?.totalAmount ?? 0);
+        totals[col].count += Number(val?.contractCount ?? 0);
+      });
+    });
+    return totals;
+  }, [stores]);
+
+  const sortedByColAmount = useMemo(() =>
+    Object.entries(collectionTotals).sort((a, b) => b[1].amount - a[1].amount),
+    [collectionTotals]
+  );
+  const sortedByColCount = useMemo(() =>
+    Object.entries(collectionTotals).sort((a, b) => b[1].count - a[1].count),
+    [collectionTotals]
+  );
+  const totalColAmount = sortedByColAmount.reduce((s, [, v]) => s + v.amount, 0);
+  const totalColCount = sortedByColCount.reduce((s, [, v]) => s + v.count, 0);
 
   const insights: string[] = [];
   if (stores.length >= 2) {
@@ -40,36 +98,49 @@ export default function HqStoreStatusTab() {
     if (top) insights.push(`매출 1위 ${top.storeName ?? '매장'}이 전체의 ${totalAmount > 0 ? ((Number(top.contractAmount) / totalAmount) * 100).toFixed(1) : 0}%를 차지합니다.`);
     if (bottom && bottom.storeName !== top?.storeName) insights.push(`${bottom.storeName ?? '하위 매장'}의 매출이 가장 낮습니다. 원인 파악이 필요합니다.`);
     const quoteTop = sortedByQuote[0];
-    const amountRank = sortedByAmount.findIndex((s) => s.storeId === quoteTop?.storeId) + 1;
+    const amountRank = sortedByAmount.findIndex((s: any) => s.storeId === quoteTop?.storeId) + 1;
     if (quoteTop && amountRank > 2) insights.push(`${quoteTop.storeName ?? '매장'}은 견적 1위이나 매출 ${amountRank}위입니다. 구매 전환율 개선이 필요합니다.`);
   }
 
   return (
     <div>
+      {/* 기간 설정 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-        <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={{ width: 100 }}>
-          {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}년</option>)}
+        <select value={year} onChange={e => setYear(Number(e.target.value))} style={{ width: 90, fontSize: 13 }}>
+          {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}년</option>)}
         </select>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {PERIOD_OPTIONS.map((opt) => (
-            <button key={opt.value} className={`btn ${period === opt.value ? 'btn-primary' : 'btn-ghost'}`} style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => setPeriod(opt.value)}>
+          {PERIOD_OPTIONS.map(opt => (
+            <button key={opt.value} onClick={() => setPeriod(opt.value)}
+              style={{ fontSize: 11, padding: '5px 10px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: period === opt.value ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+                color: period === opt.value ? '#fff' : 'var(--text-muted)', fontWeight: period === opt.value ? 700 : 400 }}>
               {opt.label}
             </button>
           ))}
         </div>
+        {period === 'custom' && (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }} />
+            <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>~</span>
+            <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }} />
+          </div>
+        )}
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 4 }}>운영 매장 {stores.length}개</span>
       </div>
 
       {isLoading ? (
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>불러오는 중...</div>
       ) : (
         <>
-          {/* TOP 순위 */}
+          {/* 매장별 TOP */}
+          <div style={{ marginBottom: 8, fontSize: 13, fontWeight: 700, color: 'var(--text-muted)' }}>매장별 TOP</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
             {[
               { title: '판매 TOP', data: sortedByAmount, valueKey: 'contractAmount', format: (v: any) => `${Number(v).toLocaleString()}원` },
               { title: '견적 TOP', data: sortedByQuote, valueKey: 'quoteCount', format: (v: any) => `${v ?? 0}건` },
               { title: '상담 TOP', data: sortedByConsult, valueKey: 'consultCount', format: (v: any) => `${v ?? 0}건` },
-            ].map((ranking) => (
+            ].map(ranking => (
               <div key={ranking.title} className="glass" style={{ padding: 20 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>{ranking.title}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -78,6 +149,33 @@ export default function HqStoreStatusTab() {
                       <span style={{ fontSize: 14, fontWeight: 800, color: i === 0 ? '#fcd34d' : i === 1 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)', minWidth: 20 }}>{i + 1}</span>
                       <span style={{ flex: 1, fontSize: 12 }}>{s.storeName ?? `매장 ${i + 1}`}</span>
                       <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{ranking.format(s[ranking.valueKey])}</span>
+                    </div>
+                  ))}
+                  {ranking.data.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>데이터 없음</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 품목별 TOP */}
+          <div style={{ marginBottom: 8, fontSize: 13, fontWeight: 700, color: 'var(--text-muted)' }}>품목별 TOP</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+            {[
+              { title: '품목별 매출 TOP', data: sortedByColAmount, format: (v: any) => `${Number(v.amount).toLocaleString()}원`, pct: (v: any) => totalColAmount > 0 ? ((v.amount / totalColAmount) * 100).toFixed(1) : '0.0' },
+              { title: '품목별 판매건수 TOP', data: sortedByColCount, format: (v: any) => `${v.count}건`, pct: (v: any) => totalColCount > 0 ? ((v.count / totalColCount) * 100).toFixed(1) : '0.0' },
+              { title: '품목별 평균단가 TOP', data: [...sortedByColAmount].sort((a, b) => (b[1].count > 0 ? b[1].amount/b[1].count : 0) - (a[1].count > 0 ? a[1].amount/a[1].count : 0)), format: (v: any) => v.count > 0 ? `${Math.round(v.amount/v.count/10000)}만원` : '-', pct: () => '' },
+            ].map(ranking => (
+              <div key={ranking.title} className="glass" style={{ padding: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>{ranking.title}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {ranking.data.slice(0, 5).map(([col, val], i) => (
+                    <div key={col} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: i === 0 ? '#fcd34d' : i === 1 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)', minWidth: 20 }}>{i + 1}</span>
+                      <span style={{ flex: 1, fontSize: 12 }}>{COLLECTION_LABELS[col] ?? col}</span>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{ranking.format(val)}</div>
+                        {ranking.pct(val) && <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{ranking.pct(val)}%</div>}
+                      </div>
                     </div>
                   ))}
                   {ranking.data.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>데이터 없음</div>}
@@ -102,7 +200,7 @@ export default function HqStoreStatusTab() {
 
           {/* 매장별 핵심 수치 */}
           <div className="glass" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', fontSize: 13, fontWeight: 700 }}>매장별 핵심 수치</div>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', fontSize: 13, fontWeight: 700 }}>매장별 핵심 수치 (운영 매장)</div>
             <table>
               <thead>
                 <tr>

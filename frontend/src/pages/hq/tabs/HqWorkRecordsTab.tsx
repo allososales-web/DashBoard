@@ -155,21 +155,7 @@ export default function HqWorkRecordsTab() {
             </div>
           )}
 
-          {/* 전체 매장 요약 */}
-          <div style={{ marginTop: 24, borderTop: '1px solid var(--glass-border)', paddingTop: 16 }}>
-            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 12 }}>이달 매장별 총 근무</div>
-            {stores.map((s: any) => {
-              const totalWorkDays = (s.staffs ?? []).reduce((sum: number, staff: any) => {
-                return sum + (staff.workRecords ?? []).filter((r: any) => !r.isOff).length;
-              }, 0);
-              return (
-                <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 13 }}>
-                  <span>{s.name}</span>
-                  <span style={{ color: 'var(--accent)' }}>{totalWorkDays}일</span>
-                </div>
-              );
-            })}
-          </div>
+
         </div>
       </div>
     </div>

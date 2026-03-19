@@ -231,10 +231,16 @@ export class AuthService {
   async getStoreList() {
     const stores = await this.prisma.store.findMany({
       where: { isActive: true, showOnLogin: true },
-      select: { id: true, name: true, code: true, region: true, displayName: true },
+      select: { id: true, name: true, code: true, region: true, displayName: true, defaultChannel: true },
       orderBy: { name: 'asc' },
     });
-    return stores.map((s) => ({ ...s, name: s.displayName ?? s.name }));
+    return stores.map((s) => ({
+      id: s.id,
+      name: s.displayName ?? s.name,
+      code: s.code,
+      region: s.region,
+      defaultChannel: s.defaultChannel ?? 'ROAD',
+    }));
   }
 
   async pinLogin(dto: PinLoginDto) {

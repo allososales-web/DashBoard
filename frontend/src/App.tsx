@@ -7,6 +7,8 @@ import HqLayout from './components/HqLayout';
 import DashboardPage from './pages/store/DashboardPage';
 import StoreAnalysisPage from './pages/store/StoreAnalysisPage';
 import StoreIssuePage from './pages/store/StoreIssuePage';
+import StoreDashboardDeliveryWorkTab from './pages/store/StoreDashboardDeliveryWorkTab';
+import StoreMetricsInputPage from './pages/store/StoreMetricsInputPage';
 import HqDashboardPage from './pages/hq/HqDashboardPage';
 
 const queryClient = new QueryClient({
@@ -41,6 +43,8 @@ export default function App() {
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="analysis" element={<StoreAnalysisPage />} />
               <Route path="store-issue" element={<StoreIssuePage />} />
+              <Route path="delivery-work" element={<StoreDashboardDeliveryWorkTab />} />
+              <Route path="metrics-input" element={<StoreMetricsInputPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

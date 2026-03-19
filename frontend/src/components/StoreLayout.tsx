@@ -5,6 +5,8 @@ const navItems = [
   { to: 'dashboard', label: '대시보드', icon: '◈' },
   { to: 'analysis', label: '매장 분석', icon: '📊' },
   { to: 'store-issue', label: '매장 이슈', icon: '⚡' },
+  { to: 'delivery-work', label: '납기 & 근무', icon: '📦' },
+  { to: 'metrics-input', label: '수치 입력', icon: '✏️' },
 ];
 
 export default function StoreLayout() {
