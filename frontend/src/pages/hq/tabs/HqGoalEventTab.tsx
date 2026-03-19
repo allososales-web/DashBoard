@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../services/api";
 
@@ -88,19 +88,24 @@ export default function HqGoalEventTab() {
   const { data: annualGoals, refetch: refetchGoals } = useQuery({
     queryKey: ["hq-annual-goals", goalYear],
     queryFn: () => api.get(`/hq/goals/annual?year=${goalYear}`).then(r => r.data).catch(() => ({})),
-    onSuccess: (data: any) => {
-      const inputs: typeof goalInputs = {};
-      for (let m = 1; m <= 12; m++) {
-        const k = `${goalYear}-${pad2(m)}`;
-        inputs[k] = {
-          targetAmount: data[k]?.targetAmount ? String(data[k].targetAmount) : "",
-          targetContracts: data[k]?.targetContracts ? String(data[k].targetContracts) : "",
-          targetQuotes: data[k]?.targetQuotes ? String(data[k].targetQuotes) : "",
-        };
-      }
-      setGoalInputs(inputs);
-    },
-  } as any);
+  });
+
+  // annualGoals 로드 시 goalInputs 초기화
+  useEffect(() => {
+    if (!annualGoals) return;
+    const inputs: typeof goalInputs = {};
+    for (let m = 1; m <= 12; m++) {
+      const k = `${goalYear}-${pad2(m)}`;
+      const d = (annualGoals as any)[k];
+      inputs[k] = {
+        targetAmount: d?.targetAmount ? String(d.targetAmount) : "",
+        targetContracts: d?.targetContracts ? String(d.targetContracts) : "",
+        targetQuotes: d?.targetQuotes ? String(d.targetQuotes) : "",
+      };
+    }
+    setGoalInputs(inputs);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [annualGoals]);
 
   // 납기 캘린더 현재 상태 (저장값 우선, 없으면 기본값)
   const currentDelStatuses = useMemo(() => {

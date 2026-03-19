@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../services/api';
+import { useMetricsStores } from '../../../hooks/useMetricsStores';
 
 const COLLECTION_LABELS: Record<string, string> = {
   SATI: 'SATI', QUERENCIA: 'QUERENCIA', MILO: 'MILO',
@@ -37,6 +38,7 @@ export default function HqStoreStatusTab() {
   const [period, setPeriod] = useState<PeriodType>('month');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  const { includedIds, count: metricsCount } = useMetricsStores();
 
   const primaryMonth = period === 'custom' ? now.getMonth() + 1 : getPeriodMonth(period, now);
 
@@ -45,21 +47,12 @@ export default function HqStoreStatusTab() {
     queryFn: () => api.get(`/dashboard/all?year=${year}&month=${primaryMonth}`).then(r => r.data).catch(() => []),
   });
 
-  // 운영 매장 목록 (관리자 탭 기준)
-  const { data: storeList = [] } = useQuery({
-    queryKey: ['store-list'],
-    queryFn: () => api.get('/auth/stores').then(r => r.data).catch(() => []),
-  });
-
-  const operatingStoreIds = useMemo(() => {
-    return new Set((storeList as any[]).filter((s: any) => s.isOperating !== false).map((s: any) => s.id));
-  }, [storeList]);
-
-  // 운영 매장만 필터
+  // 실적 반영 매장만 필터 (설정된 경우), 없으면 showOnLogin 매장 전체
   const stores = useMemo(() => {
     const all = allMetrics as any[];
-    return all.filter((s: any) => operatingStoreIds.size === 0 || operatingStoreIds.has(s.storeId));
-  }, [allMetrics, operatingStoreIds]);
+    if (metricsCount > 0) return all.filter((s: any) => includedIds.has(s.storeId));
+    return all;
+  }, [allMetrics, includedIds, metricsCount]);
 
   const totalAmount = stores.reduce((s: number, st: any) => s + Number(st.contractAmount ?? 0), 0);
   const sortedByAmount = useMemo(() => [...stores].sort((a, b) => Number(b.contractAmount) - Number(a.contractAmount)), [stores]);
