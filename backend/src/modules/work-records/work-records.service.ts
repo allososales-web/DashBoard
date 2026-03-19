@@ -64,7 +64,7 @@ export class WorkRecordsService {
   // HQ: 전 매장 근무 현황
   async getAllStoresMonthly(year: number, month: number) {
     const stores = await (this.prisma as any).store.findMany({
-      where: { isActive: true },
+      where: { isActive: true, showOnLogin: true },
       orderBy: { code: 'asc' },
     });
 

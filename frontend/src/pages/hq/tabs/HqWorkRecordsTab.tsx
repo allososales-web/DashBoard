@@ -15,7 +15,7 @@ export default function HqWorkRecordsTab() {
     queryFn: () => api.get(`/work-records/hq/all?year=${year}&month=${month}`).then((r) => r.data),
   });
 
-  const stores = storesData as any[];
+  const stores = (storesData as any[]).filter((s: any) => s.showOnLogin !== false);
 
   // 일자별 총 근무 인원 계산
   const daysInMonth = new Date(year, month, 0).getDate();

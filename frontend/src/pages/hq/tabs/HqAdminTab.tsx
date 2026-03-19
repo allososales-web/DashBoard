@@ -41,6 +41,7 @@ function StoreOpsSection() {
   const [createModal, setCreateModal] = useState(false);
   const [newStore, setNewStore] = useState({ name: '', code: '', defaultChannel: 'ROAD', showOnLogin: false, displayName: '' });
   const [msg, setMsg] = useState('');
+  const [showHidden, setShowHidden] = useState(false);
 
   const { data: stores = [], isLoading } = useQuery({
     queryKey: ['admin-stores'],
@@ -64,10 +65,14 @@ function StoreOpsSection() {
 
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3000); };
 
-  const filtered = stores.filter((s: any) =>
+  const searchFiltered = (stores as any[]).filter((s: any) =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
     s.code.toLowerCase().includes(search.toLowerCase())
   );
+  // 운영 매장(showOnLogin=true) 우선, 그 안에서 defaultChannel 기준 정렬
+  const activeStores = searchFiltered.filter((s: any) => s.showOnLogin);
+  const hiddenStores = searchFiltered.filter((s: any) => !s.showOnLogin);
+  const filtered = showHidden ? [...activeStores, ...hiddenStores] : activeStores;
 
   const startEdit = (s: any) => {
     setEditingId(s.id);
@@ -83,7 +88,13 @@ function StoreOpsSection() {
       )}
       <div className="glass" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 600 }}>매장별 운영 현황 ({stores.length}개)</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontWeight: 600 }}>매장별 운영 현황</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              운영 {(stores as any[]).filter((s: any) => s.showOnLogin).length}개
+              {hiddenStores.length > 0 && ` / 숨김 ${hiddenStores.length}개`}
+            </span>
+          </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
               placeholder="매장명 / 코드 검색"
@@ -91,6 +102,11 @@ function StoreOpsSection() {
               onChange={(e) => setSearch(e.target.value)}
               style={{ width: 180, fontSize: 12, padding: '6px 10px' }}
             />
+            {hiddenStores.length > 0 && (
+              <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setShowHidden(!showHidden)}>
+                {showHidden ? '숨김 매장 접기 ▲' : `숨김 매장 보기 (${hiddenStores.length}) ▼`}
+              </button>
+            )}
             <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={() => setCreateModal(true)}>
               + 신규 매장
             </button>
@@ -114,7 +130,7 @@ function StoreOpsSection() {
               </thead>
               <tbody>
                 {filtered.map((s: any) => (
-                  <tr key={s.id}>
+                  <tr key={s.id} style={!s.showOnLogin ? { opacity: 0.55 } : undefined}>
                     {editingId === s.id ? (
                       <>
                         <td style={{ fontWeight: 500 }}>{s.name}</td>
@@ -313,6 +329,9 @@ export default function HqAdminTab() {
         </div>
       )}
 
+      {/* 매장별 운영 현황 */}
+      <StoreOpsSection />
+
       {/* 본사 PIN */}
       <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: changingOwnPin ? 16 : 0 }}>
@@ -399,9 +418,6 @@ export default function HqAdminTab() {
           </tbody>
         </table>
       </div>
-
-      {/* 매장별 운영 현황 */}
-      <StoreOpsSection />
 
       {/* 개별 초기화 모달 */}
       {resetTarget && (
