@@ -2,8 +2,9 @@ import { IsString, IsBoolean, IsOptional, IsDateString, IsNumber, IsArray, Valid
 import { Type } from 'class-transformer';
 
 export class BulkWorkRecordItemDto {
+  @IsOptional()
   @IsString()
-  staffName: string;
+  staffName?: string;
 
   @IsDateString()
   workDate: string;

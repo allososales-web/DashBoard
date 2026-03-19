@@ -78,22 +78,31 @@ export default function StoreDashboardDeliveryWorkTab() {
   }
 
   async function saveSchedule() {
+    if (!storeId) { alert('매장 정보를 찾을 수 없습니다.'); return; }
     setSaving(true);
     try {
-      const records = workEntries.map(e => ({
-        storeId,
-        staffName: staffList.find(s => s.id === e.staffId)?.name ?? '',
-        workDate: `${year}-${pad2(month)}-${pad2(e.day)}`,
-        isOff: e.isOff,
-        workTypeName: e.typeId ? (workTypes.find(t => t.id === e.typeId)?.name ?? '') : '',
-        startTime: e.typeId ? (workTypes.find(t => t.id === e.typeId)?.startTime ?? '') : '',
-        endTime: e.typeId ? (workTypes.find(t => t.id === e.typeId)?.endTime ?? '') : '',
-      }));
+      const records = workEntries
+        .map(e => {
+          const staffName = staffList.find(s => s.id === e.staffId)?.name ?? '';
+          if (!staffName.trim()) return null;
+          const wt = e.typeId ? workTypes.find(t => t.id === e.typeId) : null;
+          return {
+            staffName: staffName.trim(),
+            workDate: `${year}-${pad2(month)}-${pad2(e.day)}`,
+            isOff: e.isOff,
+            workTypeName: wt?.name ?? '',
+            startTime: wt?.startTime ?? '',
+            endTime: wt?.endTime ?? '',
+          };
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null);
+
       await api.post('/work-records/bulk', { storeId, year, month, records });
       qc.invalidateQueries({ queryKey: ['hq-work-records'] });
       alert('근무 스케줄이 저장되었습니다.');
-    } catch {
-      alert('저장 중 오류가 발생했습니다.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      alert(msg ? `저장 오류: ${Array.isArray(msg) ? msg.join(', ') : msg}` : '저장 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }
