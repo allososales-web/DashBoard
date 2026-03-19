@@ -366,7 +366,7 @@ export default function HqAdminTab() {
   if (isLoading) return <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>불러오는 중...</div>;
 
   const hq = data?.hq;
-  const stores = data?.stores ?? [];
+  const stores = (data?.stores ?? []).filter((s: any) => s.showOnLogin !== false);
 
   return (
     <div style={{ maxWidth: 900 }}>
@@ -411,6 +411,7 @@ export default function HqAdminTab() {
       <div className="glass" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
         <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontWeight: 600 }}>매장 PIN 관리</span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>운영중 매장만 표시</span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setShowPins(!showPins)}>{showPins ? '🙈 PIN 숨기기' : '👁 PIN 보기'}</button>
             <button className="btn btn-danger" style={{ fontSize: 12 }} onClick={() => { if (confirm('전체 매장 PIN을 초기화하시겠습니까?')) resetAllMutation.mutate(); }} disabled={resetAllMutation.isPending}>전체 초기화</button>

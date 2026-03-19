@@ -7,20 +7,7 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 function pad2(n: number) { return String(n).padStart(2, '0'); }
 
-function getDefaultDeliveryStatus(year: number, month: number, day: number): string {
-  const dow = new Date(year, month - 1, day).getDay();
-  const KR_HOLIDAYS = ['01-01','03-01','05-05','06-06','08-15','10-03','10-09','12-25'];
-  if (dow === 0 || KR_HOLIDAYS.includes(`${pad2(month)}-${pad2(day)}`)) return 'unavailable';
-  return 'available';
-}
-
-const DELIVERY_COLORS: Record<string, { bg: string; color: string; label: string }> = {
-  available: { bg: 'rgba(16,185,129,0.15)', color: '#6ee7b7', label: '가능' },
-  unavailable: { bg: 'rgba(239,68,68,0.15)', color: '#fca5a5', label: '불가' },
-  partial: { bg: 'rgba(245,158,11,0.15)', color: '#fcd34d', label: '일부' },
-};
-
-type CalendarView = 'all' | 'store' | 'delivery';
+type CalendarView = 'all' | 'store';
 
 export default function StoreIssuePage() {
   const { storeId } = useParams<{ storeId: string }>();
@@ -50,11 +37,6 @@ export default function StoreIssuePage() {
     queryFn: () => api.get('/hq/events').then(r => r.data ?? []).catch(() => []),
   });
 
-  const { data: deliveryCalendar } = useQuery({
-    queryKey: ['delivery-calendar', year, month],
-    queryFn: () => api.get(`/hq/delivery-calendar?year=${year}&month=${month}`).then(r => r.data).catch(() => ({})),
-  });
-
   const createIssueMutation = useMutation({
     mutationFn: () => api.post('/issues', { storeId, title: newIssueTitle, description: newIssueContent, priority: newIssuePriority }),
     onSuccess: () => {
@@ -71,7 +53,6 @@ export default function StoreIssuePage() {
 
   const issueList = issues as any[];
   const eventList = hqEvents as any[];
-  const deliveryMap = (deliveryCalendar ?? {}) as Record<number, string>;
 
   const dayHasIssue = (day: number) => {
     const dateStr = `${year}-${pad2(month)}-${pad2(day)}`;
@@ -164,7 +145,7 @@ export default function StoreIssuePage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 700 }}>통합 이슈 캘린더</div>
           <div style={{ display: 'flex', gap: 4 }}>
-            {([['all','전체'],['store','점별'],['delivery','납기']] as [CalendarView, string][]).map(([v, l]) => (
+            {([['all','전체'],['store','점별']] as [CalendarView, string][]).map(([v, l]) => (
               <button key={v} onClick={() => setCalView(v)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: 'none', cursor: 'pointer',
                 background: calView === v ? 'var(--accent)' : 'rgba(255,255,255,0.08)', color: calView === v ? '#fff' : 'var(--text-muted)', fontWeight: calView === v ? 700 : 400 }}>
                 {l}
@@ -175,7 +156,6 @@ export default function StoreIssuePage() {
         <div style={{ display: 'flex', gap: 16, fontSize: 11, marginBottom: 12 }}>
           {(calView === 'all' || calView === 'store') && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f87171', display: 'inline-block' }} />점별 이슈</span>}
           {(calView === 'all') && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#fcd34d', display: 'inline-block' }} />전사 이슈</span>}
-          {(calView === 'all' || calView === 'delivery') && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(16,185,129,0.3)', border: '1px solid #6ee7b7', display: 'inline-block' }} />납기 가능</span>}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 3 }}>
           {WEEKDAYS.map((d, i) => <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, padding: '4px 0', color: i===0?'#f87171':i===6?'#60a5fa':'var(--text-muted)' }}>{d}</div>)}
@@ -188,24 +168,20 @@ export default function StoreIssuePage() {
             const isSat = dow === 6;
             const hasIssue = dayHasIssue(day);
             const hasEvent = dayHasEvent(day);
-            const status = deliveryMap[day] ?? getDefaultDeliveryStatus(year, month, day);
-            const dStyle = DELIVERY_COLORS[status] ?? DELIVERY_COLORS.available;
             const isSelected = selectedDay === day;
-            const showDelivery = calView === 'all' || calView === 'delivery';
             const showIssue = calView === 'all' || calView === 'store';
             const showEvent = calView === 'all';
             return (
               <div key={day} onClick={() => setSelectedDay(isSelected ? null : day)} style={{
                 borderRadius: 8, padding: '6px 2px', textAlign: 'center', cursor: 'pointer',
-                background: isSelected ? 'rgba(200,149,108,0.25)' : showDelivery ? dStyle.bg : 'rgba(255,255,255,0.03)',
-                border: isSelected ? '1px solid var(--accent)' : showDelivery ? `1px solid ${dStyle.color}20` : '1px solid transparent',
+                background: isSelected ? 'rgba(200,149,108,0.25)' : 'rgba(255,255,255,0.03)',
+                border: isSelected ? '1px solid var(--accent)' : '1px solid transparent',
               }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: isSun ? '#f87171' : isSat ? '#60a5fa' : '#fff' }}>{day}</div>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 2, marginTop: 2 }}>
                   {showIssue && hasIssue && <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#f87171', display: 'inline-block' }} />}
                   {showEvent && hasEvent && <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#fcd34d', display: 'inline-block' }} />}
                 </div>
-                {showDelivery && <div style={{ fontSize: 8, color: dStyle.color, marginTop: 1 }}>{dStyle.label}</div>}
               </div>
             );
           })}

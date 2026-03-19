@@ -1,4 +1,45 @@
-import { IsString, IsBoolean, IsOptional, IsDateString, IsNumber } from 'class-validator';
+import { IsString, IsBoolean, IsOptional, IsDateString, IsNumber, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class BulkWorkRecordItemDto {
+  @IsString()
+  staffName: string;
+
+  @IsDateString()
+  workDate: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isOff?: boolean;
+
+  @IsOptional()
+  @IsString()
+  workTypeName?: string;
+
+  @IsOptional()
+  @IsString()
+  startTime?: string;
+
+  @IsOptional()
+  @IsString()
+  endTime?: string;
+}
+
+export class BulkWorkRecordsDto {
+  @IsString()
+  storeId: string;
+
+  @IsNumber()
+  year: number;
+
+  @IsNumber()
+  month: number;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BulkWorkRecordItemDto)
+  records: BulkWorkRecordItemDto[];
+}
 
 export class UpsertWorkRecordDto {
   @IsString()

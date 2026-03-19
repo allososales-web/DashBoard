@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Query, Param } from '@nestjs/common';
 import { WorkRecordsService } from './work-records.service';
-import { UpsertWorkRecordDto } from './dto/work-record.dto';
+import { UpsertWorkRecordDto, BulkWorkRecordsDto } from './dto/work-record.dto';
 import { Public } from '../../common/decorators/public.decorator';
 
 @Controller('work-records')
@@ -21,6 +21,12 @@ export class WorkRecordsController {
   @Post('store/:storeId')
   async upsert(@Param('storeId') storeId: string, @Body() dto: UpsertWorkRecordDto) {
     return this.service.upsertRecord(storeId, dto);
+  }
+
+  @Public()
+  @Post('bulk')
+  async bulkSave(@Body() dto: BulkWorkRecordsDto) {
+    return this.service.bulkSave(dto);
   }
 
   @Public()

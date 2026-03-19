@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { UpsertWorkRecordDto } from './dto/work-record.dto';
+import { UpsertWorkRecordDto, BulkWorkRecordsDto } from './dto/work-record.dto';
 
 @Injectable()
 export class WorkRecordsService {
@@ -59,6 +59,38 @@ export class WorkRecordsService {
         notes: dto.notes,
       },
     });
+  }
+
+  // Bulk 저장: staffName 기반으로 staff upsert 후 workRecord 저장
+  async bulkSave(dto: BulkWorkRecordsDto) {
+    const { storeId, year, month, records } = dto;
+    // 기존 해당 월 레코드 삭제 후 재삽입
+    await (this.prisma as any).workRecord.deleteMany({ where: { storeId, year, month } });
+
+    for (const rec of records) {
+      if (!rec.staffName) continue;
+      // staff upsert by name
+      let staff = await (this.prisma as any).staff.findFirst({ where: { storeId, name: rec.staffName } });
+      if (!staff) {
+        staff = await (this.prisma as any).staff.create({ data: { storeId, name: rec.staffName, isActive: true } });
+      }
+      const workDate = new Date(rec.workDate);
+      await (this.prisma as any).workRecord.create({
+        data: {
+          storeId,
+          staffId: staff.id,
+          workDate,
+          year,
+          month,
+          isOff: rec.isOff ?? false,
+          startTime: rec.startTime ?? null,
+          endTime: rec.endTime ?? null,
+          totalHours: null,
+          notes: rec.workTypeName ?? null,
+        },
+      });
+    }
+    return { success: true, count: records.length };
   }
 
   // HQ: 전 매장 근무 현황

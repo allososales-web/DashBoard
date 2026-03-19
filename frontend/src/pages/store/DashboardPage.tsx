@@ -31,6 +31,13 @@ function buildCalendar(year: number, month: number) {
   return cells;
 }
 
+const LOCAL_NEWS = [
+  { title: '강남구 가구 인테리어 트렌드 2026 — 미니멀 & 내추럴 소재 급부상', date: '2026-03-10', summary: '강남 지역 인테리어 시장에서 천연 소재 소파와 미니멀 디자인 수요가 전년 대비 32% 증가.' },
+  { title: '분당·판교 신규 아파트 입주 물량 증가로 가구 수요 확대 전망', date: '2026-02-28', summary: '2026년 상반기 판교·분당 신규 입주 단지 1만 2천 세대 예정. 소파·거실 가구 수요 동반 상승 기대.' },
+  { title: '소파 시장 프리미엄화 가속 — 200만원 이상 제품 비중 40% 돌파', date: '2026-02-15', summary: '국내 소파 시장에서 200만원 이상 프리미엄 제품 비중이 처음으로 40%를 넘어섰다.' },
+  { title: '가구업계 온라인 전환 가속 — 오프라인 쇼룸 체험 중요성 재부각', date: '2026-01-20', summary: '온라인 가구 구매 증가에도 불구하고 소파 등 대형 가구는 직접 체험 후 구매 비율 78%로 오프라인 쇼룸 경쟁력 유지.' },
+];
+
 export default function DashboardPage() {
   const { storeId } = useParams<{ storeId: string }>();
   const now = new Date();
@@ -244,6 +251,23 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* 매장 주변 상권 & 가구 트렌드 뉴스 */}
+      <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>매장 주변 상권 & 가구 트렌드 뉴스</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>매장 주변 반경 10km 기준 · 최근 6개월</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {LOCAL_NEWS.map((news, i) => (
+            <div key={i} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px', borderLeft: '3px solid var(--accent)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{news.title}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginLeft: 12 }}>{news.date}</span>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>{news.summary}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* 납기 일정 캘린더 (3개월, 읽기 전용) */}
       <div className="glass" style={{ padding: 20 }}>

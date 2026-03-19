@@ -206,23 +206,6 @@ export default function StoreAnalysisPage() {
               </div>
             </div>
           </div>
-
-          {/* 매장 주변 상권 & 가구 트렌드 뉴스 */}
-          <div className="glass" style={{ padding: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>매장 주변 상권 & 가구 트렌드 뉴스</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>매장 주변 반경 10km 기준 · 최근 6개월</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {LOCAL_NEWS.map((news, i) => (
-                <div key={i} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px', borderLeft: '3px solid var(--accent)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{news.title}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginLeft: 12 }}>{news.date}</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>{news.summary}</div>
-                </div>
-              ))}
-            </div>
-          </div>
         </>
       )}
     </div>
