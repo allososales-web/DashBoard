@@ -184,3 +184,97 @@ tr:hover td { background: rgba(192,132,252,0.04); }
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* ── Mobile Responsive ── */
+
+/* 모바일 하단 탭바 */
+.mobile-bottom-nav {
+  display: none;
+}
+
+/* 데스크탑: 사이드바 표시, 하단 탭바 숨김 */
+.store-sidebar { display: flex; }
+.store-main { padding-bottom: 28px; }
+
+@media (max-width: 768px) {
+  body { padding-bottom: env(safe-area-inset-bottom); }
+
+  /* 사이드바 숨기고 하단 탭바 표시 */
+  .store-sidebar { display: none !important; }
+  .store-main { padding: 16px 14px 80px 14px !important; }
+
+  /* 하단 탭바 */
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 200;
+    background: rgba(13,10,20,0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--glass-border);
+    padding-bottom: env(safe-area-inset-bottom);
+    height: calc(60px + env(safe-area-inset-bottom));
+    align-items: stretch;
+  }
+  .mobile-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    text-decoration: none;
+    color: var(--text-muted);
+    font-size: 10px;
+    padding: 6px 4px;
+    transition: color 0.15s;
+    border-top: 2px solid transparent;
+  }
+  .mobile-nav-item.active {
+    color: var(--accent);
+    border-top-color: var(--accent);
+  }
+  .mobile-nav-icon { font-size: 20px; line-height: 1; }
+  .mobile-nav-label { font-size: 10px; font-weight: 500; white-space: nowrap; }
+
+  /* HQ 헤더 패딩 축소 */
+  header { padding: 0 14px !important; }
+  .hq-main { padding: 16px 14px !important; }
+
+  /* 테이블 모바일 스크롤 */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { min-width: 480px; }
+  th, td { padding: 8px 10px; font-size: 12px; }
+
+  /* 버튼 터치 영역 확보 */
+  .btn { min-height: 44px; padding: 10px 16px; }
+
+  /* 인풋 폰트 크기 (iOS 줌 방지) */
+  input, select, textarea { font-size: 16px !important; }
+
+  /* glass 카드 패딩 축소 */
+  .glass { border-radius: 12px; }
+
+  /* 탭 스크롤 */
+  .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+  .tab { white-space: nowrap; flex-shrink: 0; padding: 8px 14px; font-size: 12px; }
+
+  /* 대시보드 헤더 */
+  .dashboard-header { flex-direction: column; align-items: flex-start !important; gap: 10px; }
+  .dashboard-header-controls { flex-wrap: wrap; gap: 6px !important; }
+}
+
+/* 모바일 그리드 유틸리티 */
+@media (max-width: 640px) {
+  .grid-cols-2-mobile { grid-template-columns: 1fr 1fr !important; }
+  .grid-cols-1-mobile { grid-template-columns: 1fr !important; }
+  .hide-mobile { display: none !important; }
+  .full-width-mobile { width: 100% !important; }
+
+  /* 납기 캘린더 3열 → 1열 */
+  .delivery-calendar-grid { grid-template-columns: 1fr !important; }
+
+  /* 목표 달성 3열 → 1열 */
+  .goal-grid { grid-template-columns: 1fr !important; }
+}

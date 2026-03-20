@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useParams, useNavigate } from 'react-router-dom';
+﻿import { Outlet, NavLink, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const navItems = [
@@ -16,8 +16,8 @@ export default function StoreLayout() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Sidebar */}
-      <aside style={{
+      {/* Sidebar — 데스크탑 전용 */}
+      <aside className="store-sidebar" style={{
         width: 200,
         background: 'rgba(13,10,20,0.94)',
         backdropFilter: 'blur(20px)',
@@ -69,9 +69,23 @@ export default function StoreLayout() {
       </aside>
 
       {/* Main */}
-      <main style={{ flex: 1, padding: 28, overflowY: 'auto', minHeight: '100vh' }}>
+      <main className="store-main" style={{ flex: 1, padding: 28, overflowY: 'auto', minHeight: '100vh' }}>
         <Outlet />
       </main>
+
+      {/* 모바일 하단 탭바 */}
+      <nav className="mobile-bottom-nav">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={`/store/${storeId}/${item.to}`}
+            className={({ isActive }) => `mobile-nav-item${isActive ? ' active' : ''}`}
+          >
+            <span className="mobile-nav-icon">{item.icon}</span>
+            <span className="mobile-nav-label">{item.label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </div>
   );
 }

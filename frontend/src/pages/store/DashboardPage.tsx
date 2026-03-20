@@ -116,9 +116,9 @@ export default function DashboardPage() {
   return (
     <div>
       {/* 헤더 */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <div className="dashboard-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div style={{ fontSize: 20, fontWeight: 800 }}>대시보드</div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div className="dashboard-header-controls" style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <select value={year} onChange={e => setYear(Number(e.target.value))} style={{ width: 90, fontSize: 13 }}>
             {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}년</option>)}
           </select>
@@ -191,7 +191,7 @@ export default function DashboardPage() {
       {g && (
         <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 16 }}>목표 달성 현황</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }} className="goal-grid">
             {[
               { label: "매출 목표", rate: amountRate, current: `${myAmount.toLocaleString()}원`, target: `${Number(g.targetAmount).toLocaleString()}원` },
               { label: "계약 목표", rate: contractRate, current: `${m?.contractCount ?? 0}건`, target: `${g.targetContracts}건` },
@@ -285,7 +285,7 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }} className="delivery-calendar-grid">
           {delMonths.map(({ year: y, month: mo }, qi) => {
             const deliveryMap = (delQueries[qi].data ?? {}) as Record<number, string>;
             const cells = buildCalendar(y, mo);
