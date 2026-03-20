@@ -33,8 +33,8 @@ async function bootstrap() {
 
   // ─── Server ───
   const port = configService.get<number>('PORT', 3000);
-  await app.listen(port);
-  logger.log(`Server running on http://localhost:${port}`);
+  await app.listen(port, '0.0.0.0');
+  logger.log(`Server running on http://0.0.0.0:${port}`);
   logger.log(`CORS origin: ${corsOrigin}`);
   logger.log(`Environment: ${configService.get<string>('NODE_ENV', 'development')}`);
 }
