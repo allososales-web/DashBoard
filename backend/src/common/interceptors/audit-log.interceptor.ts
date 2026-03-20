@@ -44,9 +44,20 @@ export class AuditLogInterceptor implements NestInterceptor {
       .filter(Boolean);
     const resourceType = this.extractResourceType(pathSegments);
 
+    // 핀 로그인 유저(HQ 또는 storeId)는 users 테이블에 없으므로 감사 로그 스킵
+    if (!user?.id || user.id === 'HQ') return;
+
+    // users 테이블에 실제 존재하는지 확인
+    const userExists = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: { id: true },
+    }).catch(() => null);
+
+    if (!userExists) return;
+
     await this.prisma.auditLog.create({
       data: {
-        userId: user?.id ?? 'anonymous',
+        userId: user.id,
         storeId: storeId ?? null,
         action: request.method,
         resourceType,
