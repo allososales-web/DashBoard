@@ -96,12 +96,12 @@ export default function HqWorkRecordsTab() {
                         padding: '8px 4px',
                         textAlign: 'center',
                         cursor: 'pointer',
-                        background: isSelected ? 'rgba(200,149,108,0.25)' : hasWorkers ? 'rgba(255,255,255,0.04)' : 'transparent',
+                        background: isSelected ? 'rgba(200,149,108,0.15)' : hasWorkers ? 'rgba(124,106,247,0.04)' : 'transparent',
                         border: isSelected ? '1px solid var(--accent)' : '1px solid transparent',
                         transition: 'all 0.15s',
                       }}
                     >
-                      <div style={{ fontSize: 12, fontWeight: 600, color: isSun ? '#f87171' : isSat ? '#60a5fa' : '#fff', marginBottom: 4 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: isSun ? '#ef4444' : isSat ? '#3b82f6' : 'var(--text)', marginBottom: 4 }}>
                         {day}
                       </div>
                       {hasWorkers ? (
@@ -109,7 +109,7 @@ export default function HqWorkRecordsTab() {
                           {info.total}명
                         </div>
                       ) : (
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)' }}>-</div>
+                        <div style={{ fontSize: 10, color: 'rgba(0,0,0,0.2)' }}>-</div>
                       )}
                     </div>
                   );
@@ -134,7 +134,7 @@ export default function HqWorkRecordsTab() {
                 총 <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{selectedInfo.total}명</span> 근무
               </div>
               {selectedInfo.stores.map((s) => (
-                <div key={s.name} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px' }}>
+                <div key={s.name} style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: '12px 14px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <span style={{ fontWeight: 600, fontSize: 13 }}>{s.name}</span>
                     <span style={{ fontSize: 12, color: 'var(--accent)' }}>{s.count}명</span>

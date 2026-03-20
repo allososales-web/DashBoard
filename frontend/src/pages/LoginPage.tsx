@@ -108,18 +108,11 @@ export default function LoginPage() {
   const orderedChannels = CHANNEL_ORDER.filter((ch) => ch !== 'HQ' && grouped[ch]?.length > 0);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', background: 'var(--bg)', fontFamily: "'Pretendard', 'Apple SD Gothic Neo', sans-serif" }}>
+    <div className="login-layout" style={{ background: 'var(--bg)', fontFamily: "'Pretendard', 'Apple SD Gothic Neo', sans-serif" }}>
       {/* 좌측: 매장 목록 */}
-      <div style={{
-        flex: 1,
-        borderRight: '1px solid rgba(0,0,0,0.07)',
-        display: 'flex', flexDirection: 'column',
-        padding: '48px 40px',
-        overflowY: 'auto',
-        background: 'rgba(255,255,255,0.55)',
-      }}>
-        <div style={{ marginBottom: 40 }}>
-          <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-0.04em', background: 'linear-gradient(135deg, #7c6af7, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Alloso</div>
+      <div className="login-store-panel">
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.04em', background: 'linear-gradient(135deg, #7c6af7, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Alloso</div>
           <div style={{ fontSize: 11, letterSpacing: '0.2em', color: 'var(--text-muted)', marginTop: 4, textTransform: 'uppercase' }}>
             Store Analytics Dashboard
           </div>
@@ -161,12 +154,7 @@ export default function LoginPage() {
       </div>
 
       {/* 우측: PIN 패드 */}
-      <div style={{
-        width: 380, flexShrink: 0,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: '48px 40px',
-        background: 'rgba(255,255,255,0.70)',
-      }}>
+      <div className="login-pin-panel">
         {step === 'select' && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, letterSpacing: '0.08em' }}>선택된 매장</div>

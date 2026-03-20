@@ -117,7 +117,7 @@ export default function StoreDashboardDeliveryWorkTab() {
         <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>고객 납기 현황</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
           <input value={deliveryUrl} onChange={e => setDeliveryUrl(e.target.value)} placeholder="구글 스프레드시트 URL 입력"
-            style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 13 }} />
+            style={{ flex: 1 }} />
           <button className="btn btn-primary" style={{ fontSize: 12, padding: '8px 16px', whiteSpace: 'nowrap' }} onClick={() => setAppliedUrl(deliveryUrl)} disabled={!deliveryUrl}>
             적용
           </button>
@@ -125,7 +125,7 @@ export default function StoreDashboardDeliveryWorkTab() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>D+ 기준일:</span>
           <input type="number" value={dPlusDays} onChange={e => setDPlusDays(Number(e.target.value))} min={1} max={30}
-            style={{ width: 60, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '6px 10px', color: '#fff', fontSize: 13, textAlign: 'center' }} />
+            style={{ width: 60, fontSize: 13, textAlign: 'center' }} />
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>일 이내 납기 건 관리</span>
         </div>
         {appliedUrl ? (
@@ -133,7 +133,7 @@ export default function StoreDashboardDeliveryWorkTab() {
             <iframe src={appliedUrl.replace('/edit', '/preview')} style={{ width: '100%', height: 400, border: 'none' }} title="납기 현황" />
           </div>
         ) : (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '40px 0', background: 'rgba(255,255,255,0.02)', borderRadius: 10 }}>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '40px 0', background: 'rgba(0,0,0,0.02)', borderRadius: 10 }}>
             구글 스프레드시트 URL을 입력하고 적용 버튼을 눌러주세요
           </div>
         )}
@@ -158,11 +158,11 @@ export default function StoreDashboardDeliveryWorkTab() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
           {/* 근무형태 관리 */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 16 }}>
+          <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>근무형태 설정</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
               {workTypes.map(wt => (
-                <div key={wt.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8 }}>
+                <div key={wt.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: 8 }}>
                   <div>
                     <span style={{ fontSize: 12, fontWeight: 600 }}>{wt.name}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>{wt.startTime} ~ {wt.endTime}</span>
@@ -173,13 +173,13 @@ export default function StoreDashboardDeliveryWorkTab() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <input value={newTypeName} onChange={e => setNewTypeName(e.target.value)} placeholder="형태명 (예: 근무형태C)"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 6, padding: '6px 10px', color: '#fff', fontSize: 12 }} />
+                style={{ fontSize: 12 }} />
               <div style={{ display: 'flex', gap: 6 }}>
                 <input type="time" value={newTypeStart} onChange={e => setNewTypeStart(e.target.value)}
-                  style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 6, padding: '6px 8px', color: '#fff', fontSize: 12 }} />
+                  style={{ flex: 1, fontSize: 12 }} />
                 <span style={{ color: 'var(--text-muted)', alignSelf: 'center' }}>~</span>
                 <input type="time" value={newTypeEnd} onChange={e => setNewTypeEnd(e.target.value)}
-                  style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 6, padding: '6px 8px', color: '#fff', fontSize: 12 }} />
+                  style={{ flex: 1, fontSize: 12 }} />
               </div>
               <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => {
                 if (!newTypeName || !newTypeStart || !newTypeEnd) return;
@@ -190,11 +190,11 @@ export default function StoreDashboardDeliveryWorkTab() {
           </div>
 
           {/* 매니저 관리 */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 16 }}>
+          <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>매니저 관리</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
               {staffList.map(s => (
-                <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8 }}>
+                <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: 8 }}>
                   <span style={{ fontSize: 12 }}>{s.name}</span>
                   <button onClick={() => setStaffList(prev => prev.filter(st => st.id !== s.id))} style={{ fontSize: 10, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>삭제</button>
                 </div>
@@ -203,7 +203,7 @@ export default function StoreDashboardDeliveryWorkTab() {
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               <input value={newStaffName} onChange={e => setNewStaffName(e.target.value)} placeholder="매니저 이름"
-                style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 6, padding: '6px 10px', color: '#fff', fontSize: 12 }} />
+                style={{ flex: 1, fontSize: 12 }} />
               <button className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => {
                 if (!newStaffName.trim()) return;
                 setStaffList(prev => [...prev, { id: Date.now().toString(), name: newStaffName.trim() }]);
@@ -215,7 +215,7 @@ export default function StoreDashboardDeliveryWorkTab() {
 
         {/* 일괄 적용 설정 */}
         {staffList.length > 0 && (
-          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
+          <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>일괄 적용 설정</div>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -246,8 +246,8 @@ export default function StoreDashboardDeliveryWorkTab() {
                       if (dow === 0) return;
                       setBulkOffDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
                     }} style={{ width: 28, height: 28, borderRadius: 6, border: 'none', cursor: dow === 0 ? 'default' : 'pointer', fontSize: 11, fontWeight: 600,
-                      background: isOff ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.08)',
-                      color: dow === 0 ? '#f87171' : isOff ? '#fca5a5' : 'var(--text-muted)' }}>
+                      background: isOff ? 'rgba(239,68,68,0.15)' : 'rgba(0,0,0,0.04)',
+                      color: dow === 0 ? '#ef4444' : isOff ? '#dc2626' : 'var(--text-muted)' }}>
                       {d}
                     </button>
                   );
@@ -291,8 +291,8 @@ export default function StoreDashboardDeliveryWorkTab() {
                             else if (e.target.value === '') setEntry(staff.id, d, null, false);
                             else setEntry(staff.id, d, e.target.value, false);
                           }} style={{ width: 44, fontSize: 9, padding: '2px 1px', borderRadius: 4, border: 'none', cursor: 'pointer',
-                            background: isOff ? 'rgba(239,68,68,0.2)' : wt ? 'rgba(200,149,108,0.2)' : 'rgba(255,255,255,0.05)',
-                            color: isOff ? '#fca5a5' : wt ? 'var(--accent)' : 'var(--text-muted)' }}>
+                            background: isOff ? 'rgba(239,68,68,0.12)' : wt ? 'rgba(200,149,108,0.15)' : 'rgba(0,0,0,0.04)',
+                            color: isOff ? '#dc2626' : wt ? 'var(--accent)' : 'var(--text-muted)' }}>
                             <option value="">-</option>
                             <option value="off">휴무</option>
                             {workTypes.map(wt => <option key={wt.id} value={wt.id}>{wt.name.replace('근무형태', '')}</option>)}

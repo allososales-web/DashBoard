@@ -59,7 +59,7 @@ function MetricsStoresSection() {
           {filtered.map((s: any) => {
             const checked = isIncluded(s.id);
             return (
-              <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: checked ? 600 : 400, background: checked ? 'rgba(200,149,108,0.2)' : 'rgba(255,255,255,0.04)', border: `1px solid ${checked ? 'var(--accent)' : 'var(--glass-border)'}`, transition: 'all 0.15s', userSelect: 'none' }}>
+              <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: checked ? 600 : 400, background: checked ? 'rgba(200,149,108,0.12)' : 'rgba(0,0,0,0.03)', border: `1px solid ${checked ? 'var(--accent)' : 'var(--glass-border)'}`, transition: 'all 0.15s', userSelect: 'none' }}>
                 <input type="checkbox" checked={checked} onChange={() => toggle(s.id)} style={{ accentColor: 'var(--accent)', width: 14, height: 14 }} />
                 <span>{s.displayName ?? s.name}</span>
                 <ChannelBadge channel={s.defaultChannel ?? 'ROAD'} />
@@ -148,7 +148,7 @@ function StoreOpsSection() {
 
   return (
     <div style={{ marginTop: 24 }}>
-      {msg && <div style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#6ee7b7' }}>{msg}</div>}
+      {msg && <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#059669' }}>{msg}</div>}
       <div className="glass" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -289,7 +289,7 @@ function StoreRow({ store, displayNameValue, onDisplayNameChange, onDisplayNameS
       <td>
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
           <input type="checkbox" checked={store.showOnLogin} onChange={onToggleShow} style={{ accentColor: 'var(--accent)', width: 14, height: 14 }} />
-          <span style={{ fontSize: 12, color: store.showOnLogin ? '#6ee7b7' : 'var(--text-muted)' }}>
+          <span style={{ fontSize: 12, color: store.showOnLogin ? '#059669' : 'var(--text-muted)' }}>
             {store.showOnLogin ? '운영' : '비운영'}
           </span>
         </label>
@@ -309,7 +309,7 @@ function StoreRow({ store, displayNameValue, onDisplayNameChange, onDisplayNameS
         )}
       </td>
       <td>
-        <select value={store.defaultChannel ?? 'ROAD'} onChange={(e) => onChannelChange(e.target.value)} style={{ fontSize: 12, padding: '4px 8px', background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 6, color: '#fff' }}>
+        <select value={store.defaultChannel ?? 'ROAD'} onChange={(e) => onChannelChange(e.target.value)} style={{ fontSize: 12, padding: '4px 8px', background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 6, color: 'var(--text)' }}>
           {CHANNEL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </td>
@@ -370,7 +370,7 @@ export default function HqAdminTab() {
 
   return (
     <div style={{ maxWidth: 900 }}>
-      {msg && <div style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#6ee7b7' }}>{msg}</div>}
+      {msg && <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#059669' }}>{msg}</div>}
 
       <MetricsStoresSection />
       <StoreOpsSection />

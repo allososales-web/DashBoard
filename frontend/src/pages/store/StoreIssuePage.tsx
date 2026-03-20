@@ -135,8 +135,8 @@ export default function StoreIssuePage() {
   const selectedEvents = selectedDay ? (eventsByDay[selectedDay] ?? []) : [];
 
   const inputStyle: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)',
-    borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 13, width: '100%', boxSizing: 'border-box',
+    background: 'rgba(255,255,255,0.85)', border: '1.5px solid rgba(0,0,0,0.10)',
+    borderRadius: 8, padding: '8px 12px', color: 'var(--text)', fontSize: 13, width: '100%', boxSizing: 'border-box',
   };
 
   return (
@@ -160,7 +160,7 @@ export default function StoreIssuePage() {
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>📢 전체 공지</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {noticeList.map((n: any) => (
-              <div key={n.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, borderLeft: `3px solid ${NC[n.priority] ?? '#6b7280'}` }}>
+              <div key={n.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', background: 'rgba(124,106,247,0.04)', borderRadius: 8, borderLeft: `3px solid ${NC[n.priority] ?? '#6b7280'}` }}>
                 <span style={{ fontSize: 10, fontWeight: 600, color: NC[n.priority] ?? '#6b7280', background: `${NC[n.priority] ?? '#6b7280'}20`, padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap', marginTop: 1 }}>{NL[n.priority] ?? '일반'}</span>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{n.title}</div>
@@ -199,8 +199,8 @@ export default function StoreIssuePage() {
             const isSelected = selectedDay === day;
             const isToday = year === now.getFullYear() && month === now.getMonth() + 1 && day === now.getDate();
             return (
-              <div key={day} onClick={() => setSelectedDay(isSelected ? null : day)} style={{ minHeight: 72, borderRadius: 10, padding: '6px 8px', cursor: 'pointer', background: isSelected ? 'rgba(200,149,108,0.2)' : isToday ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)', border: isSelected ? '1.5px solid var(--accent)' : isToday ? '1.5px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.06)', transition: 'background 0.15s' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4, color: isSun ? '#f87171' : isSat ? '#60a5fa' : '#e5e7eb', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div key={day} onClick={() => setSelectedDay(isSelected ? null : day)} style={{ minHeight: 72, borderRadius: 10, padding: '6px 8px', cursor: 'pointer', background: isSelected ? 'rgba(200,149,108,0.15)' : isToday ? 'rgba(124,106,247,0.06)' : 'rgba(0,0,0,0.02)', border: isSelected ? '1.5px solid var(--accent)' : isToday ? '1.5px solid rgba(124,106,247,0.25)' : '1px solid rgba(0,0,0,0.05)', transition: 'background 0.15s' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4, color: isSun ? '#ef4444' : isSat ? '#3b82f6' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 4 }}>
                   {day}{isToday && <span style={{ fontSize: 9, background: 'var(--accent)', color: '#fff', borderRadius: 4, padding: '1px 4px', fontWeight: 700 }}>오늘</span>}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -217,13 +217,13 @@ export default function StoreIssuePage() {
           })}
         </div>
         {selectedDay && (selectedIssues.length > 0 || selectedEvents.length > 0) && (
-          <div style={{ marginTop: 16, padding: '14px 16px', background: 'rgba(255,255,255,0.05)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ marginTop: 16, padding: '14px 16px', background: 'rgba(0,0,0,0.03)', borderRadius: 10, border: '1px solid rgba(0,0,0,0.07)' }}>
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>{month}월 {selectedDay}일 상세</div>
             {selectedIssues.length > 0 && (
               <div style={{ marginBottom: 10 }}>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>점별 이슈 ({selectedIssues.length})</div>
                 {selectedIssues.map((iss: any) => (
-                  <div key={iss.id} style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', borderLeft: `3px solid ${PC[iss.priority] ?? '#6b7280'}`, marginBottom: 6 }}>
+                  <div key={iss.id} style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(0,0,0,0.03)', borderLeft: `3px solid ${PC[iss.priority] ?? '#6b7280'}`, marginBottom: 6 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
                       <span style={{ fontSize: 12, fontWeight: 600 }}>{iss.title}</span>
                       <span style={{ fontSize: 10, color: PC[iss.priority] ?? '#6b7280' }}>{PL[iss.priority] ?? '보통'}</span>
@@ -237,10 +237,10 @@ export default function StoreIssuePage() {
               <div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>전사 이벤트 ({selectedEvents.length})</div>
                 {selectedEvents.map((ev: any) => (
-                  <div key={ev.id} style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(251,191,36,0.08)', borderLeft: '3px solid #fbbf24', marginBottom: 6 }}>
+                  <div key={ev.id} style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(245,158,11,0.06)', borderLeft: '3px solid #f59e0b', marginBottom: 6 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>{ev.title}</div>
                     {ev.description && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ev.description}</div>}
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>{ev.startDate?.slice(0, 10)} ~ {ev.endDate?.slice(0, 10)}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{ev.startDate?.slice(0, 10)} ~ {ev.endDate?.slice(0, 10)}</div>
                   </div>
                 ))}
               </div>
@@ -248,7 +248,7 @@ export default function StoreIssuePage() {
           </div>
         )}
         {selectedDay && selectedIssues.length === 0 && selectedEvents.length === 0 && (
-          <div style={{ marginTop: 16, padding: '14px 16px', textAlign: 'center', background: 'rgba(255,255,255,0.03)', borderRadius: 10, fontSize: 13, color: 'var(--text-muted)' }}>{month}월 {selectedDay}일에 등록된 이슈/이벤트가 없습니다</div>
+          <div style={{ marginTop: 16, padding: '14px 16px', textAlign: 'center', background: 'rgba(0,0,0,0.02)', borderRadius: 10, fontSize: 13, color: 'var(--text-muted)' }}>{month}월 {selectedDay}일에 등록된 이슈/이벤트가 없습니다</div>
         )}
       </div>
 
@@ -257,7 +257,7 @@ export default function StoreIssuePage() {
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 20 }}>점내 이슈 누적 관리</div>
 
         {/* 이슈 등록 */}
-        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 16, marginBottom: 20, border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 12, padding: 16, marginBottom: 20, border: '1px solid rgba(0,0,0,0.06)' }}>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, fontWeight: 600 }}>새 이슈 등록</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="이슈 제목 *" style={inputStyle} />
@@ -273,16 +273,16 @@ export default function StoreIssuePage() {
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none', flex: 1 }}>
                 <div onClick={() => setIsPermanent(p => !p)} style={{
                   width: 40, height: 22, borderRadius: 11, position: 'relative', cursor: 'pointer',
-                  background: isPermanent ? 'var(--accent)' : 'rgba(255,255,255,0.15)',
+                  background: isPermanent ? 'var(--accent)' : 'rgba(0,0,0,0.12)',
                   transition: 'background 0.2s',
                 }}>
                   <div style={{
                     position: 'absolute', top: 3, left: isPermanent ? 21 : 3,
                     width: 16, height: 16, borderRadius: '50%', background: '#fff',
-                    transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                    transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                   }} />
                 </div>
-                <span style={{ fontSize: 12, color: isPermanent ? '#fff' : 'var(--text-muted)', fontWeight: isPermanent ? 600 : 400 }}>
+                <span style={{ fontSize: 12, color: isPermanent ? 'var(--accent)' : 'var(--text-muted)', fontWeight: isPermanent ? 600 : 400 }}>
                   항시 체크
                 </span>
                 {isPermanent && <span style={{ fontSize: 10, background: 'rgba(200,149,108,0.2)', color: 'var(--accent)', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>상단 고정</span>}
@@ -299,7 +299,7 @@ export default function StoreIssuePage() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, marginRight: 4 }}>기간</div>
           {([['all', '전체'], ['7d', '7일'], ['30d', '30일'], ['custom', '직접 설정']] as [FilterPeriod, string][]).map(([v, l]) => (
-            <button key={v} onClick={() => setFilterPeriod(v)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: filterPeriod === v ? 'var(--accent)' : 'rgba(255,255,255,0.08)', color: filterPeriod === v ? '#fff' : 'var(--text-muted)', fontWeight: filterPeriod === v ? 700 : 400 }}>{l}</button>
+            <button key={v} onClick={() => setFilterPeriod(v)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: filterPeriod === v ? 'var(--accent)' : 'rgba(0,0,0,0.06)', color: filterPeriod === v ? '#fff' : 'var(--text-muted)', fontWeight: filterPeriod === v ? 700 : 400 }}>{l}</button>
           ))}
           {filterPeriod === 'custom' && (
             <>
@@ -334,7 +334,7 @@ export default function StoreIssuePage() {
             const isPerma = iss.description?.startsWith(PERMANENT_TAG);
             const cleanDesc = isPerma ? iss.description.replace(PERMANENT_TAG, '').trim() : iss.description;
             return (
-              <div key={iss.id} style={{ background: isPerma ? 'rgba(200,149,108,0.08)' : 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px', borderLeft: `3px solid ${PC[iss.priority] ?? '#6b7280'}`, border: isPerma ? `1px solid rgba(200,149,108,0.3)` : '1px solid rgba(255,255,255,0.06)', borderLeftWidth: 3, borderLeftColor: PC[iss.priority] ?? '#6b7280', borderLeftStyle: 'solid' }}>
+              <div key={iss.id} style={{ background: isPerma ? 'rgba(200,149,108,0.08)' : 'rgba(0,0,0,0.02)', borderRadius: 10, padding: '12px 14px', borderLeft: `3px solid ${PC[iss.priority] ?? '#6b7280'}`, border: isPerma ? `1px solid rgba(200,149,108,0.3)` : '1px solid rgba(0,0,0,0.05)', borderLeftWidth: 3, borderLeftColor: PC[iss.priority] ?? '#6b7280', borderLeftStyle: 'solid' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                     {isPerma && <span style={{ fontSize: 10, background: 'rgba(200,149,108,0.25)', color: 'var(--accent)', padding: '2px 7px', borderRadius: 99, fontWeight: 700, whiteSpace: 'nowrap' }}>항시</span>}
@@ -346,7 +346,7 @@ export default function StoreIssuePage() {
                   </div>
                 </div>
                 {cleanDesc && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, lineHeight: 1.5 }}>{cleanDesc}</div>}
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>{new Date(iss.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{new Date(iss.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
               </div>
             );
           })}

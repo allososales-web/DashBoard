@@ -264,3 +264,51 @@ tr:hover td { background: rgba(124,106,247,0.04); }
   .delivery-calendar-grid { grid-template-columns: 1fr !important; }
   .goal-grid { grid-template-columns: 1fr !important; }
 }
+
+/* ── Login Page Mobile ── */
+.login-layout {
+  display: flex;
+  min-height: 100vh;
+}
+.login-store-panel {
+  flex: 1;
+  border-right: 1px solid rgba(0,0,0,0.07);
+  display: flex;
+  flex-direction: column;
+  padding: 48px 40px;
+  overflow-y: auto;
+  background: rgba(255,255,255,0.55);
+}
+.login-pin-panel {
+  width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+  background: rgba(255,255,255,0.70);
+}
+
+@media (max-width: 640px) {
+  .login-layout {
+    flex-direction: column;
+  }
+  .login-store-panel {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+    padding: 32px 20px 24px;
+    max-height: 45vh;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .login-pin-panel {
+    width: 100%;
+    flex: 1;
+    padding: 24px 20px 32px;
+    justify-content: flex-start;
+  }
+  /* 로그인 페이지에서 테이블 min-width 해제 */
+  .login-layout table { min-width: unset; }
+}

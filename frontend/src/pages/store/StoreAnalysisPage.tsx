@@ -88,7 +88,7 @@ export default function StoreAnalysisPage() {
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           {PERIOD_OPTIONS.map(opt => (
             <button key={opt.value} onClick={() => setPeriod(opt.value)} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: period === opt.value ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+              background: period === opt.value ? 'var(--accent)' : 'rgba(0,0,0,0.06)',
               color: period === opt.value ? '#fff' : 'var(--text-muted)', fontWeight: period === opt.value ? 700 : 400 }}>
               {opt.label}
             </button>
@@ -141,8 +141,8 @@ export default function StoreAnalysisPage() {
                           <span style={{ color: 'var(--text-muted)', marginLeft: 6 }}>vs 사업부 {hqPct}%</span>
                         </span>
                       </div>
-                      <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden', position: 'relative' }}>
-                        <div style={{ height: '100%', width: `${hqPct}%`, background: 'rgba(255,255,255,0.1)', borderRadius: 3 }} />
+                      <div style={{ height: 6, background: 'rgba(0,0,0,0.07)', borderRadius: 3, overflow: 'hidden', position: 'relative' }}>
+                        <div style={{ height: '100%', width: `${hqPct}%`, background: 'rgba(0,0,0,0.08)', borderRadius: 3 }} />
                         <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: `${myPct}%`, background: COLLECTION_COLORS[i], borderRadius: 3, opacity: 0.8 }} />
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{val}건</div>
@@ -178,7 +178,7 @@ export default function StoreAnalysisPage() {
                   const hqAvg = [3200000, 4500000, 2800000, 3800000, 2200000, 1900000][i];
                   const ratio = hqAvg > 0 && avgPrice > 0 ? (avgPrice / hqAvg) * 100 : 0;
                   return (
-                    <div key={key} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div key={key} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
                       <span style={{ fontSize: 12, color: COLLECTION_COLORS[i] }}>{label}</span>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: 12, fontWeight: 700 }}>{avgPrice > 0 ? `${Math.round(avgPrice / 10000)}만원` : '-'}</div>

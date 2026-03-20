@@ -176,8 +176,8 @@ export default function HqPerformanceTab() {
                 {c.rate > 0 ? `${c.rate.toFixed(1)}%` : '-'}
               </div>
             </div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', marginBottom: 8 }}>{c.value}</div>
-            <div style={{ height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden', marginBottom: 6 }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{c.value}</div>
+            <div style={{ height: 3, background: 'rgba(0,0,0,0.08)', borderRadius: 2, overflow: 'hidden', marginBottom: 6 }}>
               <div style={{ height: '100%', width: `${Math.min(c.rate, 100)}%`, background: c.rate >= 100 ? 'var(--success)' : 'var(--accent)', borderRadius: 2, transition: 'width 0.5s' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)' }}>
@@ -201,7 +201,7 @@ export default function HqPerformanceTab() {
               <div key={ch.value} style={{ width: `${pct}%`, background: ch.color, transition: 'width 0.5s' }} title={`${ch.label}: ${pct.toFixed(1)}%`} />
             ) : null;
           })}
-          {totalAmount === 0 && <div style={{ width: '100%', background: 'rgba(255,255,255,0.08)' }} />}
+          {totalAmount === 0 && <div style={{ width: '100%', background: 'rgba(0,0,0,0.07)' }} />}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {CHANNEL_FILTERS.map((ch) => {
@@ -216,7 +216,7 @@ export default function HqPerformanceTab() {
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{ch.label}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{storeCount > 0 ? `${storeCount}개 매장` : '—'}</div>
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{pct}%</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{pct}%</div>
               </div>
             );
           })}
@@ -234,7 +234,7 @@ export default function HqPerformanceTab() {
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{w.label} ({now.getMonth() + 1}/{w.start}~{now.getMonth() + 1}/{w.end})</span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>전년비 데이터 준비 중</span>
               </div>
-              <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: 6, background: 'rgba(0,0,0,0.07)', borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${20 * (i + 1)}%`, background: 'var(--accent)', borderRadius: 3, opacity: 0.7 }} />
               </div>
             </div>
@@ -273,7 +273,7 @@ export default function HqPerformanceTab() {
                     <td style={{ textAlign: 'right' }}>{conv}%</td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-                        <div style={{ width: 60, height: 4, background: 'rgba(255,245,235,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ width: 60, height: 4, background: 'rgba(0,0,0,0.07)', borderRadius: 2, overflow: 'hidden' }}>
                           <div style={{ height: '100%', width: `${Math.min(Number(ratio), 100)}%`, background: 'var(--accent)', borderRadius: 2 }} />
                         </div>
                         <span style={{ fontSize: 12 }}>{ratio}%</span>

@@ -106,7 +106,7 @@ export default function HqStoreStatusTab() {
           {PERIOD_OPTIONS.map(opt => (
             <button key={opt.value} onClick={() => setPeriod(opt.value)}
               style={{ fontSize: 11, padding: '5px 10px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                background: period === opt.value ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+                background: period === opt.value ? 'var(--accent)' : 'rgba(0,0,0,0.06)',
                 color: period === opt.value ? '#fff' : 'var(--text-muted)', fontWeight: period === opt.value ? 700 : 400 }}>
               {opt.label}
             </button>
@@ -139,7 +139,7 @@ export default function HqStoreStatusTab() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {ranking.data.slice(0, 5).map((s: any, i: number) => (
                     <div key={s.storeId} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: i === 0 ? '#fcd34d' : i === 1 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)', minWidth: 20 }}>{i + 1}</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: i === 0 ? '#d97706' : i === 1 ? 'var(--text-muted)' : 'rgba(0,0,0,0.3)', minWidth: 20 }}>{i + 1}</span>
                       <span style={{ flex: 1, fontSize: 12 }}>{s.storeName ?? `매장 ${i + 1}`}</span>
                       <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{ranking.format(s[ranking.valueKey])}</span>
                     </div>
@@ -163,7 +163,7 @@ export default function HqStoreStatusTab() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {ranking.data.slice(0, 5).map(([col, val], i) => (
                     <div key={col} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: i === 0 ? '#fcd34d' : i === 1 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)', minWidth: 20 }}>{i + 1}</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: i === 0 ? '#d97706' : i === 1 ? 'var(--text-muted)' : 'rgba(0,0,0,0.3)', minWidth: 20 }}>{i + 1}</span>
                       <span style={{ flex: 1, fontSize: 12 }}>{COLLECTION_LABELS[col] ?? col}</span>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{ranking.format(val)}</div>

@@ -17,9 +17,9 @@ function getDefaultDeliveryStatus(year: number, month: number, day: number): str
 }
 
 const DELIVERY_COLORS: Record<string, { bg: string; color: string; label: string }> = {
-  available: { bg: "rgba(16,185,129,0.15)", color: "#6ee7b7", label: "가능" },
-  unavailable: { bg: "rgba(239,68,68,0.15)", color: "#fca5a5", label: "불가" },
-  partial: { bg: "rgba(245,158,11,0.15)", color: "#fcd34d", label: "일부" },
+  available: { bg: "rgba(16,185,129,0.12)", color: "#059669", label: "가능" },
+  unavailable: { bg: "rgba(239,68,68,0.10)", color: "#dc2626", label: "불가" },
+  partial: { bg: "rgba(245,158,11,0.12)", color: "#d97706", label: "일부" },
 };
 
 function buildCalendar(year: number, month: number) {
@@ -137,7 +137,7 @@ export default function DashboardPage() {
         <div className="glass" style={{ padding: 20, position: "relative", overflow: "hidden" }}>
           <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>전체 순위</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-            <span style={{ fontSize: 36, fontWeight: 900, color: myRank === 1 ? "#fcd34d" : myRank <= 3 ? "var(--accent)" : "#fff" }}>{myRank > 0 ? myRank : "-"}</span>
+            <span style={{ fontSize: 36, fontWeight: 900, color: myRank === 1 ? "#d97706" : myRank <= 3 ? "var(--accent)" : "var(--text)" }}>{myRank > 0 ? myRank : "-"}</span>
             <span style={{ fontSize: 14, color: "var(--text-muted)" }}>위</span>
           </div>
           <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>{allStores.length}개 매장 중</div>
@@ -151,7 +151,7 @@ export default function DashboardPage() {
             <span style={{ fontSize: 32, fontWeight: 900, color: amountRate >= 100 ? "var(--success)" : amountRate >= 70 ? "var(--accent)" : "#f87171" }}>{amountRate.toFixed(0)}</span>
             <span style={{ fontSize: 14, color: "var(--text-muted)" }}>%</span>
           </div>
-          <div style={{ height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 2, overflow: "hidden" }}>
+          <div style={{ height: 4, background: "rgba(0,0,0,0.08)", borderRadius: 2, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${amountRate}%`, background: amountRate >= 100 ? "var(--success)" : "var(--accent)", borderRadius: 2, transition: "width 0.5s" }} />
           </div>
           <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>{amountRate >= 100 ? "✅ 달성" : amountRate >= 70 ? "🔥 순항 중" : "⚠️ 미달"}</div>
@@ -164,7 +164,7 @@ export default function DashboardPage() {
             <span style={{ fontSize: 32, fontWeight: 900, color: "var(--accent)" }}>{myShare}</span>
             <span style={{ fontSize: 14, color: "var(--text-muted)" }}>%</span>
           </div>
-          <div style={{ height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 2, overflow: "hidden" }}>
+          <div style={{ height: 4, background: "rgba(0,0,0,0.08)", borderRadius: 2, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${Math.min(Number(myShare), 100)}%`, background: "var(--accent)", borderRadius: 2 }} />
           </div>
           <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>전체 {Number(totalAmount).toLocaleString()}원</div>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                     {item.rate.toFixed(1)}% {item.rate >= 100 ? "✅" : item.rate >= 70 ? "🔥" : "⚠️"}
                   </span>
                 </div>
-                <div style={{ height: 8, background: "rgba(255,255,255,0.08)", borderRadius: 4, overflow: "hidden" }}>
+                <div style={{ height: 8, background: "rgba(0,0,0,0.08)", borderRadius: 4, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${item.rate}%`, background: item.rate >= 100 ? "var(--success)" : "var(--accent)", borderRadius: 4, transition: "width 0.5s" }} />
                 </div>
                 <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>{item.current} / {item.target}</div>
@@ -240,7 +240,7 @@ export default function DashboardPage() {
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>📢 전체 공지</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {(notices as any[]).slice(0, 3).map((n: any) => (
-              <div key={n.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.04)", borderRadius: 8, borderLeft: `3px solid ${priorityColor(n.priority)}` }}>
+              <div key={n.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", background: "rgba(124,106,247,0.04)", borderRadius: 8, borderLeft: `3px solid ${priorityColor(n.priority)}` }}>
                 <span style={{ fontSize: 10, fontWeight: 600, color: priorityColor(n.priority), background: `${priorityColor(n.priority)}20`, padding: "2px 8px", borderRadius: 99, whiteSpace: "nowrap", marginTop: 1 }}>{priorityLabel(n.priority)}</span>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{n.title}</div>
@@ -258,7 +258,7 @@ export default function DashboardPage() {
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>매장 주변 반경 10km 기준 · 최근 6개월</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {LOCAL_NEWS.map((news, i) => (
-            <div key={i} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px', borderLeft: '3px solid var(--accent)' }}>
+            <div key={i} style={{ background: 'rgba(124,106,247,0.04)', borderRadius: 10, padding: '12px 14px', borderLeft: '3px solid var(--accent)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 600 }}>{news.title}</span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginLeft: 12 }}>{news.date}</span>
@@ -291,7 +291,7 @@ export default function DashboardPage() {
             const cells = buildCalendar(y, mo);
             const isCurrent = y === year && mo === month;
             return (
-              <div key={`${y}-${mo}`} style={{ background: isCurrent ? "rgba(200,149,108,0.06)" : "rgba(255,255,255,0.02)", borderRadius: 10, padding: 12, border: isCurrent ? "1px solid rgba(200,149,108,0.3)" : "1px solid var(--glass-border)" }}>
+              <div key={`${y}-${mo}`} style={{ background: isCurrent ? "rgba(200,149,108,0.06)" : "rgba(0,0,0,0.02)", borderRadius: 10, padding: 12, border: isCurrent ? "1px solid rgba(200,149,108,0.3)" : "1px solid var(--glass-border)" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, textAlign: "center", marginBottom: 8 }}>{y}년 {mo}월 {isCurrent && <span style={{ fontSize: 10, color: "var(--accent)" }}>당월</span>}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1, marginBottom: 2 }}>
                   {WEEKDAYS.map((d, i) => <div key={d} style={{ textAlign: "center", fontSize: 9, color: i===0?"#f87171":i===6?"#60a5fa":"var(--text-muted)", padding: "2px 0" }}>{d}</div>)}
@@ -304,7 +304,7 @@ export default function DashboardPage() {
                     const dStyle = DELIVERY_COLORS[status] ?? DELIVERY_COLORS.available;
                     return (
                       <div key={idx} style={{ borderRadius: 4, padding: "4px 1px", textAlign: "center", background: dStyle.bg, border: `1px solid ${dStyle.color}20`, userSelect: "none" }}>
-                        <div style={{ fontSize: 9, fontWeight: 600, color: dow===0?"#f87171":dow===6?"#60a5fa":"#fff" }}>{day}</div>
+                        <div style={{ fontSize: 9, fontWeight: 600, color: dow===0?"#ef4444":dow===6?"#3b82f6":"var(--text)" }}>{day}</div>
                         <div style={{ fontSize: 8, color: dStyle.color }}>{dStyle.label}</div>
                       </div>
                     );
