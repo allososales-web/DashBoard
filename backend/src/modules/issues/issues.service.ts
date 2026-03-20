@@ -10,6 +10,8 @@ export class IssuesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(storeId: string, dto: CreateIssueDto, userId: string) {
+    // 핀 로그인 유저(storeId가 sub)는 users 테이블에 없으므로 createdBy null 처리
+    const isRealUser = userId && userId !== 'HQ' && userId !== storeId;
     return this.prisma.issue.create({
       data: {
         storeId,
@@ -17,7 +19,7 @@ export class IssuesService {
         description: dto.description || null,
         priority: dto.priority || 'MEDIUM',
         assignedTo: dto.assignedTo || null,
-        createdBy: userId,
+        createdBy: isRealUser ? userId : null,
       },
     });
   }
