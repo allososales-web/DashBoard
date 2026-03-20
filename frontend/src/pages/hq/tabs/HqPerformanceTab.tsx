@@ -84,7 +84,7 @@ export default function HqPerformanceTab() {
     setActiveChannels((prev) => { const next = new Set(prev); if (next.has(ch)) next.delete(ch); else next.add(ch); return next; });
   };
 
-  const metricsFiltered = metricsCount > 0
+  const metricsFiltered = includedIds.size > 0
     ? (allStores as any[]).filter((s: any) => includedIds.has(s.storeId))
     : (allStores as any[]);
 

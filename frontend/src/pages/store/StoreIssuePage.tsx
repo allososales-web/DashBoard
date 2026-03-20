@@ -137,6 +137,7 @@ export default function StoreIssuePage() {
   const inputStyle: React.CSSProperties = {
     background: 'rgba(255,255,255,0.85)', border: '1.5px solid rgba(0,0,0,0.10)',
     borderRadius: 8, padding: '8px 12px', color: 'var(--text)', fontSize: 13, width: '100%', boxSizing: 'border-box',
+    fontFamily: "'Pretendard', 'Apple SD Gothic Neo', -apple-system, sans-serif",
   };
 
   return (

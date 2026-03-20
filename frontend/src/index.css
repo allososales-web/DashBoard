@@ -85,6 +85,7 @@ select {
   padding-right: 32px;
   min-width: 0;
   appearance: auto;
+  white-space: nowrap;
 }
 input:focus, select:focus, textarea:focus {
   border-color: var(--accent);
@@ -107,6 +108,7 @@ select option { background: #fff; color: var(--text); }
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 .btn-primary {
   background: linear-gradient(135deg, #7c6af7, #a78bfa);
@@ -293,7 +295,7 @@ tr:hover td { background: rgba(124,106,247,0.04); }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 40px;
+  padding: 56px 48px;
   background: rgba(255,255,255,0.70);
 }
 
@@ -313,7 +315,7 @@ tr:hover td { background: rgba(124,106,247,0.04); }
   .login-pin-panel {
     width: 100%;
     flex: 1;
-    padding: 24px 20px 32px;
+    padding: 32px 28px 40px;
     justify-content: flex-start;
   }
   /* 로그인 페이지에서 테이블 min-width 해제 */

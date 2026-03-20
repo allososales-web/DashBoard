@@ -50,10 +50,10 @@ export default function HqWorkRecordsTab() {
     <div>
       {/* 헤더 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 24, alignItems: 'center' }}>
-        <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={{ width: 100 }}>
+        <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={{ width: 'auto', minWidth: 95 }}>
           {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}년</option>)}
         </select>
-        <select value={month} onChange={(e) => setMonth(Number(e.target.value))} style={{ width: 80 }}>
+        <select value={month} onChange={(e) => setMonth(Number(e.target.value))} style={{ width: 'auto', minWidth: 72 }}>
           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{m}월</option>)}
         </select>
         <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 8 }}>

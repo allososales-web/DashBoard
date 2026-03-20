@@ -114,7 +114,7 @@ export default function HqStoreStatusTab() {
     <div>
       {/* 기간 설정 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-        <select value={year} onChange={e => setYear(Number(e.target.value))} style={{ width: 90, fontSize: 13 }}>
+        <select value={year} onChange={e => setYear(Number(e.target.value))} style={{ width: 'auto', minWidth: 95, fontSize: 13 }}>
           {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}년</option>)}
         </select>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>

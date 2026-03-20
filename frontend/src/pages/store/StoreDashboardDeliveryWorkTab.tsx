@@ -212,7 +212,7 @@ export default function StoreDashboardDeliveryWorkTab() {
             <select value={month} onChange={e => setMonth(Number(e.target.value))} style={{ fontSize: 12, padding: '4px 8px' }}>
               {Array.from({length:12},(_,i)=>i+1).map(m => <option key={m} value={m}>{m}월</option>)}
             </select>
-            <button className="btn btn-primary" style={{ fontSize: 12, padding: '6px 14px' }} onClick={saveSchedule} disabled={saving}>
+            <button className="btn btn-primary" style={{ fontSize: 12, padding: '6px 14px', whiteSpace: 'nowrap' }} onClick={saveSchedule} disabled={saving}>
               {saving ? '저장 중...' : '저장 (본사 동기화)'}
             </button>
           </div>
