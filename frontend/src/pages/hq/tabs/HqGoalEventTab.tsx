@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../services/api";
+import MiniDatePicker from "../../../components/MiniDatePicker";
 
 type NoticePriority = "NORMAL" | "IMPORTANT" | "URGENT";
 type DeliveryStatus = "available" | "unavailable" | "partial";
@@ -276,11 +277,11 @@ export default function HqGoalEventTab() {
                 </div>
                 <div>
                   <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600 }}>시작일 *</div>
-                  <input className="input" type="date" value={eventForm.startDate} onChange={e => setEventForm(f => ({...f, startDate: e.target.value}))} />
+                  <MiniDatePicker value={eventForm.startDate} onChange={v => setEventForm(f => ({...f, startDate: v}))} placeholder="시작일 선택" />
                 </div>
                 <div>
                   <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600 }}>종료일 <span style={{ fontWeight: 400 }}>(미입력 시 시작일과 동일)</span></div>
-                  <input className="input" type="date" value={eventForm.endDate} onChange={e => setEventForm(f => ({...f, endDate: e.target.value}))} />
+                  <MiniDatePicker value={eventForm.endDate} onChange={v => setEventForm(f => ({...f, endDate: v}))} placeholder="종료일 선택 (선택)" />
                 </div>
                 <div style={{ gridColumn: "1/-1" }}>
                   <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600 }}>설명 <span style={{ fontWeight: 400 }}>(선택)</span></div>
