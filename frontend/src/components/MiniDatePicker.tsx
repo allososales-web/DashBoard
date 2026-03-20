@@ -5,7 +5,7 @@ function pad2(n: number) { return String(n).padStart(2, '0'); }
 function toStr(y: number, m: number, d: number) { return `${y}-${pad2(m)}-${pad2(d)}`; }
 
 interface Props {
-  value: string; // 'YYYY-MM-DD' or ''
+  value: string;
   onChange: (v: string) => void;
   placeholder?: string;
 }
@@ -30,11 +30,7 @@ export default function MiniDatePicker({ value, onChange, placeholder = '날짜 
   for (let i = 0; i < firstDow; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
-  const select = (day: number) => {
-    onChange(toStr(viewYear, viewMonth, day));
-    setOpen(false);
-  };
-
+  const select = (day: number) => { onChange(toStr(viewYear, viewMonth, day)); setOpen(false); };
   const prevMonth = () => { if (viewMonth === 1) { setViewYear(y => y - 1); setViewMonth(12); } else setViewMonth(m => m - 1); };
   const nextMonth = () => { if (viewMonth === 12) { setViewYear(y => y + 1); setViewMonth(1); } else setViewMonth(m => m + 1); };
 
@@ -46,39 +42,37 @@ export default function MiniDatePicker({ value, onChange, placeholder = '날짜 
     <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
       <button onClick={() => setOpen(o => !o)} style={{
         display: 'flex', alignItems: 'center', gap: 6,
-        background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
-        borderRadius: 8, padding: '5px 10px', color: displayValue ? '#fff' : 'rgba(255,255,255,0.35)',
-        fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 120,
+        background: 'rgba(255,255,255,0.85)', border: '1.5px solid rgba(0,0,0,0.10)',
+        borderRadius: 8, padding: '6px 12px', color: displayValue ? 'var(--text)' : '#b0b8c4',
+        fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 130,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
       }}>
         <span style={{ fontSize: 13 }}>📅</span>
         {displayValue || placeholder}
         {displayValue && (
-          <span onClick={e => { e.stopPropagation(); onChange(''); }} style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.4)', fontSize: 14, lineHeight: 1 }}>×</span>
+          <span onClick={e => { e.stopPropagation(); onChange(''); }} style={{ marginLeft: 'auto', color: '#b0b8c4', fontSize: 15, lineHeight: 1 }}>×</span>
         )}
       </button>
 
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 9999,
-          background: '#1e1b2e', border: '1px solid rgba(255,255,255,0.15)',
-          borderRadius: 12, padding: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-          width: 240,
+          background: '#fff', border: '1.5px solid rgba(0,0,0,0.09)',
+          borderRadius: 14, padding: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          width: 248,
         }}>
-          {/* 월 네비게이션 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>‹</button>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{viewYear}년 {viewMonth}월</span>
-            <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>›</button>
+            <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', fontSize: 16, padding: '0 6px' }}>‹</button>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{viewYear}년 {viewMonth}월</span>
+            <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', fontSize: 16, padding: '0 6px' }}>›</button>
           </div>
 
-          {/* 요일 헤더 */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
             {WD.map((d, i) => (
-              <div key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, padding: '2px 0', color: i === 0 ? '#f87171' : i === 6 ? '#60a5fa' : 'rgba(255,255,255,0.4)' }}>{d}</div>
+              <div key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, padding: '2px 0', color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#9ca3af' }}>{d}</div>
             ))}
           </div>
 
-          {/* 날짜 셀 */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
             {cells.map((day, idx) => {
               if (!day) return <div key={`e-${idx}`} />;
@@ -88,14 +82,14 @@ export default function MiniDatePicker({ value, onChange, placeholder = '날짜 
               const isToday = dateStr === toStr(now.getFullYear(), now.getMonth() + 1, now.getDate());
               return (
                 <div key={day} onClick={() => select(day)} style={{
-                  textAlign: 'center', fontSize: 11, padding: '5px 2px', borderRadius: 6, cursor: 'pointer',
-                  background: isSelected ? 'var(--accent)' : isToday ? 'rgba(255,255,255,0.1)' : 'transparent',
-                  color: isSelected ? '#fff' : dow === 0 ? '#f87171' : dow === 6 ? '#60a5fa' : '#e5e7eb',
+                  textAlign: 'center', fontSize: 12, padding: '5px 2px', borderRadius: 7, cursor: 'pointer',
+                  background: isSelected ? 'var(--accent)' : isToday ? 'rgba(124,106,247,0.10)' : 'transparent',
+                  color: isSelected ? '#fff' : dow === 0 ? '#ef4444' : dow === 6 ? '#3b82f6' : 'var(--text)',
                   fontWeight: isSelected || isToday ? 700 : 400,
                   transition: 'background 0.1s',
                 }}
-                  onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)'; }}
-                  onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = isToday ? 'rgba(255,255,255,0.1)' : 'transparent'; }}
+                  onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'rgba(124,106,247,0.08)'; }}
+                  onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = isToday ? 'rgba(124,106,247,0.10)' : 'transparent'; }}
                 >
                   {day}
                 </div>

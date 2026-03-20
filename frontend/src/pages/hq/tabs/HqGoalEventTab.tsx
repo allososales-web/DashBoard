@@ -41,10 +41,21 @@ function getDefaultStatus(year: number, month: number, day: number): DeliverySta
 }
 
 const DELIVERY_COLORS: Record<DeliveryStatus, { bg: string; border: string; label: string; text: string }> = {
-  available: { bg: "rgba(16,185,129,0.15)", border: "#10b981", label: "가능", text: "#6ee7b7" },
-  unavailable: { bg: "rgba(239,68,68,0.15)", border: "#ef4444", label: "불가", text: "#fca5a5" },
-  partial: { bg: "rgba(245,158,11,0.15)", border: "#f59e0b", label: "일부", text: "#fcd34d" },
+  available: { bg: "rgba(16,185,129,0.12)", border: "#10b981", label: "가능", text: "#059669" },
+  unavailable: { bg: "rgba(239,68,68,0.10)", border: "#ef4444", label: "불가", text: "#dc2626" },
+  partial: { bg: "rgba(245,158,11,0.12)", border: "#f59e0b", label: "일부", text: "#d97706" },
 };
+
+// 숫자 문자열 → 콤마 포맷 표시값 변환
+function formatNumberInput(raw: string): string {
+  const num = raw.replace(/,/g, '');
+  if (!num || isNaN(Number(num))) return raw;
+  return Number(num).toLocaleString();
+}
+// 콤마 제거 후 순수 숫자 문자열 반환
+function parseNumberInput(formatted: string): string {
+  return formatted.replace(/,/g, '');
+}
 
 export default function HqGoalEventTab() {
   const qc = useQueryClient();
@@ -210,9 +221,9 @@ export default function HqGoalEventTab() {
         const inp = goalInputs[k];
         if (inp?.targetAmount || inp?.targetContracts || inp?.targetQuotes) {
           goals[k] = {
-            targetAmount: Number(inp.targetAmount || 0),
-            targetContracts: Number(inp.targetContracts || 0),
-            targetQuotes: Number(inp.targetQuotes || 0),
+            targetAmount: Number(parseNumberInput(inp.targetAmount) || '0'),
+            targetContracts: Number(parseNumberInput(inp.targetContracts) || '0'),
+            targetQuotes: Number(parseNumberInput(inp.targetQuotes) || '0'),
           };
         }
       }
@@ -225,7 +236,7 @@ export default function HqGoalEventTab() {
   }
 
   const priorityLabel = (p: NoticePriority) => p === "URGENT" ? "긴급" : p === "IMPORTANT" ? "중요" : "일반";
-  const priorityColor = (p: NoticePriority) => p === "URGENT" ? "#ef4444" : p === "IMPORTANT" ? "#f59e0b" : "#6b7280";
+  const priorityColor = (p: NoticePriority) => p === "URGENT" ? "#ef4444" : p === "IMPORTANT" ? "#f59e0b" : "#9ca3af";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -243,7 +254,7 @@ export default function HqGoalEventTab() {
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
-            {DOW.map((d, i) => <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 600, padding: "4px 0", color: i===0?"#f87171":i===6?"#60a5fa":"var(--text-muted)" }}>{d}</div>)}
+            {DOW.map((d, i) => <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 600, padding: "4px 0", color: i===0?"#ef4444":i===6?"#3b82f6":"var(--text-muted)" }}>{d}</div>)}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
             {cells.map((day, i) => {
@@ -256,19 +267,19 @@ export default function HqGoalEventTab() {
               return (
                 <div key={i} onClick={() => setSelectedDay(isSelected ? null : dateStr)} style={{
                   padding: "6px 2px", textAlign: "center", borderRadius: 8, cursor: "pointer",
-                  background: isSelected ? "rgba(200,149,108,0.25)" : evs.length > 0 ? "rgba(245,158,11,0.1)" : "rgba(255,255,255,0.02)",
-                  border: isSelected ? "1px solid var(--accent)" : isToday ? "1px solid rgba(59,130,246,0.5)" : "1px solid transparent",
+                  background: isSelected ? "rgba(124,106,247,0.15)" : evs.length > 0 ? "rgba(245,158,11,0.10)" : "transparent",
+                  border: isSelected ? "1.5px solid var(--accent)" : isToday ? "1.5px solid rgba(124,106,247,0.4)" : "1.5px solid transparent",
                 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: dow===0?"#f87171":dow===6?"#60a5fa":"#fff" }}>{day}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: dow===0?"#ef4444":dow===6?"#3b82f6":"var(--text)" }}>{day}</div>
                   {evs.length > 0 && <div style={{ display: "flex", justifyContent: "center", gap: 2, marginTop: 2 }}>
-                    {evs.slice(0,3).map((_, ei) => <span key={ei} style={{ width: 4, height: 4, borderRadius: "50%", background: "#fcd34d", display: "inline-block" }} />)}
+                    {evs.slice(0,3).map((_, ei) => <span key={ei} style={{ width: 4, height: 4, borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />)}
                   </div>}
                 </div>
               );
             })}
           </div>
           {showEventForm && (
-            <div style={{ marginTop: 16, background: "rgba(192,132,252,0.06)", borderRadius: 12, padding: 20, border: "1px solid rgba(192,132,252,0.2)" }}>
+            <div style={{ marginTop: 16, background: "rgba(124,106,247,0.05)", borderRadius: 12, padding: 20, border: "1.5px solid rgba(124,106,247,0.18)" }}>
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14, color: "var(--accent)" }}>새 이슈 등록</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div style={{ gridColumn: "1/-1" }}>
@@ -290,36 +301,17 @@ export default function HqGoalEventTab() {
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
                 <button
-                  onClick={() => createEvent.mutate({
-                    ...eventForm,
-                    endDate: eventForm.endDate || eventForm.startDate,
-                  })}
+                  onClick={() => createEvent.mutate({ ...eventForm, endDate: eventForm.endDate || eventForm.startDate })}
                   disabled={!eventForm.title || !eventForm.startDate || createEvent.isPending}
-                  style={{
-                    flex: 1, fontSize: 13, padding: "11px 0", borderRadius: 10, border: "none",
-                    cursor: !eventForm.title || !eventForm.startDate || createEvent.isPending ? "not-allowed" : "pointer",
-                    background: !eventForm.title || !eventForm.startDate || createEvent.isPending
-                      ? "rgba(192,132,252,0.2)"
-                      : "linear-gradient(135deg, #c084fc, #f0abfc, #fb923c)",
-                    color: "#fff", fontWeight: 700,
-                    boxShadow: !eventForm.title || !eventForm.startDate || createEvent.isPending
-                      ? "none"
-                      : "0 4px 16px rgba(192,132,252,0.4)",
-                    transition: "all 0.2s",
-                    opacity: createEvent.isPending ? 0.6 : 1,
-                  }}
+                  className="btn btn-primary"
+                  style={{ flex: 1, fontSize: 13, opacity: createEvent.isPending ? 0.6 : 1 }}
                 >
                   {createEvent.isPending ? "등록 중..." : "✓ 등록"}
                 </button>
                 <button
                   onClick={() => { setShowEventForm(false); setEventForm({ title: "", description: "", startDate: "", endDate: "" }); }}
-                  style={{
-                    flex: 1, fontSize: 13, padding: "11px 0", borderRadius: 10,
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(192,132,252,0.2)",
-                    color: "var(--text-muted)", fontWeight: 600, cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
+                  className="btn btn-ghost"
+                  style={{ flex: 1, fontSize: 13 }}
                 >
                   ✕ 취소
                 </button>
@@ -328,7 +320,7 @@ export default function HqGoalEventTab() {
           )}
           {selectedDay && selectedEvents.length > 0 && (
             <div style={{ marginTop: 12, padding: 12, background: "rgba(245,158,11,0.08)", borderRadius: 8, borderLeft: "3px solid #f59e0b" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>{selectedDay} 이슈</div>
+              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: "var(--text)" }}>{selectedDay} 이슈</div>
               {selectedEvents.map(ev => (
                 <div key={ev.id} style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>• {ev.title} {ev.description && `— ${ev.description}`}</div>
               ))}
@@ -347,10 +339,10 @@ export default function HqGoalEventTab() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: showHistory ? "none" : 400, overflowY: "auto" }}>
             {events.length === 0 && <div style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>이력 없음</div>}
             {events.map(ev => (
-              <div key={ev.id} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "10px 12px", borderLeft: "3px solid #f59e0b" }}>
+              <div key={ev.id} style={{ background: "rgba(124,106,247,0.05)", borderRadius: 8, padding: "10px 12px", borderLeft: "3px solid #f59e0b" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>{ev.title}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2, color: "var(--text)" }}>{ev.title}</div>
                     <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{ev.startDate?.slice(0,10)} ~ {ev.endDate?.slice(0,10)}</div>
                     {ev.description && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{ev.description}</div>}
                   </div>
@@ -403,10 +395,10 @@ export default function HqGoalEventTab() {
             }
             const isCurrent = year === delYear && month === delMonth;
             return (
-              <div key={k} style={{ background: isCurrent ? "rgba(200,149,108,0.06)" : "rgba(255,255,255,0.02)", borderRadius: 10, padding: 14, border: isCurrent ? "1px solid rgba(200,149,108,0.3)" : "1px solid var(--glass-border)" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, textAlign: "center" }}>{year}년 {month}월 {isCurrent && <span style={{ fontSize: 10, color: "var(--accent)", marginLeft: 4 }}>당월</span>}</div>
+              <div key={k} style={{ background: isCurrent ? "rgba(124,106,247,0.06)" : "rgba(0,0,0,0.02)", borderRadius: 10, padding: 14, border: isCurrent ? "1.5px solid rgba(124,106,247,0.25)" : "1.5px solid rgba(0,0,0,0.07)" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, textAlign: "center", color: "var(--text)" }}>{year}년 {month}월 {isCurrent && <span style={{ fontSize: 10, color: "var(--accent)", marginLeft: 4 }}>당월</span>}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1, marginBottom: 2 }}>
-                  {DOW.map((d, i) => <div key={d} style={{ textAlign: "center", fontSize: 9, color: i===0?"#f87171":i===6?"#60a5fa":"var(--text-muted)", padding: "2px 0" }}>{d}</div>)}
+                  {DOW.map((d, i) => <div key={d} style={{ textAlign: "center", fontSize: 9, color: i===0?"#ef4444":i===6?"#3b82f6":"var(--text-muted)", padding: "2px 0" }}>{d}</div>)}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1 }}>
                   {cells2.map((day, idx) => {
@@ -421,10 +413,10 @@ export default function HqGoalEventTab() {
                         setDelStatuses(prev => ({ ...prev, [k]: { ...(prev[k] ?? {}), [day]: next } }));
                       }} style={{
                         borderRadius: 4, padding: "4px 1px", textAlign: "center", cursor: "pointer",
-                        background: dStyle.bg, border: `1px solid ${dStyle.border}20`,
+                        background: dStyle.bg, border: `1px solid ${dStyle.border}30`,
                         transition: "all 0.1s",
                       }}>
-                        <div style={{ fontSize: 9, fontWeight: 600, color: dow===0?"#f87171":dow===6?"#60a5fa":"#fff" }}>{day}</div>
+                        <div style={{ fontSize: 9, fontWeight: 600, color: dow===0?"#ef4444":dow===6?"#3b82f6":"var(--text)" }}>{day}</div>
                         <div style={{ fontSize: 8, color: dStyle.text }}>{dStyle.label}</div>
                       </div>
                     );
@@ -471,18 +463,18 @@ export default function HqGoalEventTab() {
                 const saved = (annualGoals as any)?.[k];
                 return (
                   <tr key={k} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                    <td style={{ padding: "8px 12px", fontWeight: 600, color: m === now.getMonth()+1 && goalYear === now.getFullYear() ? "var(--accent)" : "#fff" }}>{label}</td>
+                    <td style={{ padding: "8px 12px", fontWeight: 600, color: m === now.getMonth()+1 && goalYear === now.getFullYear() ? "var(--accent)" : "var(--text)" }}>{label}</td>
                     <td style={{ padding: "6px 12px" }}>
-                      <input value={inp.targetAmount} onChange={e => setGoalInputs(prev => ({ ...prev, [k]: { ...inp, targetAmount: e.target.value } }))}
-                        placeholder="0" style={{ width: "100%", textAlign: "right", background: "rgba(255,255,255,0.05)", border: "1px solid var(--glass-border)", borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 12 }} />
+                      <input value={formatNumberInput(inp.targetAmount)} onChange={e => setGoalInputs(prev => ({ ...prev, [k]: { ...inp, targetAmount: parseNumberInput(e.target.value) } }))}
+                        placeholder="0" style={{ width: "100%", textAlign: "right", fontSize: 12 }} />
                     </td>
                     <td style={{ padding: "6px 12px" }}>
-                      <input value={inp.targetContracts} onChange={e => setGoalInputs(prev => ({ ...prev, [k]: { ...inp, targetContracts: e.target.value } }))}
-                        placeholder="0" style={{ width: "100%", textAlign: "right", background: "rgba(255,255,255,0.05)", border: "1px solid var(--glass-border)", borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 12 }} />
+                      <input value={formatNumberInput(inp.targetContracts)} onChange={e => setGoalInputs(prev => ({ ...prev, [k]: { ...inp, targetContracts: parseNumberInput(e.target.value) } }))}
+                        placeholder="0" style={{ width: "100%", textAlign: "right", fontSize: 12 }} />
                     </td>
                     <td style={{ padding: "6px 12px" }}>
-                      <input value={inp.targetQuotes} onChange={e => setGoalInputs(prev => ({ ...prev, [k]: { ...inp, targetQuotes: e.target.value } }))}
-                        placeholder="0" style={{ width: "100%", textAlign: "right", background: "rgba(255,255,255,0.05)", border: "1px solid var(--glass-border)", borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 12 }} />
+                      <input value={formatNumberInput(inp.targetQuotes)} onChange={e => setGoalInputs(prev => ({ ...prev, [k]: { ...inp, targetQuotes: parseNumberInput(e.target.value) } }))}
+                        placeholder="0" style={{ width: "100%", textAlign: "right", fontSize: 12 }} />
                     </td>
                     <td style={{ padding: "8px 12px", textAlign: "right", fontSize: 11, color: "var(--text-muted)" }}>
                       {saved ? `${Number(saved.targetAmount).toLocaleString()}원 / ${saved.targetContracts}건` : "—"}
