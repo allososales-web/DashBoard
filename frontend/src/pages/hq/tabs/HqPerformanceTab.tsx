@@ -84,9 +84,8 @@ export default function HqPerformanceTab() {
     setActiveChannels((prev) => { const next = new Set(prev); if (next.has(ch)) next.delete(ch); else next.add(ch); return next; });
   };
 
-  const metricsFiltered = includedIds.size > 0
-    ? (allStores as any[]).filter((s: any) => includedIds.has(s.storeId))
-    : (allStores as any[]);
+  // 관리자 탭에서 실적 반영 매장으로 체크된 매장만 표시
+  const metricsFiltered = (allStores as any[]).filter((s: any) => includedIds.has(s.storeId));
 
   const filteredList = metricsFiltered.filter((s: any) => {
     const ch = channelMap[s.storeId] ?? 'ROAD';
@@ -155,8 +154,7 @@ export default function HqPerformanceTab() {
             );
           })}
           {metricsCount > 0 && <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>실적 반영 {metricsCount}개 매장 기준</span>}
-          {metricsCount === 0 && <span style={{ fontSize: 11, color: 'var(--warning)', marginLeft: 8 }}>⚠ 실적 반영 매장 미설정 — 관리자 탭에서 설정하세요</span>}
-        </div>
+          {metricsCount === 0 && <span style={{ fontSize: 11, color: 'var(--warning)', marginLeft: 8 }}>⚠ 실적 반영 매장 미설정 — 관리자 탭에서 설정하세요</span>}        </div>
       </div>
 
       {/* KPI 카드 — 진척율 포함 */}

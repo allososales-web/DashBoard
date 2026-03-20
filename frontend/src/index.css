@@ -317,46 +317,26 @@ tr:hover td { background: rgba(90,122,90,0.03); }
 }
 
 /* ── Login Page ── */
-.login-layout {
-  display: flex;
-  min-height: 100vh;
-}
-.login-store-panel {
-  flex: 1;
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  padding: 48px 40px;
-  overflow-y: auto;
-  background: var(--surface);
-}
-.login-pin-panel {
-  width: 380px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 56px 48px;
-  background: var(--surface2);
-}
-
-@media (max-width: 640px) {
-  .login-layout { flex-direction: column; }
-  .login-store-panel {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    padding: 32px 20px 24px;
-    max-height: 45vh;
+@media (max-width: 768px) {
+  /* 모바일: 카드 내부 세로 스택 */
+  .login-card-inner {
+    flex-direction: column !important;
+    min-height: unset !important;
+  }
+  .login-store-col {
+    border-right: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    max-height: 42vh;
     overflow-y: auto;
-    flex-shrink: 0;
+    padding: 28px 20px 20px !important;
   }
-  .login-pin-panel {
-    width: 100%;
-    flex: 1;
-    padding: 32px 28px 40px;
-    justify-content: flex-start;
+  .login-pin-col {
+    width: 100% !important;
+    padding: 28px 24px 36px !important;
+    justify-content: flex-start !important;
   }
-  .login-layout table { min-width: unset; }
+  .login-wrapper {
+    padding: 16px !important;
+    align-items: flex-start !important;
+  }
 }

@@ -108,145 +108,187 @@ export default function LoginPage() {
   const orderedChannels = CHANNEL_ORDER.filter((ch) => ch !== 'HQ' && grouped[ch]?.length > 0);
 
   return (
-    <div className="login-layout" style={{ background: 'var(--bg)', fontFamily: "'Pretendard', 'Apple SD Gothic Neo', sans-serif" }}>
-      {/* 좌측: 매장 목록 */}
-      <div className="login-store-panel">
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: '-0.04em', color: 'var(--text)' }}>Alloso</div>
-          <div style={{ fontSize: 11, letterSpacing: '0.2em', color: 'var(--text-muted)', marginTop: 4, textTransform: 'uppercase' }}>
-            Store Analytics Dashboard
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--bg)',
+      fontFamily: "'Pretendard', 'Apple SD Gothic Neo', sans-serif",
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '40px 32px',
+    }}>
+      {/* 중앙 컨테이너 — HqLayout maxWidth 1100 패턴 */}
+      <div style={{
+        width: '100%',
+        maxWidth: 1100,
+        display: 'flex',
+        gap: 0,
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 20,
+        boxShadow: '0 8px 40px rgba(0,0,0,0.08)',
+        overflow: 'hidden',
+        minHeight: 640,
+      }}>
+        {/* 좌측: 브랜드 + 매장 목록 */}
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '48px 40px',
+          overflowY: 'auto',
+          borderRight: '1px solid var(--border)',
+        }}>
+          {/* 브랜드 헤더 */}
+          <div style={{ marginBottom: 36 }}>
+            <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: '-0.04em', color: 'var(--text)' }}>Alloso</div>
+            <div style={{ fontSize: 11, letterSpacing: '0.2em', color: 'var(--text-muted)', marginTop: 4, textTransform: 'uppercase' }}>
+              Store Analytics Dashboard
+            </div>
           </div>
+
+          {/* 검색 */}
+          <input
+            placeholder="매장 검색..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ marginBottom: 28, fontSize: 13 }}
+          />
+
+          {/* 매장 목록 */}
+          {loading ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>불러오는 중...</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {(!search || '본사'.includes(search) || 'HQ'.toLowerCase().includes(search.toLowerCase())) && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase' }}>본사</div>
+                  <StoreRow id="HQ" name="본사(HQ)" channel="HQ" isSelected={selected?.id === 'HQ'} onClick={() => handleSelect('HQ', '본사(HQ)')} />
+                </div>
+              )}
+              {orderedChannels.map((ch) => (
+                <div key={ch} style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase' }}>{CHANNEL_LABELS[ch] ?? ch}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {grouped[ch].map((s) => (
+                      <StoreRow key={s.id} id={s.id} name={s.name} channel={ch} isSelected={selected?.id === s.id} onClick={() => handleSelect(s.id, s.name)} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {filtered.length === 0 && !search.includes('본사') && !search.includes('HQ') && (
+                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>검색 결과 없음</div>
+              )}
+            </div>
+          )}
+          {error && step === 'select' && <div style={{ marginTop: 16, color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
         </div>
 
-        <input
-          placeholder="매장 검색..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: '100%', marginBottom: 28, fontSize: 13 }}
-        />
-
-        {loading ? (
-          <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>불러오는 중...</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {(!search || '본사'.includes(search) || 'HQ'.toLowerCase().includes(search.toLowerCase())) && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase' }}>본사</div>
-                <StoreRow id="HQ" name="본사(HQ)" channel="HQ" isSelected={selected?.id === 'HQ'} onClick={() => handleSelect('HQ', '본사(HQ)')} />
+        {/* 우측: PIN 패드 */}
+        <div style={{
+          width: 380,
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '56px 48px',
+          background: 'var(--bg2)',
+        }}>
+          {step === 'select' && (
+            <div style={{ textAlign: 'center', width: '100%' }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, letterSpacing: '0.06em' }}>
+                좌측에서 매장을 선택하세요
               </div>
-            )}
-            {orderedChannels.map((ch) => (
-              <div key={ch} style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase' }}>{CHANNEL_LABELS[ch] ?? ch}</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {grouped[ch].map((s) => (
-                    <StoreRow key={s.id} id={s.id} name={s.name} channel={ch} isSelected={selected?.id === s.id} onClick={() => handleSelect(s.id, s.name)} />
-                  ))}
-                </div>
+              <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, opacity: 0.2 }}>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} style={{ height: 56, borderRadius: 10, background: 'rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.06)' }} />
+                ))}
               </div>
-            ))}
-            {filtered.length === 0 && !search.includes('본사') && !search.includes('HQ') && (
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>검색 결과 없음</div>
-            )}
-          </div>
-        )}
-        {error && step === 'select' && <div style={{ marginTop: 16, color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
-      </div>
-
-      {/* 우측: PIN 패드 */}
-      <div className="login-pin-panel">
-        {step === 'select' && (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, letterSpacing: '0.08em' }}>선택된 매장</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', minHeight: 28 }}>—</div>
-            <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, opacity: 0.25 }}>
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} style={{ height: 56, borderRadius: 10, background: 'rgba(0,0,0,0.06)', border: '1px solid rgba(0,0,0,0.07)' }} />
-              ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {step === 'pin' && selected && (
-          <div style={{ width: '100%', textAlign: 'center' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, letterSpacing: '0.08em' }}>선택된 매장</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', marginBottom: 28 }}>{selected.name}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16, letterSpacing: '0.08em' }}>PIN 코드</div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 32 }}>
-              {[0,1,2,3].map((i) => (
-                <div key={i} style={{
-                  width: 14, height: 14, borderRadius: '50%',
-                  background: i < pin.length ? 'var(--accent)' : 'rgba(0,0,0,0.10)',
+          {step === 'pin' && selected && (
+            <div style={{ width: '100%', textAlign: 'center' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, letterSpacing: '0.08em' }}>선택된 매장</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', marginBottom: 28 }}>{selected.name}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16, letterSpacing: '0.08em' }}>PIN 코드</div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 32 }}>
+                {[0,1,2,3].map((i) => (
+                  <div key={i} style={{
+                    width: 14, height: 14, borderRadius: '50%',
+                    background: i < pin.length ? 'var(--accent)' : 'rgba(0,0,0,0.10)',
+                    transition: 'background 0.15s',
+                  }} />
+                ))}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((d, i) => (
+                  <button
+                    key={i}
+                    onClick={() => d === '⌫' ? handlePinDelete() : d ? handlePinInput(d) : undefined}
+                    disabled={submitting || (!d && d !== '0')}
+                    style={{
+                      height: 56, borderRadius: 10,
+                      border: '1.5px solid rgba(0,0,0,0.09)',
+                      background: d === '⌫' ? 'rgba(239,68,68,0.08)' : d ? '#fff' : 'transparent',
+                      color: d === '⌫' ? '#ef4444' : '#1a1a2e',
+                      fontSize: 18, fontWeight: 500,
+                      cursor: d ? 'pointer' : 'default',
+                      opacity: !d && d !== '0' ? 0 : 1,
+                      transition: 'background 0.12s',
+                      boxShadow: d ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+                    }}
+                    onMouseEnter={(e) => { if (d) e.currentTarget.style.background = d === '⌫' ? 'rgba(192,57,43,0.10)' : 'rgba(90,122,90,0.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = d === '⌫' ? 'rgba(239,68,68,0.08)' : d ? '#fff' : 'transparent'; }}
+                  >
+                    {submitting && d === '0' ? '...' : d}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={handlePinSubmit}
+                disabled={pin.length !== 4 || submitting}
+                style={{
+                  width: '100%', marginTop: 16, height: 52, borderRadius: 99,
+                  background: pin.length === 4 ? 'var(--dark)' : 'rgba(0,0,0,0.08)',
+                  border: 'none', color: pin.length === 4 ? '#fff' : 'var(--text-muted)', fontSize: 14, fontWeight: 700,
+                  cursor: pin.length === 4 ? 'pointer' : 'default',
                   transition: 'background 0.15s',
-                }} />
-              ))}
+                  boxShadow: pin.length === 4 ? '0 4px 14px rgba(0,0,0,0.18)' : 'none',
+                }}
+              >
+                {submitting ? '로그인 중...' : '로그인'}
+              </button>
+              <button
+                onClick={() => { setStep('select'); setPin(''); setError(''); setSelected(null); }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, marginTop: 16 }}
+              >
+                ← 매장 다시 선택
+              </button>
+              {error && <div style={{ marginTop: 12, color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((d, i) => (
-                <button
-                  key={i}
-                  onClick={() => d === '⌫' ? handlePinDelete() : d ? handlePinInput(d) : undefined}
-                  disabled={submitting || (!d && d !== '0')}
-                  style={{
-                    height: 56, borderRadius: 10,
-                    border: '1.5px solid rgba(0,0,0,0.09)',
-                    background: d === '⌫' ? 'rgba(239,68,68,0.08)' : d ? '#fff' : 'transparent',
-                    color: d === '⌫' ? '#ef4444' : '#1a1a2e',
-                    fontSize: 18, fontWeight: 500,
-                    cursor: d ? 'pointer' : 'default',
-                    opacity: !d && d !== '0' ? 0 : 1,
-                    transition: 'background 0.12s',
-                    boxShadow: d ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
-                  }}
-                  onMouseEnter={(e) => { if (d) e.currentTarget.style.background = d === '⌫' ? 'rgba(192,57,43,0.10)' : 'rgba(90,122,90,0.08)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = d === '⌫' ? 'rgba(239,68,68,0.08)' : d ? '#fff' : 'transparent'; }}
-                >
-                  {submitting && d === '0' ? '...' : d}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={handlePinSubmit}
-              disabled={pin.length !== 4 || submitting}
-              style={{
-                width: '100%', marginTop: 16, height: 52, borderRadius: 99,
-                background: pin.length === 4 ? 'var(--dark)' : 'rgba(0,0,0,0.08)',
-                border: 'none', color: pin.length === 4 ? '#fff' : 'var(--text-muted)', fontSize: 14, fontWeight: 700,
-                cursor: pin.length === 4 ? 'pointer' : 'default',
-                transition: 'background 0.15s',
-                boxShadow: pin.length === 4 ? '0 4px 14px rgba(0,0,0,0.18)' : 'none',
-              }}
-            >
-              {submitting ? '로그인 중...' : '로그인'}
-            </button>
-            <button
-              onClick={() => { setStep('select'); setPin(''); setError(''); setSelected(null); }}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, marginTop: 16 }}
-            >
-              ← 매장 다시 선택
-            </button>
-            {error && <div style={{ marginTop: 12, color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
-          </div>
-        )}
+          )}
 
-        {step === 'change-pin' && (
-          <div style={{ width: '100%' }}>
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>PIN 변경 필요</div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24 }}>처음 로그인입니다. 새 PIN을 설정해주세요.</div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6, letterSpacing: '0.06em' }}>새 PIN (4자리)</label>
-              <input type="password" maxLength={4} value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))} placeholder="새 PIN 입력" />
+          {step === 'change-pin' && (
+            <div style={{ width: '100%' }}>
+              <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>PIN 변경 필요</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24 }}>처음 로그인입니다. 새 PIN을 설정해주세요.</div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6, letterSpacing: '0.06em' }}>새 PIN (4자리)</label>
+                <input type="password" maxLength={4} value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))} placeholder="새 PIN 입력" />
+              </div>
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6, letterSpacing: '0.06em' }}>PIN 확인</label>
+                <input type="password" maxLength={4} value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))} placeholder="PIN 재입력" />
+              </div>
+              {error && <div style={{ marginBottom: 16, color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
+              <button className="btn btn-primary" style={{ width: '100%', height: 52, fontSize: 15 }} onClick={handleChangePinSubmit} disabled={submitting}>
+                {submitting ? '변경 중...' : 'PIN 설정 완료'}
+              </button>
             </div>
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6, letterSpacing: '0.06em' }}>PIN 확인</label>
-              <input type="password" maxLength={4} value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))} placeholder="PIN 재입력" />
-            </div>
-            {error && <div style={{ marginBottom: 16, color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
-            <button className="btn btn-primary" style={{ width: '100%', height: 52, fontSize: 15 }} onClick={handleChangePinSubmit} disabled={submitting}>
-              {submitting ? '변경 중...' : 'PIN 설정 완료'}
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
