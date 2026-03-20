@@ -81,6 +81,11 @@ input, select, textarea {
   width: 100%;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
+select {
+  padding-right: 32px;
+  min-width: 0;
+  appearance: auto;
+}
 input:focus, select:focus, textarea:focus {
   border-color: var(--accent);
   background: #fff;
@@ -204,6 +209,7 @@ tr:hover td { background: rgba(124,106,247,0.04); }
 
   .store-sidebar { display: none !important; }
   .store-main { padding: 16px 14px 80px 14px !important; }
+  .store-main > div { max-width: 100% !important; }
 
   .mobile-bottom-nav {
     display: flex;
@@ -242,6 +248,7 @@ tr:hover td { background: rgba(124,106,247,0.04); }
 
   header { padding: 0 14px !important; }
   .hq-main { padding: 16px 14px !important; }
+  .hq-main > div { max-width: 100% !important; }
 
   .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table { min-width: 480px; }

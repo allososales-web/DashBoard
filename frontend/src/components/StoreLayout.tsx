@@ -147,7 +147,9 @@ export default function StoreLayout() {
 
       {/* Main */}
       <main className="store-main" style={{ flex: 1, padding: 28, overflowY: 'auto', minHeight: '100vh' }}>
-        <Outlet />
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <Outlet />
+        </div>
       </main>
 
       {/* 모바일 하단 탭바 */}
