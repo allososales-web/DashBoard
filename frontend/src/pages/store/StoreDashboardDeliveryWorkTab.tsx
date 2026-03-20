@@ -6,11 +6,13 @@ import api from '../../services/api';
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 function pad2(n: number) { return String(n).padStart(2, '0'); }
 
-interface WorkType { id: string; name: string; startTime: string; endTime: string; }
+interface WorkType { id: string; name: string; startTime: string; endTime: string; color: string; }
 interface StaffMember { id: string; name: string; }
 interface WorkEntry { staffId: string; day: number; typeId: string | null; isOff: boolean; }
 
-// 주N일 패턴 옵션
+// 근무형태별 파스텔 색상
+const TYPE_COLORS = ['#b8a4f0', '#7dd8b8', '#f0a070', '#fcd080', '#f9a0a0', '#a0c4f9', '#c4f0a0'];
+
 const WEEK_PATTERNS = [
   { label: '주5일 (월~금)', days: [1,2,3,4,5] },
   { label: '주5일 (화~토)', days: [2,3,4,5,6] },
@@ -35,8 +37,8 @@ export default function StoreDashboardDeliveryWorkTab() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [workTypes, setWorkTypes] = useState<WorkType[]>([
-    { id: 'A', name: '근무형태A', startTime: '10:01', endTime: '20:59' },
-    { id: 'B', name: '근무형태B', startTime: '12:30', endTime: '22:30' },
+    { id: 'A', name: '근무형태A', startTime: '10:01', endTime: '20:59', color: TYPE_COLORS[0] },
+    { id: 'B', name: '근무형태B', startTime: '12:30', endTime: '22:30', color: TYPE_COLORS[1] },
   ]);
   const [newTypeName, setNewTypeName] = useState('');
   const [newTypeStart, setNewTypeStart] = useState('');
@@ -49,13 +51,17 @@ export default function StoreDashboardDeliveryWorkTab() {
   const [bulkOffDays, setBulkOffDays] = useState<number[]>([]);
   const [weekPattern, setWeekPattern] = useState<number[] | null>(null);
   const [saving, setSaving] = useState(false);
+  // 캘린더 뷰: 선택된 날짜 셀 편집 팝업
+  const [editCell, setEditCell] = useState<{ day: number; staffId: string } | null>(null);
 
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
 
-  const calendarDays = useMemo(() => {
+  // 캘린더 셀 배열 (null = 빈 칸)
+  const calendarCells = useMemo(() => {
     const cells: (number | null)[] = Array(firstDayOfWeek).fill(null);
     for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    while (cells.length % 7 !== 0) cells.push(null);
     return cells;
   }, [year, month, daysInMonth, firstDayOfWeek]);
 
@@ -89,13 +95,9 @@ export default function StoreDashboardDeliveryWorkTab() {
     }
   }
 
-  // 전체 매니저 일괄 적용
   function applyAllStaff() {
     if (!selectedType) return;
-    staffList.forEach(s => {
-      applyBulkType(s.id);
-      applyBulkOff(s.id);
-    });
+    staffList.forEach(s => { applyBulkType(s.id); applyBulkOff(s.id); });
   }
 
   async function saveSchedule() {
@@ -117,7 +119,6 @@ export default function StoreDashboardDeliveryWorkTab() {
           };
         })
         .filter((r): r is NonNullable<typeof r> => r !== null);
-
       await api.post('/work-records/bulk', { storeId, year, month, records });
       qc.invalidateQueries({ queryKey: ['hq-work-records'] });
       alert('근무 스케줄이 저장되었습니다.');
@@ -129,7 +130,6 @@ export default function StoreDashboardDeliveryWorkTab() {
     }
   }
 
-  // 납기 리스트 뷰용 더미 데이터 (실제로는 스프레드시트 파싱 필요)
   const deliveryListItems = useMemo(() => {
     if (!appliedUrl) return [];
     return [
@@ -159,13 +159,9 @@ export default function StoreDashboardDeliveryWorkTab() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
-          <input value={deliveryUrl} onChange={e => setDeliveryUrl(e.target.value)} placeholder="구글 스프레드시트 URL 입력"
-            style={{ flex: 1 }} />
-          <button className="btn btn-primary" style={{ fontSize: 12, padding: '8px 16px', whiteSpace: 'nowrap' }} onClick={() => setAppliedUrl(deliveryUrl)} disabled={!deliveryUrl}>
-            적용
-          </button>
+          <input value={deliveryUrl} onChange={e => setDeliveryUrl(e.target.value)} placeholder="구글 스프레드시트 URL 입력" style={{ flex: 1 }} />
+          <button className="btn btn-primary" style={{ fontSize: 12, padding: '8px 16px', whiteSpace: 'nowrap' }} onClick={() => setAppliedUrl(deliveryUrl)} disabled={!deliveryUrl}>적용</button>
         </div>
-
         {deliveryView === 'calendar' ? (
           appliedUrl ? (
             <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
@@ -177,40 +173,31 @@ export default function StoreDashboardDeliveryWorkTab() {
             </div>
           )
         ) : (
-          <div>
-            {deliveryListItems.length > 0 ? (
-              <table>
-                <thead>
-                  <tr>
-                    <th>고객명</th>
-                    <th>제품</th>
-                    <th>납기일</th>
-                    <th>상태</th>
+          deliveryListItems.length > 0 ? (
+            <table>
+              <thead><tr><th>고객명</th><th>제품</th><th>납기일</th><th>상태</th></tr></thead>
+              <tbody>
+                {deliveryListItems.map(item => (
+                  <tr key={item.id}>
+                    <td style={{ fontWeight: 500 }}>{item.customer}</td>
+                    <td>{item.product}</td>
+                    <td>{item.dueDate}</td>
+                    <td>
+                      <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 99, fontWeight: 600,
+                        background: item.status === '납기 완료' ? 'rgba(16,185,129,0.12)' : item.status === '배송 중' ? 'rgba(124,106,247,0.12)' : 'rgba(245,158,11,0.12)',
+                        color: item.status === '납기 완료' ? 'var(--success)' : item.status === '배송 중' ? 'var(--accent)' : 'var(--warning)' }}>
+                        {item.status}
+                      </span>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {deliveryListItems.map(item => (
-                    <tr key={item.id}>
-                      <td style={{ fontWeight: 500 }}>{item.customer}</td>
-                      <td>{item.product}</td>
-                      <td>{item.dueDate}</td>
-                      <td>
-                        <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 99, fontWeight: 600,
-                          background: item.status === '납기 완료' ? 'rgba(16,185,129,0.12)' : item.status === '배송 중' ? 'rgba(124,106,247,0.12)' : 'rgba(245,158,11,0.12)',
-                          color: item.status === '납기 완료' ? 'var(--success)' : item.status === '배송 중' ? 'var(--accent)' : 'var(--warning)' }}>
-                          {item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '40px 0', background: 'rgba(0,0,0,0.02)', borderRadius: 10 }}>
-                URL을 적용하면 납기 리스트가 표시됩니다
-              </div>
-            )}
-          </div>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '40px 0', background: 'rgba(0,0,0,0.02)', borderRadius: 10 }}>
+              URL을 적용하면 납기 리스트가 표시됩니다
+            </div>
+          )
         )}
       </div>
 
@@ -231,16 +218,17 @@ export default function StoreDashboardDeliveryWorkTab() {
           </div>
         </div>
 
+        {/* 근무형태 + 매니저 설정 */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-          {/* 근무형태 관리 */}
           <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>근무형태 설정</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-              {workTypes.map(wt => (
+              {workTypes.map((wt, idx) => (
                 <div key={wt.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: 8 }}>
-                  <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 3, background: wt.color, flexShrink: 0, display: 'inline-block' }} />
                     <span style={{ fontSize: 12, fontWeight: 600 }}>{wt.name}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>{wt.startTime} ~ {wt.endTime}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{wt.startTime} ~ {wt.endTime}</span>
                   </div>
                   <button onClick={() => setWorkTypes(prev => prev.filter(t => t.id !== wt.id))} style={{ fontSize: 10, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>삭제</button>
                 </div>
@@ -255,13 +243,13 @@ export default function StoreDashboardDeliveryWorkTab() {
               </div>
               <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => {
                 if (!newTypeName || !newTypeStart || !newTypeEnd) return;
-                setWorkTypes(prev => [...prev, { id: Date.now().toString(), name: newTypeName, startTime: newTypeStart, endTime: newTypeEnd }]);
+                const color = TYPE_COLORS[workTypes.length % TYPE_COLORS.length];
+                setWorkTypes(prev => [...prev, { id: Date.now().toString(), name: newTypeName, startTime: newTypeStart, endTime: newTypeEnd, color }]);
                 setNewTypeName(''); setNewTypeStart(''); setNewTypeEnd('');
               }}>+ 형태 추가</button>
             </div>
           </div>
 
-          {/* 매니저 관리 */}
           <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>매니저 관리</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
@@ -284,9 +272,9 @@ export default function StoreDashboardDeliveryWorkTab() {
           </div>
         </div>
 
-        {/* 일괄 적용 설정 */}
+        {/* 일괄 적용 */}
         {staffList.length > 0 && (
-          <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
+          <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>일괄 적용 설정</div>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -315,11 +303,11 @@ export default function StoreDashboardDeliveryWorkTab() {
                 </select>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
               <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => { if (selectedStaff) { applyBulkType(selectedStaff); applyBulkOff(selectedStaff); } }}>선택 매니저 적용</button>
               <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={applyAllStaff}>전체 매니저 일괄 적용</button>
             </div>
-            <div style={{ marginTop: 12 }}>
+            <div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>추가 휴무 일자 (클릭으로 토글):</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {Array.from({length: daysInMonth}, (_, i) => i+1).map(d => {
@@ -341,57 +329,137 @@ export default function StoreDashboardDeliveryWorkTab() {
           </div>
         )}
 
-        {/* 스케줄 그리드 */}
-        {staffList.length > 0 && (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                  <th style={{ padding: '8px 12px', textAlign: 'left', minWidth: 80, color: 'var(--text-muted)' }}>매니저</th>
-                  {Array.from({length: daysInMonth}, (_, i) => i+1).map(d => {
-                    const dow = new Date(year, month-1, d).getDay();
+        {/* ── 월간 캘린더 뷰 ── */}
+        {staffList.length > 0 ? (
+          <div>
+            {/* 범례 */}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>범례:</span>
+              {workTypes.map(wt => (
+                <span key={wt.id} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 3, background: wt.color, display: 'inline-block' }} />
+                  {wt.name}
+                </span>
+              ))}
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: 'rgba(239,68,68,0.25)', display: 'inline-block' }} />
+                휴무
+              </span>
+            </div>
+
+            {/* 캘린더 그리드 */}
+            <div style={{ overflowX: 'auto' }}>
+              <div style={{ minWidth: 560 }}>
+                {/* 요일 헤더 */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 3 }}>
+                  {WEEKDAYS.map((d, i) => (
+                    <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, padding: '6px 0',
+                      color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : 'var(--text-muted)',
+                      background: 'rgba(0,0,0,0.03)', borderRadius: 6 }}>
+                      {d}
+                    </div>
+                  ))}
+                </div>
+
+                {/* 날짜 셀 */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+                  {calendarCells.map((day, idx) => {
+                    if (!day) return <div key={idx} style={{ minHeight: 80 + staffList.length * 22 }} />;
+                    const dow = new Date(year, month - 1, day).getDay();
+                    const isToday = day === now.getDate() && month === now.getMonth() + 1 && year === now.getFullYear();
+                    const isSun = dow === 0;
+                    const isSat = dow === 6;
+
                     return (
-                      <th key={d} style={{ padding: '4px 2px', textAlign: 'center', minWidth: 32, color: dow===0?'#f87171':dow===6?'#60a5fa':'var(--text-muted)', fontWeight: 600 }}>
-                        <div>{d}</div>
-                        <div style={{ fontSize: 9 }}>{WEEKDAYS[dow]}</div>
-                      </th>
+                      <div key={idx} style={{
+                        borderRadius: 8,
+                        border: isToday ? '2px solid var(--accent)' : '1px solid rgba(0,0,0,0.07)',
+                        background: isToday ? 'rgba(124,106,247,0.04)' : isSun ? 'rgba(239,68,68,0.03)' : 'rgba(255,255,255,0.7)',
+                        padding: '6px 4px',
+                        minHeight: 80 + staffList.length * 22,
+                        display: 'flex', flexDirection: 'column', gap: 3,
+                      }}>
+                        {/* 날짜 숫자 */}
+                        <div style={{ textAlign: 'center', fontSize: 12, fontWeight: isToday ? 800 : 600,
+                          color: isToday ? 'var(--accent)' : isSun ? '#ef4444' : isSat ? '#3b82f6' : 'var(--text)',
+                          marginBottom: 4 }}>
+                          {day}
+                        </div>
+
+                        {/* 매니저별 근무 배지 */}
+                        {staffList.map(staff => {
+                          const entry = getEntry(staff.id, day);
+                          const isOff = entry?.isOff || isSun;
+                          const wt = entry?.typeId ? workTypes.find(t => t.id === entry.typeId) : null;
+                          const isEditing = editCell?.day === day && editCell?.staffId === staff.id;
+
+                          return (
+                            <div key={staff.id} style={{ position: 'relative' }}>
+                              <button
+                                onClick={() => setEditCell(isEditing ? null : { day, staffId: staff.id })}
+                                title={`${staff.name}: ${isOff ? '휴무' : wt ? wt.name : '미설정'}`}
+                                style={{
+                                  width: '100%', border: 'none', cursor: 'pointer', borderRadius: 4,
+                                  padding: '2px 4px', fontSize: 10, fontWeight: 600, textAlign: 'center',
+                                  background: isOff ? 'rgba(239,68,68,0.18)' : wt ? `${wt.color}55` : 'rgba(0,0,0,0.05)',
+                                  color: isOff ? '#dc2626' : wt ? '#333' : 'var(--text-muted)',
+                                  outline: isEditing ? '2px solid var(--accent)' : 'none',
+                                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                }}>
+                                {staff.name.length > 3 ? staff.name.slice(0, 3) : staff.name}
+                                {' '}
+                                {isOff ? '휴' : wt ? wt.name.replace('근무형태', '') : '-'}
+                              </button>
+
+                              {/* 편집 드롭다운 팝업 */}
+                              {isEditing && (
+                                <div style={{
+                                  position: 'absolute', top: '100%', left: 0, zIndex: 50,
+                                  background: '#fff', border: '1px solid var(--glass-border)',
+                                  borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                                  padding: 8, minWidth: 130,
+                                }}>
+                                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>
+                                    {staff.name} · {month}/{day}
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    <button onClick={() => { setEntry(staff.id, day, null, false); setEditCell(null); }}
+                                      style={{ fontSize: 11, padding: '4px 8px', borderRadius: 5, border: '1px solid rgba(0,0,0,0.08)', background: !entry || (!entry.isOff && !entry.typeId) ? 'rgba(124,106,247,0.1)' : '#fff', cursor: 'pointer', textAlign: 'left' }}>
+                                      — 미설정
+                                    </button>
+                                    <button onClick={() => { setEntry(staff.id, day, null, true); setEditCell(null); }}
+                                      style={{ fontSize: 11, padding: '4px 8px', borderRadius: 5, border: '1px solid rgba(239,68,68,0.3)', background: entry?.isOff ? 'rgba(239,68,68,0.12)' : '#fff', cursor: 'pointer', textAlign: 'left', color: '#dc2626' }}>
+                                      🔴 휴무
+                                    </button>
+                                    {workTypes.map(wt => (
+                                      <button key={wt.id} onClick={() => { setEntry(staff.id, day, wt.id, false); setEditCell(null); }}
+                                        style={{ fontSize: 11, padding: '4px 8px', borderRadius: 5, border: `1px solid ${wt.color}88`, background: entry?.typeId === wt.id ? `${wt.color}33` : '#fff', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        <span style={{ width: 8, height: 8, borderRadius: 2, background: wt.color, flexShrink: 0 }} />
+                                        {wt.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     );
                   })}
-                </tr>
-              </thead>
-              <tbody>
-                {staffList.map(staff => (
-                  <tr key={staff.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <td style={{ padding: '6px 12px', fontWeight: 600, whiteSpace: 'nowrap' }}>{staff.name}</td>
-                    {Array.from({length: daysInMonth}, (_, i) => i+1).map(d => {
-                      const entry = getEntry(staff.id, d);
-                      const dow = new Date(year, month-1, d).getDay();
-                      const isOff = entry?.isOff || dow === 0;
-                      const wt = entry?.typeId ? workTypes.find(t => t.id === entry.typeId) : null;
-                      return (
-                        <td key={d} style={{ padding: '2px', textAlign: 'center' }}>
-                          <select value={entry?.isOff ? 'off' : (entry?.typeId ?? '')} onChange={e => {
-                            if (e.target.value === 'off') setEntry(staff.id, d, null, true);
-                            else if (e.target.value === '') setEntry(staff.id, d, null, false);
-                            else setEntry(staff.id, d, e.target.value, false);
-                          }} style={{ width: 44, fontSize: 9, padding: '2px 1px', borderRadius: 4, border: 'none', cursor: 'pointer',
-                            background: isOff ? 'rgba(239,68,68,0.12)' : wt ? 'rgba(200,149,108,0.15)' : 'rgba(0,0,0,0.04)',
-                            color: isOff ? '#dc2626' : wt ? 'var(--accent)' : 'var(--text-muted)' }}>
-                            <option value="">-</option>
-                            <option value="off">휴무</option>
-                            {workTypes.map(wt => <option key={wt.id} value={wt.id}>{wt.name.replace('근무형태', '')}</option>)}
-                          </select>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </div>
+              </div>
+            </div>
+
+            {/* 닫기 오버레이 */}
+            {editCell && (
+              <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setEditCell(null)} />
+            )}
           </div>
-        )}
-        {staffList.length === 0 && (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '40px 0' }}>매니저를 추가하면 스케줄 입력이 가능합니다</div>
+        ) : (
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '40px 0' }}>
+            매니저를 추가하면 스케줄 입력이 가능합니다
+          </div>
         )}
       </div>
     </div>
