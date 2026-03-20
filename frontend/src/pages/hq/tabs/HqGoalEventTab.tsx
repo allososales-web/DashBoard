@@ -242,11 +242,11 @@ export default function HqGoalEventTab() {
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
       {/* ── 전사 이슈 캘린더 + 이력 ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 300px", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 300px", gap: 16 }} className="event-cal-grid">
         <div className="glass" style={{ padding: 20 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
             <div style={{ fontSize: 14, fontWeight: 700 }}>전사 이슈 캘린더</div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: 'wrap' }}>
               <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => { if (calMonth === 1) { setCalYear(y => y-1); setCalMonth(12); } else setCalMonth(m => m-1); }}>‹</button>
               <span style={{ fontWeight: 600, fontSize: 13, minWidth: 80, textAlign: "center" }}>{calYear}년 {calMonth}월</span>
               <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => { if (calMonth === 12) { setCalYear(y => y+1); setCalMonth(1); } else setCalMonth(m => m+1); }}>›</button>
@@ -356,12 +356,12 @@ export default function HqGoalEventTab() {
 
       {/* ── 납기 일정 관리 (3개월) ── */}
       <div className="glass" style={{ padding: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 700 }}>납기 일정 관리</div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>당월 기준 앞뒤 1개월 · 클릭으로 상태 변경 · 일요일/공휴일 기본 불가</div>
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: 'wrap' }}>
             <div style={{ display: "flex", gap: 12, fontSize: 11 }}>
               {(Object.entries(DELIVERY_COLORS) as [DeliveryStatus, typeof DELIVERY_COLORS[DeliveryStatus]][]).map(([k, v]) => (
                 <span key={k} style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -384,7 +384,7 @@ export default function HqGoalEventTab() {
             {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
           </select>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }} className="del-cal-grid">
           {delMonths.map(({ year, month }) => {
             const k = `${year}-${pad2(month)}`;
             const cells2 = buildCalendar(year, month);

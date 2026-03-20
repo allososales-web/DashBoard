@@ -290,8 +290,7 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }} className="delivery-calendar-grid">
-          {delMonths.map(({ year: y, month: mo }, qi) => {
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }} className="delivery-calendar-grid">          {delMonths.map(({ year: y, month: mo }, qi) => {
             const deliveryMap = (delQueries[qi].data ?? {}) as Record<number, string>;
             const cells = buildCalendar(y, mo);
             const isCurrent = y === year && mo === month;

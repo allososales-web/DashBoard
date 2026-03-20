@@ -143,7 +143,7 @@ export default function HqStoreStatusTab() {
         <>
           {/* 매장별 TOP */}
           <div style={{ marginBottom: 8, fontSize: 13, fontWeight: 700, color: 'var(--text-muted)' }}>매장별 TOP</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }} className="store-top3-grid">
             {[
               { title: '판매 TOP', data: sortedByAmount, valueKey: 'contractAmount', format: (v: any) => `${Number(v).toLocaleString()}원` },
               { title: '견적 TOP', data: sortedByQuote, valueKey: 'quoteCount', format: (v: any) => `${v ?? 0}건` },
@@ -167,7 +167,7 @@ export default function HqStoreStatusTab() {
 
           {/* 품목별 TOP */}
           <div style={{ marginBottom: 8, fontSize: 13, fontWeight: 700, color: 'var(--text-muted)' }}>품목별 TOP</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }} className="store-top3-grid">
             {[
               { title: '품목별 매출 TOP', data: sortedByColAmount, format: (v: any) => `${Number(v.amount).toLocaleString()}원`, pct: (v: any) => totalColAmount > 0 ? ((v.amount / totalColAmount) * 100).toFixed(1) : '0.0' },
               { title: '품목별 판매건수 TOP', data: sortedByColCount, format: (v: any) => `${v.count}건`, pct: (v: any) => totalColCount > 0 ? ((v.count / totalColCount) * 100).toFixed(1) : '0.0' },

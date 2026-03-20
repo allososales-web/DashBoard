@@ -178,7 +178,7 @@ export default function StoreAnalysisPage() {
       ) : (
         <>
           {/* 컬렉션별 판매 비중 — 도넛 차트 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }} className="donut-grid">
             <div className="glass" style={{ padding: 24 }}>
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 20 }}>컬렉션별 판매 비중</div>
               <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
@@ -235,7 +235,7 @@ export default function StoreAnalysisPage() {
           </div>
 
           {/* 컬렉션별 평균 단가 + 사업부 비교 바 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }} className="donut-grid">
             <div className="glass" style={{ padding: 24 }}>
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 16 }}>컬렉션별 평균 단가</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

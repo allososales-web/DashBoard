@@ -185,13 +185,13 @@ function GoalProgressChart({
   return (
     <div className="glass" style={{ padding: 24 }}>
       {/* 헤더 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+      <div className="goal-chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Goal Progress</div>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>목표 매출 진척율</div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>기간 설정과 무관 — {chartYear}년 기준</div>
         </div>
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div className="goal-chart-btns" style={{ display: 'flex', gap: 4 }}>
           {([['annual','연도별'],['quarterly','분기별'],['recent3','직전 3개월']] as [ChartView, string][]).map(([v, l]) => (
             <button key={v} onClick={() => setView(v)} style={{
               padding: '6px 12px', borderRadius: 8, border: '1px solid var(--glass-border)',

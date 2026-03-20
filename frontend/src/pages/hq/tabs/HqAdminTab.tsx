@@ -45,10 +45,10 @@ function MetricsStoresSection() {
   return (
     <div className="glass" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
       <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 600 }}>실적 반영 매장</span>
           <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>{includedIds.size}개 선택됨</span>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>— 브랜드 실적 탭 KPI에 반영되는 매장</span>
+          <span className="hide-mobile" style={{ fontSize: 11, color: 'var(--text-muted)' }}>— 브랜드 실적 탭 KPI에 반영되는 매장</span>
         </div>
         <input placeholder="매장명 / 코드 검색" value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 180, fontSize: 12, padding: '6px 10px' }} />
       </div>

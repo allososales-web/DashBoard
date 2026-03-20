@@ -20,7 +20,7 @@ export default function HqDashboardPage() {
     <div>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>본사 대시보드</h1>
-        <div className="tabs" style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>
+        <div className="tabs" style={{ display: 'inline-flex', overflowX: 'auto', WebkitOverflowScrolling: 'touch', flexWrap: 'nowrap', maxWidth: '100%' }}>
           {TABS.map((t) => (
             <button key={t.id} className={`tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>
               {t.label}

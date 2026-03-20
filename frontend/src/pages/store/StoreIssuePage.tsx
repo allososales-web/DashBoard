@@ -200,8 +200,8 @@ export default function StoreIssuePage() {
             const isSelected = selectedDay === day;
             const isToday = year === now.getFullYear() && month === now.getMonth() + 1 && day === now.getDate();
             return (
-              <div key={day} onClick={() => setSelectedDay(isSelected ? null : day)} style={{ minHeight: 72, borderRadius: 10, padding: '6px 8px', cursor: 'pointer', background: isSelected ? 'rgba(200,149,108,0.15)' : isToday ? 'rgba(124,106,247,0.06)' : 'rgba(0,0,0,0.02)', border: isSelected ? '1.5px solid var(--accent)' : isToday ? '1.5px solid rgba(124,106,247,0.25)' : '1px solid rgba(0,0,0,0.05)', transition: 'background 0.15s' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4, color: isSun ? '#ef4444' : isSat ? '#3b82f6' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div key={day} onClick={() => setSelectedDay(isSelected ? null : day)} className="issue-cal-cell" style={{ minHeight: 72, borderRadius: 10, padding: '6px 8px', cursor: 'pointer', background: isSelected ? 'rgba(200,149,108,0.15)' : isToday ? 'rgba(124,106,247,0.06)' : 'rgba(0,0,0,0.02)', border: isSelected ? '1.5px solid var(--accent)' : isToday ? '1.5px solid rgba(124,106,247,0.25)' : '1px solid rgba(0,0,0,0.05)', transition: 'background 0.15s' }}>
+                <div className="issue-cal-day" style={{ fontSize: 13, fontWeight: 700, marginBottom: 4, color: isSun ? '#ef4444' : isSat ? '#3b82f6' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 4 }}>
                   {day}{isToday && <span style={{ fontSize: 9, background: 'var(--accent)', color: '#fff', borderRadius: 4, padding: '1px 4px', fontWeight: 700 }}>오늘</span>}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

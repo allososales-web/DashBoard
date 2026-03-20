@@ -49,19 +49,19 @@ export default function HqWorkRecordsTab() {
   return (
     <div>
       {/* 헤더 */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, alignItems: 'center', flexWrap: 'wrap' }}>
         <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={{ width: 'auto', minWidth: 95 }}>
           {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}년</option>)}
         </select>
         <select value={month} onChange={(e) => setMonth(Number(e.target.value))} style={{ width: 'auto', minWidth: 72 }}>
           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{m}월</option>)}
         </select>
-        <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 8 }}>
+        <span className="hide-mobile" style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 8 }}>
           날짜를 클릭하면 점별 근무 인원을 확인할 수 있어요
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 340px)', gap: 20, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 340px)', gap: 20, alignItems: 'start' }} className="hq-work-grid">
         {/* 캘린더 */}
         <div className="glass" style={{ padding: 20 }}>
           <div style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>{year}년 {month}월 일자별 근무 현황</div>

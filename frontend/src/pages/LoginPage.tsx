@@ -108,7 +108,7 @@ export default function LoginPage() {
   const orderedChannels = CHANNEL_ORDER.filter((ch) => ch !== 'HQ' && grouped[ch]?.length > 0);
 
   return (
-    <div style={{
+    <div className="login-wrapper" style={{
       minHeight: '100vh',
       background: 'var(--bg)',
       fontFamily: "'Pretendard', 'Apple SD Gothic Neo', sans-serif",
@@ -118,7 +118,7 @@ export default function LoginPage() {
       padding: '40px 32px',
     }}>
       {/* 중앙 컨테이너 — HqLayout maxWidth 1100 패턴 */}
-      <div style={{
+      <div className="login-card" style={{
         width: '100%',
         maxWidth: 1100,
         display: 'flex',
@@ -131,7 +131,7 @@ export default function LoginPage() {
         minHeight: 640,
       }}>
         {/* 좌측: 브랜드 + 매장 목록 */}
-        <div style={{
+        <div className="login-store-col" style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
@@ -185,7 +185,7 @@ export default function LoginPage() {
         </div>
 
         {/* 우측: PIN 패드 */}
-        <div style={{
+        <div className="login-pin-col" style={{
           width: 380,
           flexShrink: 0,
           display: 'flex',
