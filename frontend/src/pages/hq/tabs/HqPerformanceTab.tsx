@@ -18,12 +18,12 @@ const PERIOD_LABELS: { id: Period; label: string }[] = [
 ];
 
 const CHANNEL_FILTERS = [
-  { value: 'ROAD', label: '로드', color: '#c8956c' },
-  { value: 'DEPARTMENT', label: '백화점', color: '#7c6af7' },
-  { value: 'MALL', label: '몰', color: '#10b981' },
-  { value: 'STARFIELD', label: '스타필드', color: '#f59e0b' },
-  { value: 'POPUP', label: '팝업', color: '#ef4444' },
-  { value: 'OTHER', label: '기타', color: '#6b7280' },
+  { value: 'ROAD', label: '로드', color: '#f0a070' },
+  { value: 'DEPARTMENT', label: '백화점', color: '#b8a4f0' },
+  { value: 'MALL', label: '몰', color: '#7dd8b8' },
+  { value: 'STARFIELD', label: '스타필드', color: '#fcd080' },
+  { value: 'POPUP', label: '팝업', color: '#f9a0a0' },
+  { value: 'OTHER', label: '기타', color: '#b0bec5' },
 ];
 
 function getPrimaryMonth(period: Period, now: Date): number {
@@ -122,7 +122,7 @@ export default function HqPerformanceTab() {
       <div className="glass" style={{ padding: 16 }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           {period !== 'year' && (
-            <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={{ width: 90 }}>
+            <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={{ width: 'auto', minWidth: 90 }}>
               {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}년</option>)}
             </select>
           )}

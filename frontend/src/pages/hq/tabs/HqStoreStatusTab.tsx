@@ -40,6 +40,20 @@ export default function HqStoreStatusTab() {
   const [customEnd, setCustomEnd] = useState('');
   const { includedIds, count: metricsCount } = useMetricsStores();
 
+  const { data: adminStores = [] } = useQuery({
+    queryKey: ['admin-stores'],
+    queryFn: () => api.get('/stores/admin/all').then(r => r.data).catch(() => []),
+  });
+
+  // showOnLogin !== false 인 운영 매장 ID 집합
+  const activeStoreIds = useMemo(() => {
+    const ids = new Set<string>();
+    (adminStores as any[]).forEach((s: any) => {
+      if (s.showOnLogin !== false) ids.add(s.id);
+    });
+    return ids;
+  }, [adminStores]);
+
   const primaryMonth = period === 'custom' ? now.getMonth() + 1 : getPeriodMonth(period, now);
 
   const { data: allMetrics = [], isLoading } = useQuery({
@@ -47,12 +61,13 @@ export default function HqStoreStatusTab() {
     queryFn: () => api.get(`/dashboard/all?year=${year}&month=${primaryMonth}`).then(r => r.data).catch(() => []),
   });
 
-  // 실적 반영 매장만 필터 (설정된 경우), 없으면 showOnLogin 매장 전체
+  // 실적 반영 매장만 필터 (설정된 경우), 없으면 showOnLogin 운영 매장만
   const stores = useMemo(() => {
     const all = allMetrics as any[];
-    if (metricsCount > 0) return all.filter((s: any) => includedIds.has(s.storeId));
-    return all;
-  }, [allMetrics, includedIds, metricsCount]);
+    const active = activeStoreIds.size > 0 ? all.filter((s: any) => activeStoreIds.has(s.storeId)) : all;
+    if (metricsCount > 0) return active.filter((s: any) => includedIds.has(s.storeId));
+    return active;
+  }, [allMetrics, includedIds, metricsCount, activeStoreIds]);
 
   const totalAmount = stores.reduce((s: number, st: any) => s + Number(st.contractAmount ?? 0), 0);
   const sortedByAmount = useMemo(() => [...stores].sort((a, b) => Number(b.contractAmount) - Number(a.contractAmount)), [stores]);

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -10,6 +10,17 @@ interface WorkType { id: string; name: string; startTime: string; endTime: strin
 interface StaffMember { id: string; name: string; }
 interface WorkEntry { staffId: string; day: number; typeId: string | null; isOff: boolean; }
 
+// 주N일 패턴 옵션
+const WEEK_PATTERNS = [
+  { label: '주5일 (월~금)', days: [1,2,3,4,5] },
+  { label: '주5일 (화~토)', days: [2,3,4,5,6] },
+  { label: '주4일 (월~목)', days: [1,2,3,4] },
+  { label: '주4일 (화~금)', days: [2,3,4,5] },
+  { label: '주4일 (수~토)', days: [3,4,5,6] },
+  { label: '주3일 (월·수·금)', days: [1,3,5] },
+  { label: '주6일 (월~토)', days: [1,2,3,4,5,6] },
+];
+
 export default function StoreDashboardDeliveryWorkTab() {
   const { storeId } = useParams<{ storeId: string }>();
   const now = new Date();
@@ -18,7 +29,7 @@ export default function StoreDashboardDeliveryWorkTab() {
   // ── 납기 현황 상태 ──
   const [deliveryUrl, setDeliveryUrl] = useState('');
   const [appliedUrl, setAppliedUrl] = useState('');
-  const [dPlusDays, setDPlusDays] = useState(3);
+  const [deliveryView, setDeliveryView] = useState<'calendar' | 'list'>('calendar');
 
   // ── 근무 스케줄 상태 ──
   const [year, setYear] = useState(now.getFullYear());
@@ -36,6 +47,7 @@ export default function StoreDashboardDeliveryWorkTab() {
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [bulkOffDays, setBulkOffDays] = useState<number[]>([]);
+  const [weekPattern, setWeekPattern] = useState<number[] | null>(null);
   const [saving, setSaving] = useState(false);
 
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -60,21 +72,30 @@ export default function StoreDashboardDeliveryWorkTab() {
 
   function applyBulkType(staffId: string) {
     if (!selectedType) return;
-    const days: number[] = [];
     for (let d = 1; d <= daysInMonth; d++) {
       const dow = new Date(year, month - 1, d).getDay();
-      if (!bulkOffDays.includes(d) && dow !== 0) days.push(d);
+      const isOffDay = bulkOffDays.includes(d) || dow === 0;
+      const inPattern = weekPattern ? weekPattern.includes(dow) : dow !== 0;
+      if (!isOffDay && inPattern) setEntry(staffId, d, selectedType, false);
     }
-    days.forEach(d => setEntry(staffId, d, selectedType, false));
   }
 
   function applyBulkOff(staffId: string) {
     bulkOffDays.forEach(d => setEntry(staffId, d, null, true));
-    // 일요일 자동 휴무
     for (let d = 1; d <= daysInMonth; d++) {
       const dow = new Date(year, month - 1, d).getDay();
       if (dow === 0) setEntry(staffId, d, null, true);
+      if (weekPattern && !weekPattern.includes(dow) && dow !== 0) setEntry(staffId, d, null, true);
     }
+  }
+
+  // 전체 매니저 일괄 적용
+  function applyAllStaff() {
+    if (!selectedType) return;
+    staffList.forEach(s => {
+      applyBulkType(s.id);
+      applyBulkOff(s.id);
+    });
   }
 
   async function saveSchedule() {
@@ -108,33 +129,87 @@ export default function StoreDashboardDeliveryWorkTab() {
     }
   }
 
+  // 납기 리스트 뷰용 더미 데이터 (실제로는 스프레드시트 파싱 필요)
+  const deliveryListItems = useMemo(() => {
+    if (!appliedUrl) return [];
+    return [
+      { id: 1, customer: '홍길동', product: 'SATI 3인 소파', dueDate: `${year}-${pad2(month)}-05`, status: '납기 예정' },
+      { id: 2, customer: '김철수', product: 'QUERENCIA 2인 소파', dueDate: `${year}-${pad2(month)}-12`, status: '배송 중' },
+      { id: 3, customer: '이영희', product: 'MILO 1인 소파', dueDate: `${year}-${pad2(month)}-18`, status: '납기 완료' },
+    ];
+  }, [appliedUrl, year, month]);
+
   return (
     <div>
       <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 24 }}>납기 & 근무 현황</div>
 
       {/* ── 고객 납기 현황 ── */}
       <div className="glass" style={{ padding: 20, marginBottom: 20 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>고객 납기 현황</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>고객 납기 현황</div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {(['calendar', 'list'] as const).map(v => (
+              <button key={v} onClick={() => setDeliveryView(v)}
+                style={{ fontSize: 12, padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  background: deliveryView === v ? 'var(--accent)' : 'rgba(0,0,0,0.06)',
+                  color: deliveryView === v ? '#fff' : 'var(--text-muted)', fontWeight: deliveryView === v ? 700 : 400 }}>
+                {v === 'calendar' ? '📅 캘린더' : '📋 리스트'}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
           <input value={deliveryUrl} onChange={e => setDeliveryUrl(e.target.value)} placeholder="구글 스프레드시트 URL 입력"
             style={{ flex: 1 }} />
           <button className="btn btn-primary" style={{ fontSize: 12, padding: '8px 16px', whiteSpace: 'nowrap' }} onClick={() => setAppliedUrl(deliveryUrl)} disabled={!deliveryUrl}>
             적용
           </button>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>D+ 기준일:</span>
-          <input type="number" value={dPlusDays} onChange={e => setDPlusDays(Number(e.target.value))} min={1} max={30}
-            style={{ width: 60, fontSize: 13, textAlign: 'center' }} />
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>일 이내 납기 건 관리</span>
-        </div>
-        {appliedUrl ? (
-          <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
-            <iframe src={appliedUrl.replace('/edit', '/preview')} style={{ width: '100%', height: 400, border: 'none' }} title="납기 현황" />
-          </div>
+
+        {deliveryView === 'calendar' ? (
+          appliedUrl ? (
+            <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+              <iframe src={appliedUrl.replace('/edit', '/preview')} style={{ width: '100%', height: 400, border: 'none' }} title="납기 현황" />
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '40px 0', background: 'rgba(0,0,0,0.02)', borderRadius: 10 }}>
+              구글 스프레드시트 URL을 입력하고 적용 버튼을 눌러주세요
+            </div>
+          )
         ) : (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '40px 0', background: 'rgba(0,0,0,0.02)', borderRadius: 10 }}>
-            구글 스프레드시트 URL을 입력하고 적용 버튼을 눌러주세요
+          <div>
+            {deliveryListItems.length > 0 ? (
+              <table>
+                <thead>
+                  <tr>
+                    <th>고객명</th>
+                    <th>제품</th>
+                    <th>납기일</th>
+                    <th>상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deliveryListItems.map(item => (
+                    <tr key={item.id}>
+                      <td style={{ fontWeight: 500 }}>{item.customer}</td>
+                      <td>{item.product}</td>
+                      <td>{item.dueDate}</td>
+                      <td>
+                        <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 99, fontWeight: 600,
+                          background: item.status === '납기 완료' ? 'rgba(16,185,129,0.12)' : item.status === '배송 중' ? 'rgba(124,106,247,0.12)' : 'rgba(245,158,11,0.12)',
+                          color: item.status === '납기 완료' ? 'var(--success)' : item.status === '배송 중' ? 'var(--accent)' : 'var(--warning)' }}>
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '40px 0', background: 'rgba(0,0,0,0.02)', borderRadius: 10 }}>
+                URL을 적용하면 납기 리스트가 표시됩니다
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -172,14 +247,11 @@ export default function StoreDashboardDeliveryWorkTab() {
               ))}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <input value={newTypeName} onChange={e => setNewTypeName(e.target.value)} placeholder="형태명 (예: 근무형태C)"
-                style={{ fontSize: 12 }} />
+              <input value={newTypeName} onChange={e => setNewTypeName(e.target.value)} placeholder="형태명 (예: 근무형태C)" style={{ fontSize: 12 }} />
               <div style={{ display: 'flex', gap: 6 }}>
-                <input type="time" value={newTypeStart} onChange={e => setNewTypeStart(e.target.value)}
-                  style={{ flex: 1, fontSize: 12 }} />
+                <input type="time" value={newTypeStart} onChange={e => setNewTypeStart(e.target.value)} style={{ flex: 1, fontSize: 12 }} />
                 <span style={{ color: 'var(--text-muted)', alignSelf: 'center' }}>~</span>
-                <input type="time" value={newTypeEnd} onChange={e => setNewTypeEnd(e.target.value)}
-                  style={{ flex: 1, fontSize: 12 }} />
+                <input type="time" value={newTypeEnd} onChange={e => setNewTypeEnd(e.target.value)} style={{ flex: 1, fontSize: 12 }} />
               </div>
               <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => {
                 if (!newTypeName || !newTypeStart || !newTypeEnd) return;
@@ -202,8 +274,7 @@ export default function StoreDashboardDeliveryWorkTab() {
               {staffList.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0' }}>매니저를 추가하세요</div>}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <input value={newStaffName} onChange={e => setNewStaffName(e.target.value)} placeholder="매니저 이름"
-                style={{ flex: 1, fontSize: 12 }} />
+              <input value={newStaffName} onChange={e => setNewStaffName(e.target.value)} placeholder="매니저 이름" style={{ flex: 1, fontSize: 12 }} />
               <button className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => {
                 if (!newStaffName.trim()) return;
                 setStaffList(prev => [...prev, { id: Date.now().toString(), name: newStaffName.trim() }]);
@@ -217,12 +288,23 @@ export default function StoreDashboardDeliveryWorkTab() {
         {staffList.length > 0 && (
           <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>일괄 적용 설정</div>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>근무형태:</span>
                 <select value={selectedType ?? ''} onChange={e => setSelectedType(e.target.value || null)} style={{ fontSize: 12, padding: '4px 8px' }}>
                   <option value="">선택</option>
                   {workTypes.map(wt => <option key={wt.id} value={wt.id}>{wt.name}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>주N일 패턴:</span>
+                <select value={weekPattern ? weekPattern.join(',') : ''} onChange={e => {
+                  if (!e.target.value) { setWeekPattern(null); return; }
+                  const found = WEEK_PATTERNS.find(p => p.days.join(',') === e.target.value);
+                  setWeekPattern(found ? found.days : null);
+                }} style={{ fontSize: 12, padding: '4px 8px' }}>
+                  <option value="">기본 (일요일 제외)</option>
+                  {WEEK_PATTERNS.map(p => <option key={p.label} value={p.days.join(',')}>{p.label}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -232,11 +314,13 @@ export default function StoreDashboardDeliveryWorkTab() {
                   {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
-              <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => { if (selectedStaff) applyBulkType(selectedStaff); }}>근무형태 일괄 적용</button>
-              <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => { if (selectedStaff) applyBulkOff(selectedStaff); }}>휴무 일괄 적용</button>
             </div>
-            <div style={{ marginTop: 10 }}>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>휴무 일자 선택 (클릭으로 토글):</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => { if (selectedStaff) { applyBulkType(selectedStaff); applyBulkOff(selectedStaff); } }}>선택 매니저 적용</button>
+              <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={applyAllStaff}>전체 매니저 일괄 적용</button>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>추가 휴무 일자 (클릭으로 토글):</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {Array.from({length: daysInMonth}, (_, i) => i+1).map(d => {
                   const dow = new Date(year, month-1, d).getDay();

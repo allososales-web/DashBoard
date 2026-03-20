@@ -18,7 +18,7 @@ export default function HqLayout() {
         height: 60,
         boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
       }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.03em', background: 'linear-gradient(135deg, #7c6af7, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             Alloso
           </div>
@@ -29,8 +29,8 @@ export default function HqLayout() {
           </div>
         </div>
       </header>
-      <main style={{ padding: '28px 32px' }} className="hq-main">
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <main style={{ padding: '28px 40px' }} className="hq-main">
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <Outlet />
         </div>
       </main>

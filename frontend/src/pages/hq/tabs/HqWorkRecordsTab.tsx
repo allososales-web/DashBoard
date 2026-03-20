@@ -93,7 +93,7 @@ export default function HqWorkRecordsTab() {
                       onClick={() => setSelectedDay(isSelected ? null : day)}
                       style={{
                         borderRadius: 10,
-                        padding: '8px 4px',
+                        padding: '10px 4px',
                         textAlign: 'center',
                         cursor: 'pointer',
                         background: isSelected ? 'rgba(200,149,108,0.15)' : hasWorkers ? 'rgba(124,106,247,0.04)' : 'transparent',
@@ -101,15 +101,15 @@ export default function HqWorkRecordsTab() {
                         transition: 'all 0.15s',
                       }}
                     >
-                      <div style={{ fontSize: 12, fontWeight: 600, color: isSun ? '#ef4444' : isSat ? '#3b82f6' : 'var(--text)', marginBottom: 4 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: isSun ? '#ef4444' : isSat ? '#3b82f6' : 'var(--text)', marginBottom: 4 }}>
                         {day}
                       </div>
                       {hasWorkers ? (
-                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', lineHeight: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', lineHeight: 1 }}>
                           {info.total}명
                         </div>
                       ) : (
-                        <div style={{ fontSize: 10, color: 'rgba(0,0,0,0.2)' }}>-</div>
+                        <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.2)' }}>-</div>
                       )}
                     </div>
                   );

@@ -146,8 +146,8 @@ export default function StoreLayout() {
       </aside>
 
       {/* Main */}
-      <main className="store-main" style={{ flex: 1, padding: 28, overflowY: 'auto', minHeight: '100vh' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <main className="store-main" style={{ flex: 1, padding: '28px 36px', overflowY: 'auto', minHeight: '100vh' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
           <Outlet />
         </div>
       </main>
