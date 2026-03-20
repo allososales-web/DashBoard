@@ -23,7 +23,7 @@ export default function StoreIssuePage() {
 
   const { data: issues = [] } = useQuery({
     queryKey: ['issues', storeId],
-    queryFn: () => api.get(`/issues?storeId=${storeId}`).then(r => r.data?.data ?? []).catch(() => []),
+    queryFn: () => api.get(`/stores/${storeId}/issues`).then(r => r.data?.data ?? []).catch(() => []),
     enabled: !!storeId,
   });
 
@@ -38,10 +38,13 @@ export default function StoreIssuePage() {
   });
 
   const createIssueMutation = useMutation({
-    mutationFn: () => api.post('/issues', { storeId, title: newIssueTitle, description: newIssueContent, priority: newIssuePriority }),
+    mutationFn: () => api.post(`/stores/${storeId}/issues`, { title: newIssueTitle, description: newIssueContent, priority: newIssuePriority }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['issues', storeId] });
       setNewIssueTitle(''); setNewIssueContent('');
+    },
+    onError: (err: any) => {
+      alert('이슈 등록 실패: ' + (err?.response?.data?.message ?? err.message));
     },
   });
 
