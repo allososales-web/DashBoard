@@ -191,7 +191,7 @@ export default function LoginPage() {
                     height: 56, borderRadius: 10,
                     border: '1.5px solid rgba(0,0,0,0.09)',
                     background: d === '⌫' ? 'rgba(239,68,68,0.08)' : d ? '#fff' : 'transparent',
-                    color: d === '⌫' ? '#ef4444' : 'var(--text)',
+                    color: d === '⌫' ? '#ef4444' : '#1a1a2e',
                     fontSize: 18, fontWeight: 500,
                     cursor: d ? 'pointer' : 'default',
                     opacity: !d && d !== '0' ? 0 : 1,

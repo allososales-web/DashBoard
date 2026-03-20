@@ -194,6 +194,7 @@ export default function HqStoreStatusTab() {
           {/* 매장별 핵심 수치 */}
           <div className="glass" style={{ padding: 0, overflow: 'hidden' }}>
             <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', fontSize: 13, fontWeight: 700 }}>매장별 핵심 수치 (운영 매장)</div>
+            <div style={{ overflowX: 'auto' }}>
             <table>
               <thead>
                 <tr>
@@ -211,7 +212,7 @@ export default function HqStoreStatusTab() {
                   const conv = s.quoteCount > 0 ? ((s.contractCount / s.quoteCount) * 100).toFixed(1) : '0.0';
                   return (
                     <tr key={s.storeId}>
-                      <td style={{ fontWeight: 500 }}>{s.storeName ?? '-'}</td>
+                      <td style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{s.storeName ?? '-'}</td>
                       <td style={{ textAlign: 'right' }}>{Number(s.contractAmount ?? 0).toLocaleString()}원</td>
                       <td style={{ textAlign: 'right' }}>{s.contractCount ?? 0}건</td>
                       <td style={{ textAlign: 'right' }}>{s.quoteCount ?? 0}건</td>
@@ -225,6 +226,7 @@ export default function HqStoreStatusTab() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}

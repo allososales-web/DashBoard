@@ -61,7 +61,7 @@ export default function HqWorkRecordsTab() {
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 340px)', gap: 20, alignItems: 'start' }}>
         {/* 캘린더 */}
         <div className="glass" style={{ padding: 20 }}>
           <div style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>{year}년 {month}월 일자별 근무 현황</div>
