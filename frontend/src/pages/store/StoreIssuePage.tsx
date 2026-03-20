@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
+import MiniDatePicker from '../../components/MiniDatePicker';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 function pad2(n: number) { return String(n).padStart(2, '0'); }
@@ -302,9 +303,9 @@ export default function StoreIssuePage() {
           ))}
           {filterPeriod === 'custom' && (
             <>
-              <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} style={{ ...inputStyle, width: 140, padding: '4px 8px', fontSize: 12 }} />
+              <MiniDatePicker value={filterFrom} onChange={setFilterFrom} placeholder="시작일" />
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>~</span>
-              <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} style={{ ...inputStyle, width: 140, padding: '4px 8px', fontSize: 12 }} />
+              <MiniDatePicker value={filterTo} onChange={setFilterTo} placeholder="종료일" />
             </>
           )}
           <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)} style={{ ...inputStyle, width: 'auto', padding: '4px 8px', fontSize: 12 }}>
