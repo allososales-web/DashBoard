@@ -31,7 +31,7 @@ export default function StoreMetricsInputPage() {
 
   const { data: goalData } = useQuery({
     queryKey: ['goal', storeId, year, month],
-    queryFn: () => api.get(`/goals?storeId=${storeId}&year=${year}&month=${month}&limit=1`).then(r => r.data?.[0] ?? null),
+    queryFn: () => api.get(`/stores/${storeId}/goals/${year}/${month}`).then(r => r.data ?? null),
     enabled: !!storeId,
   });
 
@@ -49,7 +49,7 @@ export default function StoreMetricsInputPage() {
 
   const { data: annualData } = useQuery({
     queryKey: ['goals-annual', storeId, year],
-    queryFn: () => api.get(`/goals?storeId=${storeId}&year=${year}&limit=12`).then(r => r.data ?? []),
+    queryFn: () => api.get(`/stores/${storeId}/goals?year=${year}&limit=12`).then(r => r.data?.data ?? r.data ?? []),
     enabled: !!storeId,
   });
 
@@ -72,8 +72,8 @@ export default function StoreMetricsInputPage() {
   }, [annualData, year]);
 
   const saveMutation = useMutation({
-    mutationFn: () => api.post('/goals', {
-      storeId, year, month,
+    mutationFn: () => api.post(`/stores/${storeId}/goals`, {
+      year, month,
       targetAmount: Number(form.targetAmount) || 0,
       targetContracts: Number(form.targetContracts) || 0,
       targetConsults: Number(form.targetConsults) || 0,
@@ -83,7 +83,10 @@ export default function StoreMetricsInputPage() {
       qc.invalidateQueries({ queryKey: ['goals-annual', storeId, year] });
       alert('목표가 저장되었습니다.');
     },
-    onError: () => alert('저장 중 오류가 발생했습니다.'),
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message ?? err?.message ?? '알 수 없는 오류';
+      alert(`저장 중 오류가 발생했습니다: ${msg}`);
+    },
   });
 
   async function handleBulkSave() {
@@ -92,8 +95,8 @@ export default function StoreMetricsInputPage() {
     try {
       await Promise.all(
         annualGoals.map(g =>
-          api.post('/goals', {
-            storeId, year, month: g.month,
+          api.post(`/stores/${storeId}/goals`, {
+            year, month: g.month,
             targetAmount: g.targetAmount,
             targetContracts: g.targetContracts,
             targetConsults: g.targetConsults,
@@ -102,8 +105,9 @@ export default function StoreMetricsInputPage() {
       );
       qc.invalidateQueries({ queryKey: ['goals-annual', storeId, year] });
       alert('연간 목표가 저장되었습니다.');
-    } catch {
-      alert('저장 중 오류가 발생했습니다.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.message ?? '알 수 없는 오류';
+      alert(`저장 중 오류가 발생했습니다: ${msg}`);
     } finally {
       setBulkSaving(false);
     }

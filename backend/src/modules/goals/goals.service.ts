@@ -1,6 +1,5 @@
 import {
   Injectable,
-  ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -14,20 +13,24 @@ export class GoalsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(storeId: string, dto: CreateGoalDto, userId: string) {
+    return this.upsert(storeId, dto, userId);
+  }
+
+  async upsert(storeId: string, dto: CreateGoalDto, userId: string) {
     const existing = await this.prisma.monthlyGoal.findUnique({
-      where: {
-        storeId_year_month: {
-          storeId,
-          year: dto.year,
-          month: dto.month,
-        },
-      },
+      where: { storeId_year_month: { storeId, year: dto.year, month: dto.month } },
     });
 
     if (existing) {
-      throw new ConflictException(
-        `Goal for ${dto.year}-${dto.month} already exists for this store`,
-      );
+      return this.prisma.monthlyGoal.update({
+        where: { id: existing.id },
+        data: {
+          targetAmount: new Prisma.Decimal(dto.targetAmount),
+          targetContracts: dto.targetContracts,
+          targetConsults: dto.targetConsults,
+          customGoals: dto.customGoals ?? Prisma.JsonNull,
+        },
+      });
     }
 
     return this.prisma.monthlyGoal.create({
