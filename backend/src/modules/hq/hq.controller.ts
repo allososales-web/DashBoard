@@ -27,7 +27,7 @@ export class HqController {
     @Body() dto: CreateNoticeDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    const createdBy = /^[0-9a-f-]{36}$/i.test(user.id) ? user.id : null;
+    const createdBy = /^[0-9a-f-]{36}$/i.test(user.id) ? user.id : undefined;
     return this.hqService.createNotice(dto, createdBy);
   }
 
@@ -56,7 +56,7 @@ export class HqController {
     @Body() dto: CreateEventDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    const createdBy = /^[0-9a-f-]{36}$/i.test(user.id) ? user.id : null;
+    const createdBy = /^[0-9a-f-]{36}$/i.test(user.id) ? user.id : undefined;
     return this.hqService.createEvent(dto, createdBy);
   }
 
@@ -85,7 +85,7 @@ export class HqController {
     @Body() dto: CreateDeliveryRuleDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    const createdBy = /^[0-9a-f-]{36}$/i.test(user.id) ? user.id : null;
+    const createdBy = /^[0-9a-f-]{36}$/i.test(user.id) ? user.id : undefined;
     return this.hqService.createDeliveryRule(dto, createdBy);
   }
 
