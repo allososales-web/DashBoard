@@ -10,16 +10,14 @@ export default function HqLayout() {
     <div style={{ minHeight: '100vh' }}>
       <header style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(255,255,255,0.88)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(0,0,0,0.07)',
+        background: 'var(--surface)',
+        borderBottom: '1px solid var(--border)',
         padding: '0 32px',
-        height: 60,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        height: 58,
+        boxShadow: '0 1px 8px rgba(0,0,0,0.04)',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.03em', background: 'linear-gradient(135deg, #7c6af7, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <div style={{ fontSize: 19, fontWeight: 900, letterSpacing: '-0.04em', color: 'var(--text)' }}>
             Alloso
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -19,8 +19,8 @@ const CHANNEL_LABELS: Record<string, string> = {
   MALL: '몰', STARFIELD: '스타필드', POPUP: '팝업', OTHER: '기타',
 };
 const CHANNEL_COLORS: Record<string, string> = {
-  HQ: '#7c6af7', ROAD: '#f59e0b', DEPARTMENT: '#a78bfa',
-  MALL: '#10b981', STARFIELD: '#3b82f6', POPUP: '#f87171', OTHER: '#94a3b8',
+  HQ: '#5a7a5a', ROAD: '#8a7a5a', DEPARTMENT: '#7a6a8a',
+  MALL: '#5a7a6a', STARFIELD: '#5a6a8a', POPUP: '#8a5a5a', OTHER: '#8a8a82',
 };
 
 export default function LoginPage() {
@@ -112,7 +112,7 @@ export default function LoginPage() {
       {/* 좌측: 매장 목록 */}
       <div className="login-store-panel">
         <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.04em', background: 'linear-gradient(135deg, #7c6af7, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Alloso</div>
+          <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: '-0.04em', color: 'var(--text)' }}>Alloso</div>
           <div style={{ fontSize: 11, letterSpacing: '0.2em', color: 'var(--text-muted)', marginTop: 4, textTransform: 'uppercase' }}>
             Store Analytics Dashboard
           </div>
@@ -176,7 +176,7 @@ export default function LoginPage() {
               {[0,1,2,3].map((i) => (
                 <div key={i} style={{
                   width: 14, height: 14, borderRadius: '50%',
-                  background: i < pin.length ? 'var(--accent)' : 'rgba(0,0,0,0.12)',
+                  background: i < pin.length ? 'var(--accent)' : 'rgba(0,0,0,0.10)',
                   transition: 'background 0.15s',
                 }} />
               ))}
@@ -198,7 +198,7 @@ export default function LoginPage() {
                     transition: 'background 0.12s',
                     boxShadow: d ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
                   }}
-                  onMouseEnter={(e) => { if (d) e.currentTarget.style.background = d === '⌫' ? 'rgba(239,68,68,0.14)' : 'rgba(124,106,247,0.07)'; }}
+                  onMouseEnter={(e) => { if (d) e.currentTarget.style.background = d === '⌫' ? 'rgba(192,57,43,0.10)' : 'rgba(90,122,90,0.08)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = d === '⌫' ? 'rgba(239,68,68,0.08)' : d ? '#fff' : 'transparent'; }}
                 >
                   {submitting && d === '0' ? '...' : d}
@@ -209,12 +209,12 @@ export default function LoginPage() {
               onClick={handlePinSubmit}
               disabled={pin.length !== 4 || submitting}
               style={{
-                width: '100%', marginTop: 16, height: 52, borderRadius: 10,
-                background: pin.length === 4 ? 'linear-gradient(135deg, #7c6af7, #a78bfa)' : 'rgba(124,106,247,0.15)',
-                border: 'none', color: pin.length === 4 ? '#fff' : 'var(--text-muted)', fontSize: 15, fontWeight: 700,
+                width: '100%', marginTop: 16, height: 52, borderRadius: 99,
+                background: pin.length === 4 ? 'var(--dark)' : 'rgba(0,0,0,0.08)',
+                border: 'none', color: pin.length === 4 ? '#fff' : 'var(--text-muted)', fontSize: 14, fontWeight: 700,
                 cursor: pin.length === 4 ? 'pointer' : 'default',
                 transition: 'background 0.15s',
-                boxShadow: pin.length === 4 ? '0 4px 14px rgba(124,106,247,0.35)' : 'none',
+                boxShadow: pin.length === 4 ? '0 4px 14px rgba(0,0,0,0.18)' : 'none',
               }}
             >
               {submitting ? '로그인 중...' : '로그인'}
