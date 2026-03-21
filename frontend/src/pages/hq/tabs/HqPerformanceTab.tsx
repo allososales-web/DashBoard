@@ -42,6 +42,164 @@ function getWeeksInMonth(year: number, month: number) {
   return weeks;
 }
 
+// ── 채널별 매출 비중 도넛 차트 ────────────────────────────────────────────────
+function ChannelDonutChart({
+  channelAmounts, activeChannels, toggleChannel, channelMap, metricsFiltered,
+}: {
+  channelAmounts: Record<string, number>;
+  activeChannels: Set<string>;
+  toggleChannel: (ch: string) => void;
+  channelMap: Record<string, string>;
+  metricsFiltered: any[];
+}) {
+  const SIZE = 220;
+  const R = 80;
+  const STROKE = 32;
+  const cx = SIZE / 2;
+  const cy = SIZE / 2;
+  const circumference = 2 * Math.PI * R;
+
+  // 체크된 채널 기준 합계
+  const activeTotal = CHANNEL_FILTERS
+    .filter((ch) => activeChannels.has(ch.value))
+    .reduce((sum, ch) => sum + (channelAmounts[ch.value] ?? 0), 0);
+
+  // arc 계산 (체크된 채널만)
+  let offset = 0;
+  const arcs = CHANNEL_FILTERS
+    .filter((ch) => activeChannels.has(ch.value))
+    .map((ch) => {
+      const amt = channelAmounts[ch.value] ?? 0;
+      const pct = activeTotal > 0 ? amt / activeTotal : 0;
+      const dash = pct * circumference;
+      const gap = circumference - dash;
+      const arc = { ch, pct, dash, gap, offset, amt };
+      offset += dash;
+      return arc;
+    })
+    .filter((a) => a.pct > 0);
+
+  // 가장 큰 채널 (중앙 표시)
+  const topArc = arcs.length > 0 ? arcs.reduce((a, b) => (a.pct > b.pct ? a : b)) : null;
+
+  return (
+    <div className="glass" style={{ padding: 20 }}>
+      {/* 헤더: 제목 + 채널 체크박스 가로 나열 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
+        <div>
+          <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Channel Mix</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>채널별 매출 비중</div>
+        </div>
+        {/* 채널 체크박스 태그 — 가로 나열 */}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          {CHANNEL_FILTERS.map((ch) => {
+            const active = activeChannels.has(ch.value);
+            return (
+              <label
+                key={ch.value}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+                  padding: '5px 12px', borderRadius: 20,
+                  fontSize: 12, fontWeight: active ? 700 : 400,
+                  background: active ? ch.color : 'rgba(0,0,0,0.04)',
+                  color: active ? '#fff' : 'var(--text-muted)',
+                  border: `1.5px solid ${active ? ch.color : 'var(--glass-border)'}`,
+                  userSelect: 'none',
+                  transition: 'all 0.18s cubic-bezier(0.4,0,0.2,1)',
+                  boxShadow: active ? `0 2px 8px ${ch.color}44` : 'none',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={active}
+                  onChange={() => toggleChannel(ch.value)}
+                  style={{ display: 'none' }}
+                />
+                {active && <span style={{ fontSize: 10 }}>✓</span>}
+                {ch.label}
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 도넛 차트 중앙 배치 */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 40, flexWrap: 'wrap' }}>
+        {/* SVG 도넛 */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <svg width={SIZE} height={SIZE} style={{ transform: 'rotate(-90deg)', display: 'block' }}>
+            {/* 배경 링 */}
+            <circle cx={cx} cy={cy} r={R} fill="none" stroke="rgba(0,0,0,0.07)" strokeWidth={STROKE} />
+            {arcs.length === 0 ? null : arcs.map((a, i) => (
+              <circle
+                key={a.ch.value}
+                cx={cx} cy={cy} r={R}
+                fill="none"
+                stroke={a.ch.color}
+                strokeWidth={STROKE}
+                strokeDasharray={`${a.dash} ${a.gap}`}
+                strokeDashoffset={-a.offset}
+                strokeLinecap="butt"
+                style={{
+                  transition: `stroke-dasharray 0.55s cubic-bezier(0.4,0,0.2,1) ${i * 0.05}s, stroke-dashoffset 0.55s cubic-bezier(0.4,0,0.2,1) ${i * 0.05}s`,
+                }}
+              />
+            ))}
+          </svg>
+          {/* 중앙 텍스트 */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            pointerEvents: 'none',
+          }}>
+            {topArc ? (
+              <>
+                <div style={{ fontSize: 28, fontWeight: 900, color: topArc.ch.color, lineHeight: 1 }}>
+                  {(topArc.pct * 100).toFixed(0)}%
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontWeight: 600 }}>
+                  {topArc.ch.label}
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>데이터 없음</div>
+            )}
+          </div>
+        </div>
+
+        {/* 범례: 체크된 채널만 표시 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 160 }}>
+          {CHANNEL_FILTERS.filter((ch) => activeChannels.has(ch.value)).map((ch) => {
+            const amt = channelAmounts[ch.value] ?? 0;
+            const pct = activeTotal > 0 ? (amt / activeTotal) * 100 : 0;
+            const storeCount = metricsFiltered.filter((s: any) => (channelMap[s.storeId] ?? 'ROAD') === ch.value).length;
+            return (
+              <div key={ch.value} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 12, height: 12, borderRadius: '50%', background: ch.color, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{ch.label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    {storeCount > 0 ? `${storeCount}개 매장` : '—'}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: ch.color }}>{pct.toFixed(1)}%</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    {amt > 0 ? `${(amt / 10000).toFixed(0)}만` : '—'}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {arcs.length === 0 && (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>채널을 선택하세요</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 진척율 그래프 컴포넌트 ──────────────────────────────────────────────────
 interface BarItem { label: string; rate: number; actual: number; goal: number; color: string; }
 
@@ -389,19 +547,9 @@ export default function HqPerformanceTab() {
             <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} style={{ fontSize: 12 }} />
           </div>
         )}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginRight: 4 }}>채널:</span>
-          {CHANNEL_FILTERS.map((ch) => {
-            const active = activeChannels.has(ch.value);
-            return (
-              <label key={ch.value} style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: active ? 600 : 400, background: active ? `${ch.color}22` : 'rgba(255,255,255,0.04)', border: `1px solid ${active ? ch.color : 'var(--glass-border)'}`, userSelect: 'none' }}>
-                <input type="checkbox" checked={active} onChange={() => toggleChannel(ch.value)} style={{ accentColor: ch.color, width: 12, height: 12 }} />
-                {ch.label}
-              </label>
-            );
-          })}
-          {metricsCount > 0 && <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>실적 반영 {metricsCount}개 매장 기준</span>}
-          {metricsCount === 0 && <span style={{ fontSize: 11, color: 'var(--warning)', marginLeft: 8 }}>⚠ 실적 반영 매장 미설정 — 관리자 탭에서 설정하세요</span>}
+        <div style={{ display: 'flex', gap: 6, marginTop: 12, alignItems: 'center' }}>
+          {metricsCount > 0 && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>실적 반영 {metricsCount}개 매장 기준</span>}
+          {metricsCount === 0 && <span style={{ fontSize: 11, color: 'var(--warning)' }}>⚠ 실적 반영 매장 미설정 — 관리자 탭에서 설정하세요</span>}
         </div>
       </div>
 
@@ -436,37 +584,14 @@ export default function HqPerformanceTab() {
       {/* ── 목표 진척율 그래프 (기간 설정 무관) ── */}
       <GoalProgressChart chartYear={now.getFullYear()} includedIds={includedIds} channelMap={channelMap} />
 
-      {/* 채널별 매출 비중 */}
-      <div className="glass" style={{ padding: 20 }}>
-        <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Channel Mix</div>
-        <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>채널별 매출 비중</div>
-        <div style={{ height: 12, borderRadius: 6, overflow: 'hidden', display: 'flex', marginBottom: 16 }}>
-          {CHANNEL_FILTERS.map((ch) => {
-            const amt = channelAmounts[ch.value] ?? 0;
-            const pct = totalAmount > 0 ? (amt / totalAmount) * 100 : 0;
-            return pct > 0 ? <div key={ch.value} style={{ width: `${pct}%`, background: ch.color, transition: 'width 0.5s' }} title={`${ch.label}: ${pct.toFixed(1)}%`} /> : null;
-          })}
-          {totalAmount === 0 && <div style={{ width: '100%', background: 'rgba(0,0,0,0.07)' }} />}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {CHANNEL_FILTERS.map((ch) => {
-            const amt = channelAmounts[ch.value] ?? 0;
-            const pct = totalAmount > 0 ? ((amt / totalAmount) * 100).toFixed(1) : '0.0';
-            const storeCount = filteredList.filter((s: any) => (channelMap[s.storeId] ?? 'ROAD') === ch.value).length;
-            return (
-              <div key={ch.value} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="checkbox" checked={activeChannels.has(ch.value)} onChange={() => toggleChannel(ch.value)} style={{ accentColor: ch.color, width: 14, height: 14, flexShrink: 0 }} />
-                <div style={{ width: 12, height: 12, borderRadius: 2, background: ch.color, flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{ch.label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{storeCount > 0 ? `${storeCount}개 매장` : '—'}</div>
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{pct}%</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* 채널별 매출 비중 — 도넛 차트 */}
+      <ChannelDonutChart
+        channelAmounts={channelAmounts}
+        activeChannels={activeChannels}
+        toggleChannel={toggleChannel}
+        channelMap={channelMap}
+        metricsFiltered={metricsFiltered}
+      />
 
       {/* 당월 주차별 섹터 */}
       <div className="glass" style={{ padding: 20 }}>
