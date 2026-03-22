@@ -10,6 +10,7 @@ import StoreIssuePage from './pages/store/StoreIssuePage';
 import StoreDashboardDeliveryWorkTab from './pages/store/StoreDashboardDeliveryWorkTab';
 import StoreMetricsInputPage from './pages/store/StoreMetricsInputPage';
 import HqDashboardPage from './pages/hq/HqDashboardPage';
+import BackgroundCanvas from './components/BackgroundCanvas';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -32,6 +33,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <BackgroundCanvas />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<LoginPage />} />

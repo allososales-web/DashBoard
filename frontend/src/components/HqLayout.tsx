@@ -15,11 +15,11 @@ export default function HqLayout() {
         borderBottom: '1px solid var(--border)',
         padding: '0 32px',
         height: 58,
-        boxShadow: '0 1px 0 rgba(0,212,255,0.08)',
+        boxShadow: '0 1px 8px rgba(139,124,248,0.08)',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <img src={allosoLogo} alt="Alloso" style={{ height: 28, mixBlendMode: 'screen', objectFit: 'contain', filter: 'brightness(10) saturate(0)' }} />
+            <img src={allosoLogo} alt="Alloso" style={{ height: 28, mixBlendMode: 'multiply', objectFit: 'contain' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="hide-mobile" style={{ fontSize: 12, color: 'var(--text-muted)' }}>본사 관리자</span>
