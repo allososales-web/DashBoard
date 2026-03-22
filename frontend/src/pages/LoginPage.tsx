@@ -111,7 +111,7 @@ export default function LoginPage() {
   return (
     <div className="login-wrapper" style={{
       minHeight: '100vh',
-      background: 'var(--bg)',
+      background: 'transparent',
       fontFamily: "'Pretendard', 'Apple SD Gothic Neo', sans-serif",
       display: 'flex',
       alignItems: 'center',
@@ -124,10 +124,12 @@ export default function LoginPage() {
         maxWidth: 1100,
         display: 'flex',
         gap: 0,
-        background: 'var(--surface)',
+        background: 'rgba(255,255,255,0.88)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
         border: '1px solid var(--border)',
         borderRadius: 20,
-        boxShadow: '0 8px 48px rgba(139,124,248,0.14), 0 0 0 1px rgba(139,124,248,0.08)',
+        boxShadow: '0 8px 48px rgba(139,124,248,0.18), 0 0 0 1px rgba(139,124,248,0.10)',
         overflow: 'hidden',
         minHeight: 640,
       }}>
@@ -139,6 +141,7 @@ export default function LoginPage() {
           padding: '48px 40px',
           overflowY: 'auto',
           borderRight: '1px solid var(--border)',
+          background: 'rgba(255,255,255,0.60)',
         }}>
           {/* 브랜드 헤더 */}
           <div style={{ marginBottom: 36 }}>
@@ -194,7 +197,7 @@ export default function LoginPage() {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '56px 48px',
-          background: 'var(--surface2)',
+          background: 'rgba(245,243,254,0.75)',
         }}>
           {step === 'select' && (
             <div style={{ textAlign: 'center', width: '100%' }}>
