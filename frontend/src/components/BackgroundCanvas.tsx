@@ -80,6 +80,7 @@ export default function BackgroundCanvas() {
       const n = (current + 1) % slides.length;
       setNext(n);
       setFading(true);
+      // After fade completes, swap current → next, keep next visible until next cycle
       timerRef.current = setTimeout(() => {
         setCurrent(n);
         setNext(null);
@@ -94,15 +95,16 @@ export default function BackgroundCanvas() {
     <div id="logo-canvas" aria-hidden="true">
       {/* ── Fullscreen image slider ── */}
       <div className="bg-slider">
+        {/* Current slide — stays fully visible until next is fully faded in */}
         <div
           className="bg-slide bg-slide-current"
           style={{
             backgroundImage: `url(${slides[current]})`,
             animation: `kenburns-${current % 3} ${SLIDE_DURATION + FADE_DURATION}ms ease-in-out forwards`,
-            opacity: fading ? 0 : 1,
-            transition: `opacity ${FADE_DURATION}ms ease-in-out`,
+            opacity: 1,
           }}
         />
+        {/* Next slide fades IN on top; current stays underneath at opacity 1 */}
         {next !== null && (
           <div
             className="bg-slide bg-slide-next"
