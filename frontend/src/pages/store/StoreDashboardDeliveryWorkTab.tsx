@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -10,7 +10,22 @@ interface WorkType { id: string; name: string; startTime: string; endTime: strin
 interface StaffMember { id: string; name: string; }
 interface WorkEntry { staffId: string; day: number; typeId: string | null; isOff: boolean; }
 
-// 근무형태별 파스텔 색상
+interface DeliveryItem {
+  id: string;
+  customerName: string;
+  scheduledDate: string;
+  status: string;
+  address: string | null;
+  notes: string | null;
+}
+
+const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
+  SCHEDULED:  { bg: 'rgba(245,158,11,0.12)',  color: '#d97706', label: '납기 예정' },
+  IN_TRANSIT: { bg: 'rgba(124,106,247,0.12)', color: 'var(--accent)', label: '배송 중' },
+  DELIVERED:  { bg: 'rgba(16,185,129,0.12)',  color: '#059669', label: '납기 완료' },
+  FAILED:     { bg: 'rgba(239,68,68,0.10)',   color: '#dc2626', label: '실패' },
+};
+
 const TYPE_COLORS = ['#b8a4f0', '#7dd8b8', '#f0a070', '#fcd080', '#f9a0a0', '#a0c4f9', '#c4f0a0'];
 
 const WEEK_PATTERNS = [
@@ -29,9 +44,10 @@ export default function StoreDashboardDeliveryWorkTab() {
   const qc = useQueryClient();
 
   // ── 납기 현황 상태 ──
-  const [deliveryUrl, setDeliveryUrl] = useState('');
-  const [appliedUrl, setAppliedUrl] = useState('');
   const [deliveryView, setDeliveryView] = useState<'calendar' | 'list'>('calendar');
+  const [deliveryYear, setDeliveryYear] = useState(now.getFullYear());
+  const [deliveryMonth, setDeliveryMonth] = useState(now.getMonth() + 1);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   // ── 근무 스케줄 상태 ──
   const [year, setYear] = useState(now.getFullYear());
@@ -51,13 +67,46 @@ export default function StoreDashboardDeliveryWorkTab() {
   const [bulkOffDays, setBulkOffDays] = useState<number[]>([]);
   const [weekPattern, setWeekPattern] = useState<number[] | null>(null);
   const [saving, setSaving] = useState(false);
-  // 캘린더 뷰: 선택된 날짜 셀 편집 팝업
   const [editCell, setEditCell] = useState<{ day: number; staffId: string } | null>(null);
 
+  // ── 납기 데이터 fetch ──
+  const startDate = `${deliveryYear}-${pad2(deliveryMonth)}-01`;
+  const lastDay = new Date(deliveryYear, deliveryMonth, 0).getDate();
+  const endDate = `${deliveryYear}-${pad2(deliveryMonth)}-${pad2(lastDay)}`;
+
+  const { data: deliveryData, isLoading: deliveryLoading } = useQuery({
+    queryKey: ['deliveries', storeId, deliveryYear, deliveryMonth],
+    queryFn: () =>
+      api.get(`/stores/${storeId}/deliveries?startDate=${startDate}&endDate=${endDate}&limit=100`)
+        .then(r => r.data).catch(() => ({ data: [] })),
+    enabled: !!storeId,
+  });
+
+  const deliveries: DeliveryItem[] = deliveryData?.data ?? [];
+
+  const deliveryByDay = useMemo(() => {
+    const map: Record<number, DeliveryItem[]> = {};
+    deliveries.forEach(d => {
+      const day = new Date(d.scheduledDate).getDate();
+      if (!map[day]) map[day] = [];
+      map[day].push(d);
+    });
+    return map;
+  }, [deliveries]);
+
+  const deliveryCalendarCells = useMemo(() => {
+    const firstDay = new Date(deliveryYear, deliveryMonth - 1, 1).getDay();
+    const days = new Date(deliveryYear, deliveryMonth, 0).getDate();
+    const cells: (number | null)[] = Array(firstDay).fill(null);
+    for (let d = 1; d <= days; d++) cells.push(d);
+    while (cells.length % 7 !== 0) cells.push(null);
+    return cells;
+  }, [deliveryYear, deliveryMonth]);
+
+  // ── 근무 스케줄 helpers ──
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
 
-  // 캘린더 셀 배열 (null = 빈 칸)
   const calendarCells = useMemo(() => {
     const cells: (number | null)[] = Array(firstDayOfWeek).fill(null);
     for (let d = 1; d <= daysInMonth; d++) cells.push(d);
@@ -130,72 +179,182 @@ export default function StoreDashboardDeliveryWorkTab() {
     }
   }
 
-  const deliveryListItems = useMemo(() => {
-    if (!appliedUrl) return [];
-    return [
-      { id: 1, customer: '홍길동', product: 'SATI 3인 소파', dueDate: `${year}-${pad2(month)}-05`, status: '납기 예정' },
-      { id: 2, customer: '김철수', product: 'QUERENCIA 2인 소파', dueDate: `${year}-${pad2(month)}-12`, status: '배송 중' },
-      { id: 3, customer: '이영희', product: 'MILO 1인 소파', dueDate: `${year}-${pad2(month)}-18`, status: '납기 완료' },
-    ];
-  }, [appliedUrl, year, month]);
-
   return (
     <div>
       <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 24 }}>납기 & 근무 현황</div>
 
       {/* ── 고객 납기 현황 ── */}
       <div className="glass" style={{ padding: 20, marginBottom: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        {/* 헤더 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
           <div style={{ fontSize: 14, fontWeight: 700 }}>고객 납기 현황</div>
-          <div style={{ display: 'flex', gap: 4 }}>
-            {(['calendar', 'list'] as const).map(v => (
-              <button key={v} onClick={() => setDeliveryView(v)}
-                style={{ fontSize: 12, padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                  background: deliveryView === v ? 'var(--accent)' : 'rgba(0,0,0,0.06)',
-                  color: deliveryView === v ? '#fff' : 'var(--text-muted)', fontWeight: deliveryView === v ? 700 : 400 }}>
-                {v === 'calendar' ? '📅 캘린더' : '📋 리스트'}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* 연/월 네비게이터 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.8)', border: '1.5px solid var(--border)', borderRadius: 99, padding: '4px 10px' }}>
+              <button
+                onClick={() => { if (deliveryMonth === 1) { setDeliveryYear(y => y - 1); setDeliveryMonth(12); } else setDeliveryMonth(m => m - 1); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, padding: '0 2px', lineHeight: 1 }}>‹</button>
+              <span style={{ fontSize: 12, fontWeight: 700, minWidth: 60, textAlign: 'center', whiteSpace: 'nowrap' }}>{deliveryYear}년 {deliveryMonth}월</span>
+              <button
+                onClick={() => { if (deliveryMonth === 12) { setDeliveryYear(y => y + 1); setDeliveryMonth(1); } else setDeliveryMonth(m => m + 1); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, padding: '0 2px', lineHeight: 1 }}>›</button>
+            </div>
+            {/* 뷰 토글 */}
+            <div style={{ display: 'flex', gap: 3 }}>
+              {(['calendar', 'list'] as const).map(v => (
+                <button key={v} onClick={() => { setDeliveryView(v); setSelectedDay(null); }}
+                  style={{ fontSize: 12, padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    background: deliveryView === v ? 'var(--accent)' : 'rgba(0,0,0,0.06)',
+                    color: deliveryView === v ? '#fff' : 'var(--text-muted)', fontWeight: deliveryView === v ? 700 : 400 }}>
+                  {v === 'calendar' ? '📅 캘린더' : '📋 리스트'}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
-          <input value={deliveryUrl} onChange={e => setDeliveryUrl(e.target.value)} placeholder="구글 스프레드시트 URL 입력" style={{ flex: 1 }} />
-          <button className="btn btn-primary" style={{ fontSize: 12, padding: '8px 16px', whiteSpace: 'nowrap' }} onClick={() => setAppliedUrl(deliveryUrl)} disabled={!deliveryUrl}>적용</button>
+
+        {/* 상태 범례 */}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+          {Object.entries(STATUS_STYLE).map(([k, v]) => (
+            <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: v.bg, border: `1px solid ${v.color}`, display: 'inline-block' }} />
+              <span style={{ color: 'var(--text-muted)' }}>{v.label}</span>
+            </span>
+          ))}
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>총 {deliveries.length}건</span>
         </div>
-        {deliveryView === 'calendar' ? (
-          appliedUrl ? (
-            <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
-              <iframe src={appliedUrl.replace('/edit', '/preview')} style={{ width: '100%', height: 400, border: 'none' }} title="납기 현황" />
+
+        {deliveryLoading ? (
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0', fontSize: 13 }}>불러오는 중...</div>
+        ) : deliveryView === 'calendar' ? (
+          <>
+            {/* 캘린더 뷰 */}
+            <div style={{ overflowX: 'auto' }}>
+              <div style={{ minWidth: 420 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 3 }}>
+                  {WEEKDAYS.map((d, i) => (
+                    <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, padding: '5px 0',
+                      color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : 'var(--text-muted)',
+                      background: 'rgba(0,0,0,0.03)', borderRadius: 6 }}>
+                      {d}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+                  {deliveryCalendarCells.map((day, idx) => {
+                    if (!day) return <div key={idx} style={{ minHeight: 64 }} />;
+                    const dow = new Date(deliveryYear, deliveryMonth - 1, day).getDay();
+                    const isToday = day === now.getDate() && deliveryMonth === now.getMonth() + 1 && deliveryYear === now.getFullYear();
+                    const items = deliveryByDay[day] ?? [];
+                    const isSelected = selectedDay === day;
+                    return (
+                      <div key={idx}
+                        onClick={() => setSelectedDay(isSelected ? null : day)}
+                        style={{
+                          borderRadius: 8, cursor: 'pointer',
+                          border: isSelected ? '2px solid var(--accent)' : isToday ? '2px solid rgba(139,124,248,0.3)' : '1px solid rgba(0,0,0,0.07)',
+                          background: isSelected ? 'rgba(139,124,248,0.08)' : isToday ? 'rgba(139,124,248,0.04)' : dow === 0 ? 'rgba(239,68,68,0.02)' : 'rgba(255,255,255,0.7)',
+                          padding: '5px 4px', minHeight: 64,
+                          display: 'flex', flexDirection: 'column', gap: 2,
+                          transition: 'all 0.12s',
+                        }}>
+                        <div style={{ textAlign: 'center', fontSize: 11, fontWeight: isToday ? 800 : 600,
+                          color: isToday ? 'var(--accent)' : dow === 0 ? '#ef4444' : dow === 6 ? '#3b82f6' : 'var(--text)' }}>
+                          {day}
+                        </div>
+                        {items.slice(0, 2).map((item, i) => {
+                          const s = STATUS_STYLE[item.status] ?? STATUS_STYLE.SCHEDULED;
+                          return (
+                            <div key={i} style={{
+                              fontSize: 9, fontWeight: 600, padding: '2px 4px', borderRadius: 4,
+                              background: s.bg, color: s.color,
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>
+                              {item.customerName}
+                            </div>
+                          );
+                        })}
+                        {items.length > 2 && (
+                          <div style={{ fontSize: 9, color: 'var(--accent)', fontWeight: 700, textAlign: 'center' }}>
+                            +{items.length - 2}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          ) : (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '40px 0', background: 'rgba(0,0,0,0.02)', borderRadius: 10 }}>
-              구글 스프레드시트 URL을 입력하고 적용 버튼을 눌러주세요
-            </div>
-          )
+
+            {/* 선택된 날짜 상세 패널 */}
+            {selectedDay !== null && (
+              <div style={{ marginTop: 16, padding: 16, background: 'rgba(139,124,248,0.04)', borderRadius: 12, border: '1px solid var(--border-accent)' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>
+                  {deliveryYear}년 {deliveryMonth}월 {selectedDay}일 납기 목록
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>{(deliveryByDay[selectedDay] ?? []).length}건</span>
+                </div>
+                {(deliveryByDay[selectedDay] ?? []).length === 0 ? (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0' }}>납기 일정 없음</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {(deliveryByDay[selectedDay] ?? []).map(item => {
+                      const s = STATUS_STYLE[item.status] ?? STATUS_STYLE.SCHEDULED;
+                      return (
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#fff', borderRadius: 10, border: `1px solid ${s.color}30` }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>{item.customerName}</div>
+                            {item.address && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{item.address}</div>}
+                            {item.notes && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>메모: {item.notes}</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         ) : (
-          deliveryListItems.length > 0 ? (
-            <table>
-              <thead><tr><th>고객명</th><th>제품</th><th>납기일</th><th>상태</th></tr></thead>
-              <tbody>
-                {deliveryListItems.map(item => (
-                  <tr key={item.id}>
-                    <td style={{ fontWeight: 500 }}>{item.customer}</td>
-                    <td>{item.product}</td>
-                    <td>{item.dueDate}</td>
-                    <td>
-                      <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 99, fontWeight: 600,
-                        background: item.status === '납기 완료' ? 'rgba(16,185,129,0.12)' : item.status === '배송 중' ? 'rgba(124,106,247,0.12)' : 'rgba(245,158,11,0.12)',
-                        color: item.status === '납기 완료' ? 'var(--success)' : item.status === '배송 중' ? 'var(--accent)' : 'var(--warning)' }}>
-                        {item.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
+          deliveries.length === 0 ? (
             <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '40px 0', background: 'rgba(0,0,0,0.02)', borderRadius: 10 }}>
-              URL을 적용하면 납기 리스트가 표시됩니다
+              이 달 납기 일정이 없습니다
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>고객명</th><th>납기일</th><th>주소</th><th>메모</th><th>상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deliveries
+                    .slice()
+                    .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
+                    .map(item => {
+                      const s = STATUS_STYLE[item.status] ?? STATUS_STYLE.SCHEDULED;
+                      const d = new Date(item.scheduledDate);
+                      const dow = WEEKDAYS[d.getDay()];
+                      return (
+                        <tr key={item.id}>
+                          <td style={{ fontWeight: 600 }}>{item.customerName}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            {`${d.getMonth() + 1}/${d.getDate()}`}
+                            <span style={{ fontSize: 10, color: d.getDay() === 0 ? '#ef4444' : d.getDay() === 6 ? '#3b82f6' : 'var(--text-muted)', marginLeft: 4 }}>({dow})</span>
+                          </td>
+                          <td style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.address ?? '—'}</td>
+                          <td style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.notes ?? '—'}</td>
+                          <td>
+                            <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 99, fontWeight: 600, background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>
+                              {s.label}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
             </div>
           )
         )}
@@ -223,7 +382,7 @@ export default function StoreDashboardDeliveryWorkTab() {
           <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>근무형태 설정</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-              {workTypes.map((wt, idx) => (
+              {workTypes.map((wt) => (
                 <div key={wt.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ width: 10, height: 10, borderRadius: 3, background: wt.color, flexShrink: 0, display: 'inline-block' }} />
@@ -329,10 +488,9 @@ export default function StoreDashboardDeliveryWorkTab() {
           </div>
         )}
 
-        {/* ── 월간 캘린더 뷰 ── */}
+        {/* 월간 캘린더 뷰 */}
         {staffList.length > 0 ? (
           <div>
-            {/* 범례 */}
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>범례:</span>
               {workTypes.map(wt => (
@@ -347,10 +505,8 @@ export default function StoreDashboardDeliveryWorkTab() {
               </span>
             </div>
 
-            {/* 캘린더 그리드 */}
             <div style={{ overflowX: 'auto' }}>
               <div style={{ minWidth: 560 }}>
-                {/* 요일 헤더 */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 3 }}>
                   {WEEKDAYS.map((d, i) => (
                     <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, padding: '6px 0',
@@ -361,7 +517,6 @@ export default function StoreDashboardDeliveryWorkTab() {
                   ))}
                 </div>
 
-                {/* 날짜 셀 */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
                   {calendarCells.map((day, idx) => {
                     if (!day) return <div key={idx} style={{ minHeight: 80 + staffList.length * 22 }} />;
@@ -379,14 +534,12 @@ export default function StoreDashboardDeliveryWorkTab() {
                         minHeight: 80 + staffList.length * 22,
                         display: 'flex', flexDirection: 'column', gap: 3,
                       }}>
-                        {/* 날짜 숫자 */}
                         <div style={{ textAlign: 'center', fontSize: 12, fontWeight: isToday ? 800 : 600,
                           color: isToday ? 'var(--accent)' : isSun ? '#ef4444' : isSat ? '#3b82f6' : 'var(--text)',
                           marginBottom: 4 }}>
                           {day}
                         </div>
 
-                        {/* 매니저별 근무 배지 */}
                         {staffList.map(staff => {
                           const entry = getEntry(staff.id, day);
                           const isOff = entry?.isOff || isSun;
@@ -411,7 +564,6 @@ export default function StoreDashboardDeliveryWorkTab() {
                                 {isOff ? '휴' : wt ? wt.name.replace('근무형태', '') : '-'}
                               </button>
 
-                              {/* 편집 드롭다운 팝업 */}
                               {isEditing && (
                                 <div style={{
                                   position: 'absolute', top: '100%', left: 0, zIndex: 50,
@@ -431,11 +583,11 @@ export default function StoreDashboardDeliveryWorkTab() {
                                       style={{ fontSize: 11, padding: '4px 8px', borderRadius: 5, border: '1px solid rgba(239,68,68,0.3)', background: entry?.isOff ? 'rgba(239,68,68,0.12)' : '#fff', cursor: 'pointer', textAlign: 'left', color: '#dc2626' }}>
                                       🔴 휴무
                                     </button>
-                                    {workTypes.map(wt => (
-                                      <button key={wt.id} onClick={() => { setEntry(staff.id, day, wt.id, false); setEditCell(null); }}
-                                        style={{ fontSize: 11, padding: '4px 8px', borderRadius: 5, border: `1px solid ${wt.color}88`, background: entry?.typeId === wt.id ? `${wt.color}33` : '#fff', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 5 }}>
-                                        <span style={{ width: 8, height: 8, borderRadius: 2, background: wt.color, flexShrink: 0 }} />
-                                        {wt.name}
+                                    {workTypes.map(wt2 => (
+                                      <button key={wt2.id} onClick={() => { setEntry(staff.id, day, wt2.id, false); setEditCell(null); }}
+                                        style={{ fontSize: 11, padding: '4px 8px', borderRadius: 5, border: `1px solid ${wt2.color}88`, background: entry?.typeId === wt2.id ? `${wt2.color}33` : '#fff', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        <span style={{ width: 8, height: 8, borderRadius: 2, background: wt2.color, flexShrink: 0 }} />
+                                        {wt2.name}
                                       </button>
                                     ))}
                                   </div>
@@ -451,7 +603,6 @@ export default function StoreDashboardDeliveryWorkTab() {
               </div>
             </div>
 
-            {/* 닫기 오버레이 */}
             {editCell && (
               <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setEditCell(null)} />
             )}
