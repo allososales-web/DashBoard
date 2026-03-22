@@ -1,19 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-// useRef: slide timer cleanup
 import allosoLogo from '../assets/Alloso_LOGO_Basic (1).jpg';
 
-// Alloso 브랜드 소파 이미지 (공개 CDN)
-const SLIDES = [
+// Fallback images (used when API is unavailable)
+const FALLBACK_SLIDES = [
   'https://cdn.alloso.co.kr/AllosoUpload/contents/20251210/_34691fc6-6124-4523-8821-93e43e1e6059.jpg',
   'https://cdn.alloso.co.kr/AllosoUpload/contents/20251210/_8681a295-e64f-4d3b-8945-38a7c368a750.jpg',
   'https://cdn.alloso.co.kr/AllosoUpload/contents/20240725/_7a16dfb3-88f1-45e6-8d96-993354815469.jpg',
-];
-
-// Ken Burns 효과 변형 세트 (각 슬라이드마다 다른 방향)
-const KB_TRANSFORMS = [
-  { from: 'scale(1.08) translate(0%, 0%)',    to: 'scale(1.0) translate(-1.5%, -1%)' },
-  { from: 'scale(1.0)  translate(1.5%, 1%)',  to: 'scale(1.08) translate(-1%, 0.5%)' },
-  { from: 'scale(1.06) translate(-1%, 1%)',   to: 'scale(1.0) translate(1%, -0.5%)' },
 ];
 
 const FLOATERS = [
@@ -59,18 +51,33 @@ function CrossSvg({ size, color }: { size: number; color: string }) {
   return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}><line x1={h} y1={t} x2={h} y2={size-t} stroke={color} strokeWidth="1.5" /><line x1={t} y1={h} x2={size-t} y2={h} stroke={color} strokeWidth="1.5" /></svg>;
 }
 
-const SLIDE_DURATION = 6000; // ms per slide
-const FADE_DURATION  = 1200; // ms crossfade
+const SLIDE_DURATION = 6000;
+const FADE_DURATION  = 1200;
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export default function BackgroundCanvas() {
+  const [slides, setSlides] = useState<string[]>(FALLBACK_SLIDES);
   const [current, setCurrent] = useState(0);
   const [next, setNext]       = useState<number | null>(null);
   const [fading, setFading]   = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Fetch live banner images from backend (which scrapes alloso.co.kr)
+  useEffect(() => {
+    fetch(`${API_BASE}/banner/images`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data.images) && data.images.length > 0) {
+          setSlides(data.images);
+          setCurrent(0);
+        }
+      })
+      .catch(() => { /* silently use fallback */ });
+  }, []);
+
   useEffect(() => {
     function advance() {
-      const n = (current + 1) % SLIDES.length;
+      const n = (current + 1) % slides.length;
       setNext(n);
       setFading(true);
       timerRef.current = setTimeout(() => {
@@ -81,38 +88,32 @@ export default function BackgroundCanvas() {
     }
     timerRef.current = setTimeout(advance, SLIDE_DURATION);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [current]);
-
-  const kb = KB_TRANSFORMS[current % KB_TRANSFORMS.length];
-  const kbNext = next !== null ? KB_TRANSFORMS[next % KB_TRANSFORMS.length] : null;
+  }, [current, slides]);
 
   return (
     <div id="logo-canvas" aria-hidden="true">
       {/* ── Fullscreen image slider ── */}
       <div className="bg-slider">
-        {/* Current slide */}
         <div
           className="bg-slide bg-slide-current"
           style={{
-            backgroundImage: `url(${SLIDES[current]})`,
+            backgroundImage: `url(${slides[current]})`,
             animation: `kenburns-${current % 3} ${SLIDE_DURATION + FADE_DURATION}ms ease-in-out forwards`,
             opacity: fading ? 0 : 1,
             transition: `opacity ${FADE_DURATION}ms ease-in-out`,
           }}
         />
-        {/* Next slide (fading in) */}
         {next !== null && (
           <div
             className="bg-slide bg-slide-next"
             style={{
-              backgroundImage: `url(${SLIDES[next]})`,
+              backgroundImage: `url(${slides[next]})`,
               animation: `kenburns-${next % 3} ${SLIDE_DURATION + FADE_DURATION}ms ease-in-out forwards`,
               opacity: fading ? 1 : 0,
               transition: `opacity ${FADE_DURATION}ms ease-in-out`,
             }}
           />
         )}
-        {/* Pastel overlay — keeps brand palette on top of photos */}
         <div className="bg-overlay" />
       </div>
 
