@@ -66,7 +66,7 @@ function IconMetrics({ active }: { active?: boolean }) {
 }
 
 const navItems = [
-  { to: 'dashboard',     label: '대시보드',   Icon: IconDashboard },
+  { to: 'dashboard',     label: '매장 대시보드', Icon: IconDashboard },
   { to: 'analysis',      label: '매장 분석',  Icon: IconAnalysis },
   { to: 'store-issue',   label: '매장 이슈',  Icon: IconIssue },
   { to: 'delivery-work', label: '납기 & 근무', Icon: IconDelivery },

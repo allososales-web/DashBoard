@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dashboardApi } from "../../services/dashboard";
@@ -37,6 +37,119 @@ const LOCAL_NEWS = [
   { title: '소파 시장 프리미엄화 가속 — 200만원 이상 제품 비중 40% 돌파', date: '2026-02-15', summary: '국내 소파 시장에서 200만원 이상 프리미엄 제품 비중이 처음으로 40%를 넘어섰다.', url: 'https://search.naver.com/search.naver?query=소파+프리미엄+시장+트렌드' },
   { title: '가구업계 온라인 전환 가속 — 오프라인 쇼룸 체험 중요성 재부각', date: '2026-01-20', summary: '온라인 가구 구매 증가에도 불구하고 소파 등 대형 가구는 직접 체험 후 구매 비율 78%로 오프라인 쇼룸 경쟁력 유지.', url: 'https://search.naver.com/search.naver?query=가구+쇼룸+오프라인+온라인' },
 ];
+
+// ── 카운트업 훅 ──────────────────────────────────────────────
+function useCountUp(target: number, duration = 1200) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    let start = 0;
+    const step = target / (duration / 16);
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= target) { setVal(target); clearInterval(timer); }
+      else setVal(Math.floor(start));
+    }, 16);
+    return () => clearInterval(timer);
+  }, [target, duration]);
+  return val;
+}
+
+// ── SVG 원형 게이지 ──────────────────────────────────────────
+function ArcGauge({ pct, size = 80, stroke = 8, color = "var(--accent)", label, sublabel }: {
+  pct: number; size?: number; stroke?: number; color?: string; label: string; sublabel?: string;
+}) {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = (pct / 100) * circ;
+  const cx = size / 2, cy = size / 2;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth={stroke} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke}
+          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+          style={{ transition: "stroke-dasharray 1s ease" }} />
+      </svg>
+      <div style={{ marginTop: -size * 0.55, textAlign: "center", pointerEvents: "none" }}>
+        <div style={{ fontSize: size * 0.22, fontWeight: 900, color, lineHeight: 1 }}>{label}</div>
+        {sublabel && <div style={{ fontSize: size * 0.14, color: "var(--text-muted)", marginTop: 2 }}>{sublabel}</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── 반원 스피드미터 ──────────────────────────────────────────
+function Speedometer({ pct, size = 90, color = "var(--accent)" }: { pct: number; size?: number; color?: string }) {
+  const stroke = size * 0.1;
+  const r = (size - stroke) / 2;
+  const cx = size / 2, cy = size / 2;
+  const halfCirc = Math.PI * r;
+  const dash = (pct / 100) * halfCirc;
+  // needle angle: -180deg(0%) to 0deg(100%)
+  const angle = -180 + (pct / 100) * 180;
+  const needleLen = r * 0.7;
+  const rad = (angle * Math.PI) / 180;
+  const nx = cx + needleLen * Math.cos(rad);
+  const ny = cy + needleLen * Math.sin(rad);
+  return (
+    <svg width={size} height={size / 2 + stroke} viewBox={`0 0 ${size} ${size / 2 + stroke}`}>
+      {/* track */}
+      <path d={`M ${stroke/2} ${cy} A ${r} ${r} 0 0 1 ${size - stroke/2} ${cy}`}
+        fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth={stroke} strokeLinecap="round" />
+      {/* fill */}
+      <path d={`M ${stroke/2} ${cy} A ${r} ${r} 0 0 1 ${size - stroke/2} ${cy}`}
+        fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
+        strokeDasharray={`${dash} ${halfCirc}`}
+        style={{ transition: "stroke-dasharray 1s ease" }} />
+      {/* needle */}
+      <line x1={cx} y1={cy} x2={nx} y2={ny} stroke={color} strokeWidth={2} strokeLinecap="round"
+        style={{ transition: "all 1s ease" }} />
+      <circle cx={cx} cy={cy} r={4} fill={color} />
+    </svg>
+  );
+}
+
+// ── 미니 도넛 ────────────────────────────────────────────────
+function MiniDonut({ pct, size = 56, color = "var(--accent)" }: { pct: number; size?: number; color?: string }) {
+  const stroke = size * 0.18;
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = (pct / 100) * circ;
+  const cx = size / 2, cy = size / 2;
+  return (
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth={stroke} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke}
+        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+        style={{ transition: "stroke-dasharray 1s ease" }} />
+    </svg>
+  );
+}
+
+// ── 랭킹 배지 ────────────────────────────────────────────────
+function RankBadge({ rank, total }: { rank: number; total: number }) {
+  const isTop = rank === 1;
+  const isPodium = rank <= 3;
+  const badgeColor = isTop ? "#d97706" : isPodium ? "var(--accent)" : "var(--text-muted)";
+  const bgColor = isTop ? "rgba(217,119,6,0.12)" : isPodium ? "rgba(124,106,247,0.12)" : "rgba(0,0,0,0.06)";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+      <div style={{
+        width: 64, height: 64, borderRadius: "50%",
+        background: bgColor, border: `3px solid ${badgeColor}`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        boxShadow: isPodium ? `0 0 16px ${badgeColor}40` : "none",
+        transition: "all 0.5s",
+      }}>
+        <span style={{ fontSize: 28, fontWeight: 900, color: badgeColor, lineHeight: 1 }}>
+          {rank > 0 ? rank : "-"}
+        </span>
+      </div>
+      {isTop && <span style={{ fontSize: 18 }}>🏆</span>}
+      <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{total}개 매장 중</span>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { storeId } = useParams<{ storeId: string }>();
@@ -77,19 +190,18 @@ export default function DashboardPage() {
   const allStores: any[] = allMetrics ?? [];
   const totalAmount = allStores.reduce((sum: number, s: any) => sum + Number(s.contractAmount ?? 0), 0);
   const myAmount = Number(m?.contractAmount ?? 0);
-  const myShare = totalAmount > 0 ? ((myAmount / totalAmount) * 100).toFixed(1) : "0.0";
+  const myShare = totalAmount > 0 ? ((myAmount / totalAmount) * 100) : 0;
   const sortedByAmount = [...allStores].sort((a, b) => Number(b.contractAmount) - Number(a.contractAmount));
   const myRank = sortedByAmount.findIndex((s: any) => s.storeId === storeId) + 1;
 
-  // 목표 달성률
   const amountRate = g && Number(g.targetAmount) > 0 ? Math.min((myAmount / Number(g.targetAmount)) * 100, 100) : 0;
   const contractRate = g && g.targetContracts > 0 ? Math.min(((m?.contractCount ?? 0) / g.targetContracts) * 100, 100) : 0;
   const consultRate = g && g.targetConsults > 0 ? Math.min(((m?.consultCount ?? 0) / g.targetConsults) * 100, 100) : 0;
-
-  // 사업부 목표 달성률
   const hqAmountRate = hqGoal && hqGoal.targetAmount > 0 ? Math.min((totalAmount / hqGoal.targetAmount) * 100, 100) : 0;
+  const conversionPct = Number(m?.conversionRate ?? 0) * 100;
 
-  // 납기 3개월
+  const countedAmount = useCountUp(myAmount, 1400);
+
   const delMonths = useMemo(() => {
     const result = [];
     for (let offset = -1; offset <= 1; offset++) {
@@ -113,11 +225,14 @@ export default function DashboardPage() {
 
   if (isLoading) return <div style={{ color: "var(--text-muted)", padding: 40, textAlign: "center" }}>불러오는 중...</div>;
 
+  const amountColor = amountRate >= 100 ? "var(--success)" : amountRate >= 70 ? "var(--accent)" : "#f87171";
+  const convColor = conversionPct >= 50 ? "var(--success)" : "var(--accent)";
+
   return (
     <div>
       {/* 헤더 */}
       <div className="dashboard-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <div style={{ fontSize: 20, fontWeight: 800 }}>대시보드</div>
+        <div style={{ fontSize: 20, fontWeight: 800 }}>매장 대시보드</div>
         <div className="dashboard-header-controls" style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <select value={year} onChange={e => setYear(Number(e.target.value))} style={{ width: 90, fontSize: 13 }}>
             {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}년</option>)}
@@ -133,81 +248,70 @@ export default function DashboardPage() {
 
       {/* 핵심 KPI 카드 */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
-        {/* 순위 카드 */}
-        <div className="glass" style={{ padding: 20, position: "relative", overflow: "hidden" }}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>전체 순위</div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-            <span style={{ fontSize: 36, fontWeight: 900, color: myRank === 1 ? "#d97706" : myRank <= 3 ? "var(--accent)" : "var(--text)" }}>{myRank > 0 ? myRank : "-"}</span>
-            <span style={{ fontSize: 14, color: "var(--text-muted)" }}>위</span>
-          </div>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>{allStores.length}개 매장 중</div>
-          {myRank === 1 && <div style={{ position: "absolute", top: 12, right: 12, fontSize: 20 }}>🏆</div>}
+
+        {/* 전체 순위 — 랭킹 배지 */}
+        <div className="glass" style={{ padding: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4, alignSelf: "flex-start" }}>전체 순위</div>
+          <RankBadge rank={myRank} total={allStores.length} />
         </div>
 
-        {/* 진척율 카드 */}
-        <div className="glass" style={{ padding: 20 }}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>매출 진척율</div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 8 }}>
-            <span style={{ fontSize: 32, fontWeight: 900, color: amountRate >= 100 ? "var(--success)" : amountRate >= 70 ? "var(--accent)" : "#f87171" }}>{amountRate.toFixed(0)}</span>
-            <span style={{ fontSize: 14, color: "var(--text-muted)" }}>%</span>
-          </div>
-          <div style={{ height: 4, background: "rgba(0,0,0,0.08)", borderRadius: 2, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${amountRate}%`, background: amountRate >= 100 ? "var(--success)" : "var(--accent)", borderRadius: 2, transition: "width 0.5s" }} />
-          </div>
-          <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>{amountRate >= 100 ? "✅ 달성" : amountRate >= 70 ? "🔥 순항 중" : "⚠️ 미달"}</div>
+        {/* 매출 진척율 — 원형 게이지 */}
+        <div className="glass" style={{ padding: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4, alignSelf: "flex-start" }}>매출 진척율</div>
+          <ArcGauge pct={amountRate} size={84} stroke={9} color={amountColor}
+            label={`${amountRate.toFixed(0)}%`}
+            sublabel={amountRate >= 100 ? "달성 ✅" : amountRate >= 70 ? "순항 🔥" : "미달 ⚠️"} />
         </div>
 
-        {/* 사업부 비중 카드 */}
-        <div className="glass" style={{ padding: 20 }}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>사업부 매출 비중</div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 8 }}>
-            <span style={{ fontSize: 32, fontWeight: 900, color: "var(--accent)" }}>{myShare}</span>
-            <span style={{ fontSize: 14, color: "var(--text-muted)" }}>%</span>
+        {/* 사업부 매출 비중 — 미니 도넛 */}
+        <div className="glass" style={{ padding: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4, alignSelf: "flex-start" }}>사업부 매출 비중</div>
+          <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            <MiniDonut pct={Math.min(myShare, 100)} size={84} color="var(--accent)" />
+            <div style={{ position: "absolute", textAlign: "center" }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "var(--accent)", lineHeight: 1 }}>{myShare.toFixed(1)}%</div>
+            </div>
           </div>
-          <div style={{ height: 4, background: "rgba(0,0,0,0.08)", borderRadius: 2, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${Math.min(Number(myShare), 100)}%`, background: "var(--accent)", borderRadius: 2 }} />
-          </div>
-          <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>전체 {Number(totalAmount).toLocaleString()}원</div>
+          <div style={{ fontSize: 10, color: "var(--text-muted)" }}>전체 {(totalAmount / 10000).toFixed(0)}만원</div>
         </div>
 
-        {/* 이달 매출 */}
-        <div className="glass" style={{ padding: 20 }}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>이달 매출</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "var(--accent)", marginBottom: 4 }}>{myAmount >= 10000 ? `${Math.round(myAmount/10000).toLocaleString()}만` : myAmount.toLocaleString()}원</div>
+        {/* 이달 매출 — 카운트업 */}
+        <div className="glass" style={{ padding: 20, display: "flex", flexDirection: "column", justifyContent: "center", gap: 6 }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>이달 매출</div>
+          <div style={{ fontSize: 26, fontWeight: 900, color: "var(--accent)", lineHeight: 1 }}>
+            {countedAmount >= 10000
+              ? `${Math.round(countedAmount / 10000).toLocaleString()}만`
+              : countedAmount.toLocaleString()}
+            <span style={{ fontSize: 14, fontWeight: 500, color: "var(--text-muted)", marginLeft: 2 }}>원</span>
+          </div>
           <div style={{ fontSize: 11, color: "var(--text-muted)" }}>계약 {m?.contractCount ?? 0}건</div>
         </div>
 
-        {/* 전환율 */}
-        <div className="glass" style={{ padding: 20 }}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>견적→계약 전환율</div>
-          <div style={{ fontSize: 32, fontWeight: 900, color: Number(m?.conversionRate ?? 0) * 100 >= 50 ? "var(--success)" : "var(--accent)", marginBottom: 4 }}>
-            {(Number(m?.conversionRate ?? 0) * 100).toFixed(1)}%
-          </div>
-          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>견적 {m?.quoteCount ?? 0}건</div>
+        {/* 견적→계약 전환율 — 스피드미터 */}
+        <div className="glass" style={{ padding: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2, alignSelf: "flex-start" }}>견적→계약 전환율</div>
+          <Speedometer pct={conversionPct} size={88} color={convColor} />
+          <div style={{ fontSize: 20, fontWeight: 900, color: convColor, marginTop: -4 }}>{conversionPct.toFixed(1)}%</div>
+          <div style={{ fontSize: 10, color: "var(--text-muted)" }}>견적 {m?.quoteCount ?? 0}건</div>
         </div>
       </div>
 
-      {/* 목표 달성 상세 */}
+      {/* 목표 달성 현황 — 3개 원형 게이지 */}
       {g && (
         <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 16 }}>목표 달성 현황</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }} className="goal-grid">
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 20 }}>목표 달성 현황</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, textAlign: "center" }} className="goal-grid">
             {[
-              { label: "매출 목표", rate: amountRate, current: `${myAmount.toLocaleString()}원`, target: `${Number(g.targetAmount).toLocaleString()}원` },
-              { label: "계약 목표", rate: contractRate, current: `${m?.contractCount ?? 0}건`, target: `${g.targetContracts}건` },
-              { label: "상담 목표", rate: consultRate, current: `${m?.consultCount ?? 0}건`, target: `${g.targetConsults}건` },
+              { label: "매출 목표", rate: amountRate, current: `${myAmount >= 10000 ? Math.round(myAmount/10000).toLocaleString()+"만" : myAmount.toLocaleString()}원`, target: `${Number(g.targetAmount) >= 10000 ? Math.round(Number(g.targetAmount)/10000).toLocaleString()+"만" : Number(g.targetAmount).toLocaleString()}원`, color: amountColor },
+              { label: "계약 목표", rate: contractRate, current: `${m?.contractCount ?? 0}건`, target: `${g.targetContracts}건`, color: contractRate >= 100 ? "var(--success)" : contractRate >= 70 ? "var(--accent)" : "#f87171" },
+              { label: "상담 목표", rate: consultRate, current: `${m?.consultCount ?? 0}건`, target: `${g.targetConsults}건`, color: consultRate >= 100 ? "var(--success)" : consultRate >= 70 ? "var(--accent)" : "#f87171" },
             ].map(item => (
-              <div key={item.label}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{item.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: item.rate >= 100 ? "var(--success)" : item.rate >= 70 ? "var(--accent)" : "#f87171" }}>
-                    {item.rate.toFixed(1)}% {item.rate >= 100 ? "✅" : item.rate >= 70 ? "🔥" : "⚠️"}
-                  </span>
-                </div>
-                <div style={{ height: 8, background: "rgba(0,0,0,0.08)", borderRadius: 4, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${item.rate}%`, background: item.rate >= 100 ? "var(--success)" : "var(--accent)", borderRadius: 4, transition: "width 0.5s" }} />
-                </div>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>{item.current} / {item.target}</div>
+              <div key={item.label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                <ArcGauge pct={item.rate} size={96} stroke={10} color={item.color}
+                  label={`${item.rate.toFixed(0)}%`}
+                  sublabel={item.rate >= 100 ? "✅" : item.rate >= 70 ? "🔥" : "⚠️"} />
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>{item.label}</div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{item.current} / {item.target}</div>
               </div>
             ))}
           </div>
@@ -274,7 +378,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 납기 일정 캘린더 (3개월, 읽기 전용) */}
+      {/* 납기 일정 캘린더 */}
       <div className="glass" style={{ padding: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div>
@@ -290,7 +394,8 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }} className="delivery-calendar-grid">          {delMonths.map(({ year: y, month: mo }, qi) => {
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }} className="delivery-calendar-grid">
+          {delMonths.map(({ year: y, month: mo }, qi) => {
             const deliveryMap = (delQueries[qi].data ?? {}) as Record<number, string>;
             const cells = buildCalendar(y, mo);
             const isCurrent = y === year && mo === month;
