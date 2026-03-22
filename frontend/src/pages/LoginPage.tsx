@@ -127,7 +127,7 @@ export default function LoginPage() {
         background: 'var(--surface)',
         border: '1px solid var(--border)',
         borderRadius: 20,
-        boxShadow: '0 8px 40px rgba(0,0,0,0.08)',
+        boxShadow: '0 8px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,255,0.06)',
         overflow: 'hidden',
         minHeight: 640,
       }}>
@@ -142,7 +142,7 @@ export default function LoginPage() {
         }}>
           {/* 브랜드 헤더 */}
           <div style={{ marginBottom: 36 }}>
-            <img src={allosoLogo} alt="Alloso" style={{ height: 40, mixBlendMode: 'multiply', objectFit: 'contain', display: 'block', marginBottom: 8 }} />
+            <img src={allosoLogo} alt="Alloso" style={{ height: 40, mixBlendMode: 'screen', objectFit: 'contain', display: 'block', marginBottom: 8, filter: 'brightness(10) saturate(0)' }} />
             <div style={{ fontSize: 11, letterSpacing: '0.2em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
               Store Analytics Dashboard
             </div>
@@ -194,7 +194,7 @@ export default function LoginPage() {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '56px 48px',
-          background: 'var(--bg2)',
+          background: 'var(--surface2)',
         }}>
           {step === 'select' && (
             <div style={{ textAlign: 'center', width: '100%' }}>
@@ -218,7 +218,7 @@ export default function LoginPage() {
                 {[0,1,2,3].map((i) => (
                   <div key={i} style={{
                     width: 14, height: 14, borderRadius: '50%',
-                    background: i < pin.length ? 'var(--accent)' : 'rgba(0,0,0,0.10)',
+                    background: i < pin.length ? 'var(--accent)' : 'rgba(255,255,255,0.10)',
                     transition: 'background 0.15s',
                   }} />
                 ))}
@@ -231,17 +231,17 @@ export default function LoginPage() {
                     disabled={submitting || (!d && d !== '0')}
                     style={{
                       height: 56, borderRadius: 10,
-                      border: '1.5px solid rgba(0,0,0,0.09)',
-                      background: d === '⌫' ? 'rgba(239,68,68,0.08)' : d ? '#fff' : 'transparent',
-                      color: d === '⌫' ? '#ef4444' : '#1a1a2e',
+                      border: '1.5px solid rgba(255,255,255,0.08)',
+                      background: d === '⌫' ? 'rgba(239,68,68,0.12)' : d ? 'var(--surface2)' : 'transparent',
+                      color: d === '⌫' ? '#ef4444' : 'var(--text)',
                       fontSize: 18, fontWeight: 500,
                       cursor: d ? 'pointer' : 'default',
                       opacity: !d && d !== '0' ? 0 : 1,
                       transition: 'background 0.12s',
                       boxShadow: d ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
                     }}
-                    onMouseEnter={(e) => { if (d) e.currentTarget.style.background = d === '⌫' ? 'rgba(192,57,43,0.10)' : 'rgba(90,122,90,0.08)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = d === '⌫' ? 'rgba(239,68,68,0.08)' : d ? '#fff' : 'transparent'; }}
+                    onMouseEnter={(e) => { if (d) e.currentTarget.style.background = d === '⌫' ? 'rgba(239,68,68,0.20)' : 'var(--surface3)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = d === '⌫' ? 'rgba(239,68,68,0.12)' : d ? 'var(--surface2)' : 'transparent'; }}
                   >
                     {submitting && d === '0' ? '...' : d}
                   </button>
@@ -252,11 +252,11 @@ export default function LoginPage() {
                 disabled={pin.length !== 4 || submitting}
                 style={{
                   width: '100%', marginTop: 16, height: 52, borderRadius: 99,
-                  background: pin.length === 4 ? 'var(--dark)' : 'rgba(0,0,0,0.08)',
-                  border: 'none', color: pin.length === 4 ? '#fff' : 'var(--text-muted)', fontSize: 14, fontWeight: 700,
+                  background: pin.length === 4 ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
+                  border: 'none', color: pin.length === 4 ? '#000' : 'var(--text-muted)', fontSize: 14, fontWeight: 700,
                   cursor: pin.length === 4 ? 'pointer' : 'default',
                   transition: 'background 0.15s',
-                  boxShadow: pin.length === 4 ? '0 4px 14px rgba(0,0,0,0.18)' : 'none',
+                  boxShadow: pin.length === 4 ? '0 0 20px rgba(0,212,255,0.35)' : 'none',
                 }}
               >
                 {submitting ? '로그인 중...' : '로그인'}

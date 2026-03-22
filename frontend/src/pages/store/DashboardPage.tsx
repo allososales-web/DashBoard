@@ -275,8 +275,8 @@ export default function DashboardPage() {
         </div>
 
         {/* 이달 매출 — 카운트업 */}
-        <div className="glass" style={{ padding: 20, display: "flex", flexDirection: "column", justifyContent: "center", gap: 6 }}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>이달 매출</div>
+        <div className="glass" style={{ padding: 20, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", alignSelf: "flex-start" }}>이달 매출</div>
           <div style={{ fontSize: 26, fontWeight: 900, color: "var(--accent)", lineHeight: 1 }}>
             {countedAmount >= 10000
               ? `${Math.round(countedAmount / 10000).toLocaleString()}만`

@@ -98,10 +98,10 @@ export default function StoreLayout() {
         flexShrink: 0,
         position: 'sticky', top: 0, height: '100vh',
         overflowY: 'auto',
-        boxShadow: '1px 0 8px rgba(0,0,0,0.04)',
+        boxShadow: '1px 0 0 rgba(0,212,255,0.06)',
       }}>
         <div style={{ padding: '22px 18px', borderBottom: '1px solid var(--border)' }}>
-          <img src={allosoLogo} alt="Alloso" style={{ height: 26, mixBlendMode: 'multiply', objectFit: 'contain', marginBottom: 2 }} />
+          <img src={allosoLogo} alt="Alloso" style={{ height: 26, mixBlendMode: 'screen', objectFit: 'contain', filter: 'brightness(10) saturate(0)', marginBottom: 2 }} />
           <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {storeName}
           </div>
