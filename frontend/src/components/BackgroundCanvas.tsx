@@ -1,29 +1,37 @@
+import { useEffect, useRef, useState } from 'react';
+// useRef: slide timer cleanup
 import allosoLogo from '../assets/Alloso_LOGO_Basic (1).jpg';
 
-// 로고를 multiply blend로 배경에 부유시키는 컴포넌트
-// 밝은 배경이므로 multiply 사용 → 흰 배경 투명 처리
-const FLOATERS = [
-  { cls: 'logo-float-a', top: '8%',  left: '6%',  size: 52, delay: '0s',   opacity: 0.12 },
-  { cls: 'logo-float-b', top: '18%', left: '78%', size: 44, delay: '-6s',  opacity: 0.09 },
-  { cls: 'logo-float-c', top: '55%', left: '12%', size: 60, delay: '-10s', opacity: 0.10 },
-  { cls: 'logo-float-d', top: '70%', left: '72%', size: 48, delay: '-4s',  opacity: 0.11 },
-  { cls: 'logo-float-e', top: '38%', left: '88%', size: 36, delay: '-14s', opacity: 0.08 },
-  { cls: 'logo-float-a', top: '85%', left: '35%', size: 40, delay: '-8s',  opacity: 0.09 },
-  { cls: 'logo-float-c', top: '28%', left: '48%', size: 32, delay: '-18s', opacity: 0.07 },
+// Alloso 브랜드 소파 이미지 (공개 CDN)
+const SLIDES = [
+  'https://cdn.alloso.co.kr/AllosoUpload/contents/20251210/_34691fc6-6124-4523-8821-93e43e1e6059.jpg',
+  'https://cdn.alloso.co.kr/AllosoUpload/contents/20251210/_8681a295-e64f-4d3b-8945-38a7c368a750.jpg',
+  'https://cdn.alloso.co.kr/AllosoUpload/contents/20240725/_7a16dfb3-88f1-45e6-8d96-993354815469.jpg',
 ];
 
-// Geometric SVG shapes
+// Ken Burns 효과 변형 세트 (각 슬라이드마다 다른 방향)
+const KB_TRANSFORMS = [
+  { from: 'scale(1.08) translate(0%, 0%)',    to: 'scale(1.0) translate(-1.5%, -1%)' },
+  { from: 'scale(1.0)  translate(1.5%, 1%)',  to: 'scale(1.08) translate(-1%, 0.5%)' },
+  { from: 'scale(1.06) translate(-1%, 1%)',   to: 'scale(1.0) translate(1%, -0.5%)' },
+];
+
+const FLOATERS = [
+  { cls: 'logo-float-a', top: '8%',  left: '6%',  size: 52, delay: '0s',   opacity: 0.10 },
+  { cls: 'logo-float-b', top: '18%', left: '78%', size: 44, delay: '-6s',  opacity: 0.08 },
+  { cls: 'logo-float-c', top: '55%', left: '12%', size: 60, delay: '-10s', opacity: 0.09 },
+  { cls: 'logo-float-d', top: '70%', left: '72%', size: 48, delay: '-4s',  opacity: 0.09 },
+  { cls: 'logo-float-e', top: '38%', left: '88%', size: 36, delay: '-14s', opacity: 0.07 },
+  { cls: 'logo-float-a', top: '85%', left: '35%', size: 40, delay: '-8s',  opacity: 0.08 },
+  { cls: 'logo-float-c', top: '28%', left: '48%', size: 32, delay: '-18s', opacity: 0.06 },
+];
+
 const GEO_SHAPES = [
-  // top-left: rotating hexagon outline
-  { type: 'hex', top: '4%',  left: '2%',  size: 120, color: 'rgba(139,124,248,0.12)', spin: 'geo-spin-slow', dur: '40s', delay: '0s' },
-  // top-right: rotating diamond
-  { type: 'diamond', top: '2%', left: '88%', size: 90, color: 'rgba(248,200,212,0.18)', spin: 'geo-spin-rev', dur: '35s', delay: '-5s' },
-  // bottom-left: circle ring
-  { type: 'ring', top: '80%', left: '1%',  size: 100, color: 'rgba(184,240,224,0.20)', spin: 'geo-spin-slow', dur: '50s', delay: '-12s' },
-  // bottom-right: triangle outline
-  { type: 'tri', top: '82%', left: '90%', size: 80, color: 'rgba(184,212,248,0.18)', spin: 'geo-spin-rev', dur: '45s', delay: '-8s' },
-  // center-ish: small cross
-  { type: 'cross', top: '45%', left: '3%', size: 60, color: 'rgba(139,124,248,0.10)', spin: 'geo-spin-slow', dur: '30s', delay: '-20s' },
+  { type: 'hex',     top: '4%',  left: '2%',  size: 120, color: 'rgba(139,124,248,0.10)', spin: 'geo-spin-slow', dur: '40s', delay: '0s' },
+  { type: 'diamond', top: '2%',  left: '88%', size: 90,  color: 'rgba(248,200,212,0.14)', spin: 'geo-spin-rev',  dur: '35s', delay: '-5s' },
+  { type: 'ring',    top: '80%', left: '1%',  size: 100, color: 'rgba(184,240,224,0.16)', spin: 'geo-spin-slow', dur: '50s', delay: '-12s' },
+  { type: 'tri',     top: '82%', left: '90%', size: 80,  color: 'rgba(184,212,248,0.14)', spin: 'geo-spin-rev',  dur: '45s', delay: '-8s' },
+  { type: 'cross',   top: '45%', left: '3%',  size: 60,  color: 'rgba(139,124,248,0.08)', spin: 'geo-spin-slow', dur: '30s', delay: '-20s' },
 ];
 
 function HexSvg({ size, color }: { size: number; color: string }) {
@@ -32,93 +40,92 @@ function HexSvg({ size, color }: { size: number; color: string }) {
     const a = (Math.PI / 3) * i - Math.PI / 6;
     return `${r + r * 0.85 * Math.cos(a)},${r + r * 0.85 * Math.sin(a)}`;
   }).join(' ');
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <polygon points={pts} fill="none" stroke={color} strokeWidth="1.5" />
-    </svg>
-  );
+  return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}><polygon points={pts} fill="none" stroke={color} strokeWidth="1.5" /></svg>;
 }
-
 function DiamondSvg({ size, color }: { size: number; color: string }) {
   const h = size / 2;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <polygon points={`${h},4 ${size-4},${h} ${h},${size-4} 4,${h}`} fill="none" stroke={color} strokeWidth="1.5" />
-    </svg>
-  );
+  return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}><polygon points={`${h},4 ${size-4},${h} ${h},${size-4} 4,${h}`} fill="none" stroke={color} strokeWidth="1.5" /></svg>;
 }
-
 function RingSvg({ size, color }: { size: number; color: string }) {
   const r = size / 2;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={r} cy={r} r={r * 0.80} fill="none" stroke={color} strokeWidth="1.5" strokeDasharray="6 4" />
-      <circle cx={r} cy={r} r={r * 0.55} fill="none" stroke={color} strokeWidth="1" opacity="0.6" />
-    </svg>
-  );
+  return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}><circle cx={r} cy={r} r={r*0.80} fill="none" stroke={color} strokeWidth="1.5" strokeDasharray="6 4" /><circle cx={r} cy={r} r={r*0.55} fill="none" stroke={color} strokeWidth="1" opacity="0.6" /></svg>;
 }
-
 function TriSvg({ size, color }: { size: number; color: string }) {
   const h = size / 2;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <polygon points={`${h},4 ${size-4},${size-4} 4,${size-4}`} fill="none" stroke={color} strokeWidth="1.5" />
-    </svg>
-  );
+  return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}><polygon points={`${h},4 ${size-4},${size-4} 4,${size-4}`} fill="none" stroke={color} strokeWidth="1.5" /></svg>;
+}
+function CrossSvg({ size, color }: { size: number; color: string }) {
+  const h = size / 2; const t = size * 0.15;
+  return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}><line x1={h} y1={t} x2={h} y2={size-t} stroke={color} strokeWidth="1.5" /><line x1={t} y1={h} x2={size-t} y2={h} stroke={color} strokeWidth="1.5" /></svg>;
 }
 
-function CrossSvg({ size, color }: { size: number; color: string }) {
-  const h = size / 2;
-  const t = size * 0.15;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <line x1={h} y1={t} x2={h} y2={size - t} stroke={color} strokeWidth="1.5" />
-      <line x1={t} y1={h} x2={size - t} y2={h} stroke={color} strokeWidth="1.5" />
-    </svg>
-  );
-}
+const SLIDE_DURATION = 6000; // ms per slide
+const FADE_DURATION  = 1200; // ms crossfade
 
 export default function BackgroundCanvas() {
+  const [current, setCurrent] = useState(0);
+  const [next, setNext]       = useState<number | null>(null);
+  const [fading, setFading]   = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    function advance() {
+      const n = (current + 1) % SLIDES.length;
+      setNext(n);
+      setFading(true);
+      timerRef.current = setTimeout(() => {
+        setCurrent(n);
+        setNext(null);
+        setFading(false);
+      }, FADE_DURATION);
+    }
+    timerRef.current = setTimeout(advance, SLIDE_DURATION);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [current]);
+
+  const kb = KB_TRANSFORMS[current % KB_TRANSFORMS.length];
+  const kbNext = next !== null ? KB_TRANSFORMS[next % KB_TRANSFORMS.length] : null;
+
   return (
     <div id="logo-canvas" aria-hidden="true">
-      {/* Floating logos */}
-      {FLOATERS.map((f, i) => (
+      {/* ── Fullscreen image slider ── */}
+      <div className="bg-slider">
+        {/* Current slide */}
         <div
-          key={i}
-          className={`logo-float ${f.cls}`}
+          className="bg-slide bg-slide-current"
           style={{
-            top: f.top,
-            left: f.left,
-            animationDelay: f.delay,
-            opacity: f.opacity,
+            backgroundImage: `url(${SLIDES[current]})`,
+            animation: `kenburns-${current % 3} ${SLIDE_DURATION + FADE_DURATION}ms ease-in-out forwards`,
+            opacity: fading ? 0 : 1,
+            transition: `opacity ${FADE_DURATION}ms ease-in-out`,
           }}
-        >
-          <img
-            src={allosoLogo}
-            alt=""
+        />
+        {/* Next slide (fading in) */}
+        {next !== null && (
+          <div
+            className="bg-slide bg-slide-next"
             style={{
-              width: f.size,
-              height: 'auto',
-              mixBlendMode: 'multiply',
-              objectFit: 'contain',
-              display: 'block',
+              backgroundImage: `url(${SLIDES[next]})`,
+              animation: `kenburns-${next % 3} ${SLIDE_DURATION + FADE_DURATION}ms ease-in-out forwards`,
+              opacity: fading ? 1 : 0,
+              transition: `opacity ${FADE_DURATION}ms ease-in-out`,
             }}
           />
+        )}
+        {/* Pastel overlay — keeps brand palette on top of photos */}
+        <div className="bg-overlay" />
+      </div>
+
+      {/* ── Floating logos ── */}
+      {FLOATERS.map((f, i) => (
+        <div key={i} className={`logo-float ${f.cls}`} style={{ top: f.top, left: f.left, animationDelay: f.delay, opacity: f.opacity }}>
+          <img src={allosoLogo} alt="" style={{ width: f.size, height: 'auto', mixBlendMode: 'multiply', objectFit: 'contain', display: 'block' }} />
         </div>
       ))}
 
-      {/* Geometric shapes */}
+      {/* ── Geometric shapes ── */}
       {GEO_SHAPES.map((g, i) => (
-        <div
-          key={`geo-${i}`}
-          style={{
-            position: 'absolute',
-            top: g.top,
-            left: g.left,
-            animation: `${g.spin} ${g.dur} linear infinite`,
-            animationDelay: g.delay,
-          }}
-        >
+        <div key={`geo-${i}`} style={{ position: 'absolute', top: g.top, left: g.left, animation: `${g.spin} ${g.dur} linear infinite`, animationDelay: g.delay }}>
           {g.type === 'hex'     && <HexSvg     size={g.size} color={g.color} />}
           {g.type === 'diamond' && <DiamondSvg size={g.size} color={g.color} />}
           {g.type === 'ring'    && <RingSvg    size={g.size} color={g.color} />}

@@ -73,18 +73,53 @@ body {
   overflow: hidden;
 }
 
-/* ── Soft pastel gradient overlay ── */
-body::before {
-  content: '';
-  position: fixed;
+/* ── Fullscreen image slider ── */
+.bg-slider {
+  position: absolute;
   inset: 0;
+  overflow: hidden;
+}
+.bg-slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  will-change: transform, opacity;
+}
+.bg-slide-current { z-index: 1; }
+.bg-slide-next    { z-index: 2; }
+
+/* Pastel overlay — softens photos to match brand palette */
+.bg-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
   background:
-    radial-gradient(ellipse 70% 60% at 5% 5%,   rgba(184,212,248,0.35) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 50% at 95% 10%,  rgba(248,200,212,0.28) 0%, transparent 50%),
-    radial-gradient(ellipse 55% 45% at 50% 95%,  rgba(184,240,224,0.25) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 40% at 90% 90%,  rgba(224,212,248,0.30) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
+    linear-gradient(
+      160deg,
+      rgba(248,246,255,0.82) 0%,
+      rgba(242,240,252,0.72) 40%,
+      rgba(248,246,255,0.78) 100%
+    ),
+    radial-gradient(ellipse 70% 60% at 5% 5%,   rgba(184,212,248,0.30) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 95% 10%,  rgba(248,200,212,0.22) 0%, transparent 50%),
+    radial-gradient(ellipse 55% 45% at 50% 95%,  rgba(184,240,224,0.20) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 40% at 90% 90%,  rgba(224,212,248,0.25) 0%, transparent 50%);
+}
+
+/* ── Ken Burns keyframes (3 variants) ── */
+@keyframes kenburns-0 {
+  0%   { transform: scale(1.08) translate(0%, 0%); }
+  100% { transform: scale(1.0)  translate(-1.5%, -1%); }
+}
+@keyframes kenburns-1 {
+  0%   { transform: scale(1.0)  translate(1.5%, 1%); }
+  100% { transform: scale(1.08) translate(-1%, 0.5%); }
+}
+@keyframes kenburns-2 {
+  0%   { transform: scale(1.06) translate(-1%, 1%); }
+  100% { transform: scale(1.0)  translate(1%, -0.5%); }
 }
 
 /* ── Geometric grid lines (subtle) ── */
