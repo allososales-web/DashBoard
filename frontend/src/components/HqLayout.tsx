@@ -1,6 +1,7 @@
 ﻿import { Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import allosoLogo from '../assets/Alloso_LOGO_Basic (1).jpg';
 
 export default function HqLayout() {
   const { logout } = useAuth();
@@ -17,8 +18,8 @@ export default function HqLayout() {
         boxShadow: '0 1px 8px rgba(0,0,0,0.04)',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 19, fontWeight: 900, letterSpacing: '-0.04em', color: 'var(--text)' }}>
-            Alloso
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <img src={allosoLogo} alt="Alloso" style={{ height: 28, mixBlendMode: 'multiply', objectFit: 'contain' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="hide-mobile" style={{ fontSize: 12, color: 'var(--text-muted)' }}>본사 관리자</span>

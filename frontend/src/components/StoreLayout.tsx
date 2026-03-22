@@ -1,5 +1,6 @@
 ﻿import { Outlet, NavLink, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import allosoLogo from '../assets/Alloso_LOGO_Basic (1).jpg';
 
 // SVG 아이콘 컴포넌트
 function IconDashboard({ active }: { active?: boolean }) {
@@ -100,9 +101,7 @@ export default function StoreLayout() {
         boxShadow: '1px 0 8px rgba(0,0,0,0.04)',
       }}>
         <div style={{ padding: '22px 18px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 19, fontWeight: 900, letterSpacing: '-0.04em', color: 'var(--text)' }}>
-            Alloso
-          </div>
+          <img src={allosoLogo} alt="Alloso" style={{ height: 26, mixBlendMode: 'multiply', objectFit: 'contain', marginBottom: 2 }} />
           <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {storeName}
           </div>

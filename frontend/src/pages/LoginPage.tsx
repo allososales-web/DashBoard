@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import allosoLogo from '../assets/Alloso_LOGO_Basic (1).jpg';
 
 interface StoreItem {
   id: string;
@@ -141,8 +142,8 @@ export default function LoginPage() {
         }}>
           {/* 브랜드 헤더 */}
           <div style={{ marginBottom: 36 }}>
-            <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: '-0.04em', color: 'var(--text)' }}>Alloso</div>
-            <div style={{ fontSize: 11, letterSpacing: '0.2em', color: 'var(--text-muted)', marginTop: 4, textTransform: 'uppercase' }}>
+            <img src={allosoLogo} alt="Alloso" style={{ height: 40, mixBlendMode: 'multiply', objectFit: 'contain', display: 'block', marginBottom: 8 }} />
+            <div style={{ fontSize: 11, letterSpacing: '0.2em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
               Store Analytics Dashboard
             </div>
           </div>
