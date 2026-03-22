@@ -98,7 +98,7 @@ export default function StoreLayout() {
         flexShrink: 0,
         position: 'sticky', top: 0, height: '100vh',
         overflowY: 'auto',
-        boxShadow: '1px 0 0 rgba(0,212,255,0.06)',
+        boxShadow: '1px 0 0 rgba(139,124,248,0.08)',
       }}>
         <div style={{ padding: '22px 18px', borderBottom: '1px solid var(--border)' }}>
           <img src={allosoLogo} alt="Alloso" style={{ height: 26, mixBlendMode: 'multiply', objectFit: 'contain', marginBottom: 2 }} />

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dashboardApi } from "../../services/dashboard";
@@ -230,23 +230,29 @@ export default function DashboardPage() {
   return (
     <div>
       {/* 헤더 */}
-      <div className="dashboard-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <div className="dashboard-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div style={{ fontSize: 20, fontWeight: 800 }}>매장 대시보드</div>
-        <div className="dashboard-header-controls" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <select value={year} onChange={e => setYear(Number(e.target.value))} style={{ width: 90, fontSize: 13 }}>
-            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}년</option>)}
-          </select>
-          <select value={month} onChange={e => setMonth(Number(e.target.value))} style={{ width: 70, fontSize: 13 }}>
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(mo => <option key={mo} value={mo}>{mo}월</option>)}
-          </select>
-          <button className="btn btn-primary" style={{ fontSize: 12, padding: "7px 12px" }} onClick={() => recalcMutation.mutate()} disabled={recalcMutation.isPending}>
+        <div className="dashboard-header-controls" style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          {/* 연도 네비게이터 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.80)", border: "1.5px solid var(--border)", borderRadius: 99, padding: "5px 12px" }}>
+            <button onClick={() => setYear(y => y - 1)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 14, lineHeight: 1, padding: "0 2px" }}>‹</button>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", minWidth: 44, textAlign: "center", whiteSpace: "nowrap" }}>{year}년</span>
+            <button onClick={() => setYear(y => y + 1)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 14, lineHeight: 1, padding: "0 2px" }}>›</button>
+          </div>
+          {/* 월 네비게이터 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.80)", border: "1.5px solid var(--border)", borderRadius: 99, padding: "5px 12px" }}>
+            <button onClick={() => { if (month === 1) { setYear(y => y - 1); setMonth(12); } else setMonth(m => m - 1); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 14, lineHeight: 1, padding: "0 2px" }}>‹</button>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", minWidth: 28, textAlign: "center", whiteSpace: "nowrap" }}>{month}월</span>
+            <button onClick={() => { if (month === 12) { setYear(y => y + 1); setMonth(1); } else setMonth(m => m + 1); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 14, lineHeight: 1, padding: "0 2px" }}>›</button>
+          </div>
+          <button className="btn btn-primary" style={{ fontSize: 12, padding: "7px 14px", whiteSpace: "nowrap" }} onClick={() => recalcMutation.mutate()} disabled={recalcMutation.isPending}>
             {recalcMutation.isPending ? "계산 중..." : "KPI 재계산"}
           </button>
         </div>
       </div>
 
       {/* 핵심 KPI 카드 */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
+      <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
 
         {/* 전체 순위 — 랭킹 배지 */}
         <div className="glass" style={{ padding: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
@@ -367,8 +373,8 @@ export default function DashboardPage() {
               onMouseLeave={e => (e.currentTarget.style.background = 'rgba(124,106,247,0.04)')}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{news.title}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginLeft: 12 }}>{news.date}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', wordBreak: 'keep-all', overflowWrap: 'break-word', lineHeight: 1.5, flex: 1 }}>{news.title}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginLeft: 12, flexShrink: 0 }}>{news.date}</span>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>{news.summary}</div>
               <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 6 }}>기사 보기 →</div>

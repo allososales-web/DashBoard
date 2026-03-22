@@ -415,6 +415,18 @@ tr:hover td { background: rgba(139,124,248,0.03); }
   .event-cal-grid { grid-template-columns: 1fr !important; }
 }
 
+/* ── News / long text wrap ── */
+.news-title {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.5;
+}
+
+/* ── KPI card grid mobile ── */
+@media (max-width: 540px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr !important; }
+}
+
 /* ── Floating logo keyframes ── */
 @keyframes float-a {
   0%   { transform: translate(0px, 0px) rotate(0deg); }
