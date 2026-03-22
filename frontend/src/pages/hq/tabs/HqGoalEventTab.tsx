@@ -172,12 +172,11 @@ export default function HqGoalEventTab() {
   const todayStr = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
   const selectedEvents = selectedDay ? (eventDates[selectedDay] ?? []) : [];
 
-  // 납기 캘린더 3개월 (당월 앞뒤 1개월)
+  // 납기 캘린더 3개월 (당월 + 익월 + 익익월)
   const delMonths = useMemo(() => {
     const result = [];
-    for (let offset = -1; offset <= 1; offset++) {
+    for (let offset = 0; offset <= 2; offset++) {
       let y = delYear, m = delMonth + offset;
-      if (m < 1) { y--; m += 12; }
       if (m > 12) { y++; m -= 12; }
       result.push({ year: y, month: m });
     }
@@ -359,7 +358,7 @@ export default function HqGoalEventTab() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 700 }}>납기 일정 관리</div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>당월 기준 앞뒤 1개월 · 클릭으로 상태 변경 · 일요일/공휴일 기본 불가</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>당월 기준 익월·익익월 · 클릭으로 상태 변경 · 일요일/공휴일 기본 불가</div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: 'wrap' }}>
             <div style={{ display: "flex", gap: 12, fontSize: 11 }}>
@@ -377,12 +376,21 @@ export default function HqGoalEventTab() {
         </div>
         <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center" }}>
           <span style={{ fontSize: 12, color: "var(--text-muted)" }}>기준 월:</span>
-          <select value={delYear} onChange={e => setDelYear(Number(e.target.value))} style={{ fontSize: 12, padding: "4px 8px" }}>
-            {[2024,2025,2026,2027].map(y => <option key={y} value={y}>{y}년</option>)}
-          </select>
-          <select value={delMonth} onChange={e => setDelMonth(Number(e.target.value))} style={{ fontSize: 12, padding: "4px 8px" }}>
-            {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
-          </select>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button
+              onClick={() => { if (delMonth === 1) { setDelYear(y => y - 1); setDelMonth(12); } else setDelMonth(m => m - 1); }}
+              style={{ width: 32, height: 32, borderRadius: "50%", border: "1.5px solid var(--glass-border)", background: "var(--surface)", cursor: "pointer", fontSize: 15, color: "var(--text)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "var(--accent-light)")}
+              onMouseLeave={e => (e.currentTarget.style.background = "var(--surface)")}
+            >‹</button>
+            <span style={{ fontSize: 16, fontWeight: 800, minWidth: 110, textAlign: "center", color: "var(--text)" }}>{delYear}년 {delMonth}월</span>
+            <button
+              onClick={() => { if (delMonth === 12) { setDelYear(y => y + 1); setDelMonth(1); } else setDelMonth(m => m + 1); }}
+              style={{ width: 32, height: 32, borderRadius: "50%", border: "1.5px solid var(--glass-border)", background: "var(--surface)", cursor: "pointer", fontSize: 15, color: "var(--text)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "var(--accent-light)")}
+              onMouseLeave={e => (e.currentTarget.style.background = "var(--surface)")}
+            >›</button>
+          </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }} className="del-cal-grid">
           {delMonths.map(({ year, month }) => {
@@ -396,7 +404,7 @@ export default function HqGoalEventTab() {
             const isCurrent = year === delYear && month === delMonth;
             return (
               <div key={k} style={{ background: isCurrent ? "rgba(124,106,247,0.06)" : "rgba(0,0,0,0.02)", borderRadius: 10, padding: 14, border: isCurrent ? "1.5px solid rgba(124,106,247,0.25)" : "1.5px solid rgba(0,0,0,0.07)" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, textAlign: "center", color: "var(--text)" }}>{year}년 {month}월 {isCurrent && <span style={{ fontSize: 10, color: "var(--accent)", marginLeft: 4 }}>당월</span>}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, textAlign: "center", color: "var(--text)" }}>{year}년 {month}월 {isCurrent && <span style={{ fontSize: 10, color: "var(--accent)", marginLeft: 4 }}>당월</span>}{!isCurrent && year === delYear && month === delMonth + 1 && <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: 4 }}>익월</span>}{!isCurrent && year === delYear && month === delMonth + 2 && <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: 4 }}>익익월</span>}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1, marginBottom: 2 }}>
                   {DOW.map((d, i) => <div key={d} style={{ textAlign: "center", fontSize: 9, color: i===0?"#ef4444":i===6?"#3b82f6":"var(--text-muted)", padding: "2px 0" }}>{d}</div>)}
                 </div>

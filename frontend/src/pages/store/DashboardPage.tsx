@@ -204,9 +204,8 @@ export default function DashboardPage() {
 
   const delMonths = useMemo(() => {
     const result = [];
-    for (let offset = -1; offset <= 1; offset++) {
+    for (let offset = 0; offset <= 2; offset++) {
       let y = year, mo = month + offset;
-      if (mo < 1) { y--; mo += 12; }
       if (mo > 12) { y++; mo -= 12; }
       result.push({ year: y, month: mo });
     }
@@ -383,7 +382,7 @@ export default function DashboardPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700 }}>납기 일정 캘린더</div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>당월 기준 앞뒤 1개월 · 수정 불가</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>당월 기준 익월·익익월 · 수정 불가</div>
           </div>
           <div style={{ display: "flex", gap: 12, fontSize: 11 }}>
             {Object.entries(DELIVERY_COLORS).map(([k, v]) => (
@@ -401,7 +400,7 @@ export default function DashboardPage() {
             const isCurrent = y === year && mo === month;
             return (
               <div key={`${y}-${mo}`} style={{ background: isCurrent ? "rgba(200,149,108,0.06)" : "rgba(0,0,0,0.02)", borderRadius: 10, padding: 12, border: isCurrent ? "1px solid rgba(200,149,108,0.3)" : "1px solid var(--glass-border)" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, textAlign: "center", marginBottom: 8 }}>{y}년 {mo}월 {isCurrent && <span style={{ fontSize: 10, color: "var(--accent)" }}>당월</span>}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, textAlign: "center", marginBottom: 8 }}>{y}년 {mo}월 {isCurrent && <span style={{ fontSize: 10, color: "var(--accent)" }}>당월</span>}{!isCurrent && qi === 1 && <span style={{ fontSize: 10, color: "var(--text-muted)" }}>익월</span>}{!isCurrent && qi === 2 && <span style={{ fontSize: 10, color: "var(--text-muted)" }}>익익월</span>}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1, marginBottom: 2 }}>
                   {WEEKDAYS.map((d, i) => <div key={d} style={{ textAlign: "center", fontSize: 9, color: i===0?"#f87171":i===6?"#60a5fa":"var(--text-muted)", padding: "2px 0" }}>{d}</div>)}
                 </div>
