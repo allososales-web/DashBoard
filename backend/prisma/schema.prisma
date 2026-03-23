@@ -186,8 +186,6 @@ model Store {
   showOnLogin    Boolean     @default(false) @map("show_on_login")
   displayName    String?     @map("display_name")
   defaultChannel ChannelType @default(ROAD) @map("default_channel")
-  deliveryUrl    String?     @map("delivery_url")
-  loginInfoUrl   String?     @map("login_info_url")
   settings       Json?       @default("{}")
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
@@ -572,6 +570,19 @@ model HqDeliveryRule {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("hq_delivery_rules")
+}
+
+// ─────────────────────────────────────────────
+// 전역 앱 설정
+// ─────────────────────────────────────────────
+
+model AppConfig {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @unique
+  value     String?
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_configs")
 }
 
 // ─────────────────────────────────────────────

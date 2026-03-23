@@ -66,7 +66,7 @@ export class StoresController {
   @Roles(Role.HQ_ADMIN)
   updateSettings(
     @Param('storeId') storeId: string,
-    @Body() dto: { showOnLogin?: boolean; displayName?: string; defaultChannel?: ChannelType; deliveryUrl?: string; loginInfoUrl?: string },
+    @Body() dto: { showOnLogin?: boolean; displayName?: string; defaultChannel?: ChannelType },
   ) {
     return this.storesService.updateStoreSettings(storeId, dto);
   }
