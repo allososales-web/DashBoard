@@ -44,12 +44,7 @@ export default function StoreDashboardDeliveryWorkTab() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [editCell, setEditCell] = useState<{ day: number; staffId: string } | null>(null);
 
-  // ── 납기 URL ──
-  const { data: deliverySheetData } = useQuery({
-    queryKey: ['delivery-sheet-url'],
-    queryFn: () => api.get('/app-config/delivery-sheet-url').then((r) => r.data),
-  });
-  const deliverySheetUrl = deliverySheetData?.url ?? null;
+  // ── 납기 URL (제거됨 - iframe 대신 캘린더 수주건명으로 대체) ──
 
   // ── 근무 스케줄 상태 ──
   const [workTypes, setWorkTypes] = useState<WorkType[]>([
@@ -81,6 +76,16 @@ export default function StoreDashboardDeliveryWorkTab() {
     enabled: !!storeId,
   });
   const deliveries: DeliveryItem[] = deliveryData?.data ?? [];
+
+  // ── 구글 시트 납기일정 (수주건명) ──
+  const { data: sheetScheduleData } = useQuery({
+    queryKey: ['sheet-delivery-schedule', storeId, calYear, calMonth],
+    queryFn: () =>
+      api.get(`/app-config/delivery-schedule/${storeId}?year=${calYear}&month=${calMonth}`)
+        .then(r => r.data).catch(() => ({})),
+    enabled: !!storeId,
+  });
+  const sheetDeliveryByDay: Record<number, { itemName: string; orderNumber: string }[]> = sheetScheduleData ?? {};
 
   const deliveryByDay = useMemo(() => {
     const map: Record<number, DeliveryItem[]> = {};
@@ -205,6 +210,16 @@ export default function StoreDashboardDeliveryWorkTab() {
                   {delivItems.length > 2 && (
                     <div style={{ fontSize: 9, color: 'var(--accent)', fontWeight: 700, textAlign: 'center' }}>+{delivItems.length - 2}</div>
                   )}
+                  {/* 수주건명 배지 (구글 시트 납기일정) */}
+                  {(sheetDeliveryByDay[day] ?? []).slice(0, 2).map((item, i) => (
+                    <div key={`sheet-${i}`} style={{ fontSize: 9, fontWeight: 600, padding: '2px 4px', borderRadius: 4,
+                      background: 'rgba(16,185,129,0.12)', color: '#059669', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      🏭 {item.itemName || item.orderNumber}
+                    </div>
+                  ))}
+                  {(sheetDeliveryByDay[day] ?? []).length > 2 && (
+                    <div style={{ fontSize: 9, color: '#059669', fontWeight: 700, textAlign: 'center' }}>+{(sheetDeliveryByDay[day] ?? []).length - 2}</div>
+                  )}
                   {/* 근무 배지 */}
                   {staffList.map(staff => {
                     const entry = getEntry(staff.id, day);
@@ -263,27 +278,6 @@ export default function StoreDashboardDeliveryWorkTab() {
   return (
     <div>
       <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 24 }}>납기 & 근무 현황</div>
-
-      {/* ══ 납기일정 구글 시트 연동 ══ */}
-      {deliverySheetUrl && (
-        <div className="glass" style={{ padding: 20, marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>📦 납기 일정 (구글 시트 연동)</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>본사에서 관리하는 전체 납기 일정</div>
-            </div>
-            <a href={deliverySheetUrl} target="_blank" rel="noopener noreferrer"
-              className="btn btn-ghost" style={{ fontSize: 12, padding: '6px 14px', whiteSpace: 'nowrap' }}>
-              시트 열기 ↗
-            </a>
-          </div>
-          <iframe
-            src={deliverySheetUrl.replace('/edit', '/preview').replace('/pub', '/preview')}
-            style={{ width: '100%', height: 400, border: 'none', borderRadius: 8, background: 'rgba(0,0,0,0.02)' }}
-            title="납기 일정 구글 시트"
-          />
-        </div>
-      )}
 
       {/* ══ 통합 캘린더 ══ */}
       <div className="glass" style={{ padding: 20, marginBottom: 20 }}>
@@ -344,6 +338,25 @@ export default function StoreDashboardDeliveryWorkTab() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+            {/* 수주건명 (구글 시트 납기일정) */}
+            {(sheetDeliveryByDay[selectedDay] ?? []).length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#059669', marginBottom: 8 }}>
+                  🏭 수주건명 ({(sheetDeliveryByDay[selectedDay] ?? []).length}건)
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {(sheetDeliveryByDay[selectedDay] ?? []).map((item, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'rgba(16,185,129,0.06)', borderRadius: 8, border: '1px solid rgba(16,185,129,0.2)' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(16,185,129,0.12)', color: '#059669', whiteSpace: 'nowrap' }}>확정납기</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{item.itemName || '(품명 없음)'}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>수주번호: {item.orderNumber}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

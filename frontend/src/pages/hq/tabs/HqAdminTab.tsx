@@ -214,6 +214,177 @@ function StoreUrlSection() {
   );
 }
 
+// ─── 매출 실적 / 납기일정 동기화 섹터 ───
+function SyncSection() {
+  const qc = useQueryClient();
+  const [salesMsg, setSalesMsg] = useState('');
+  const [deliveryMsg, setDeliveryMsg] = useState('');
+
+  const salesSyncMutation = useMutation({
+    mutationFn: () => api.post('/app-config/sync-sales-sheet').then((r) => r.data),
+    onSuccess: (data) => {
+      setSalesMsg(`완료 — ${data.savedRows}건 저장, ${data.skippedRows}건 스킵`);
+      setTimeout(() => setSalesMsg(''), 5000);
+    },
+    onError: (e: any) => {
+      setSalesMsg(`오류: ${e?.response?.data?.message ?? e?.message ?? '실패'}`);
+      setTimeout(() => setSalesMsg(''), 5000);
+    },
+  });
+
+  const deliverySyncMutation = useMutation({
+    mutationFn: () => api.post('/app-config/sync-delivery-sheet').then((r) => r.data),
+    onSuccess: (data) => {
+      setDeliveryMsg(`완료 — ${data.savedRows}건 저장, ${data.skippedRows}건 스킵`);
+      qc.invalidateQueries({ queryKey: ['sheet-delivery-schedule'] });
+      setTimeout(() => setDeliveryMsg(''), 5000);
+    },
+    onError: (e: any) => {
+      setDeliveryMsg(`오류: ${e?.response?.data?.message ?? e?.message ?? '실패'}`);
+      setTimeout(() => setDeliveryMsg(''), 5000);
+    },
+  });
+
+  return (
+    <div className="glass" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)' }}>
+        <span style={{ fontWeight: 600 }}>데이터 동기화</span>
+        <span className="hide-mobile" style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>— 구글 시트 URL에서 데이터를 가져옵니다</span>
+      </div>
+      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* 매출 실적 동기화 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>📊 매출 실적 동기화</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>매출 실적 URL의 구글 시트 → DB 저장 (수주금액/매출금액 반영)</div>
+            {salesMsg && <div style={{ fontSize: 11, marginTop: 4, color: salesMsg.startsWith('오류') ? '#ef4444' : '#059669' }}>{salesMsg}</div>}
+          </div>
+          <button className="btn btn-primary" style={{ fontSize: 12, padding: '7px 16px', whiteSpace: 'nowrap' }}
+            onClick={() => salesSyncMutation.mutate()} disabled={salesSyncMutation.isPending}>
+            {salesSyncMutation.isPending ? '동기화 중...' : '동기화'}
+          </button>
+        </div>
+        {/* 납기일정 동기화 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingTop: 12, borderTop: '1px solid var(--glass-border)' }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>📦 납기일정 동기화</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>납기 일정 URL의 구글 시트 → DB 저장 (매장 캘린더 수주건명 반영)</div>
+            {deliveryMsg && <div style={{ fontSize: 11, marginTop: 4, color: deliveryMsg.startsWith('오류') ? '#ef4444' : '#059669' }}>{deliveryMsg}</div>}
+          </div>
+          <button className="btn btn-primary" style={{ fontSize: 12, padding: '7px 16px', whiteSpace: 'nowrap' }}
+            onClick={() => deliverySyncMutation.mutate()} disabled={deliverySyncMutation.isPending}>
+            {deliverySyncMutation.isPending ? '동기화 중...' : '동기화'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 매장 별칭 매핑 섹터 ───
+function AliasMappingSection() {
+  const qc = useQueryClient();
+  const [newAlias, setNewAlias] = useState('');
+  const [newStoreId, setNewStoreId] = useState('');
+  const [msg, setMsg] = useState('');
+
+  const { data: mappings = [], isLoading: mappingsLoading } = useQuery({
+    queryKey: ['alias-mappings'],
+    queryFn: () => api.get('/sales-data/mappings').then((r) => r.data).catch(() => []),
+  });
+
+  const { data: stores = [] } = useQuery({
+    queryKey: ['admin-stores'],
+    queryFn: () => api.get('/stores/admin/all').then((r) => r.data).catch(() => []),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (dto: { aliasName: string; storeId: string }) =>
+      api.post('/sales-data/mappings', dto).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['alias-mappings'] });
+      setNewAlias(''); setNewStoreId('');
+      flash('매핑이 추가되었습니다');
+    },
+    onError: (e: any) => flash(`오류: ${e?.response?.data?.message ?? '추가 실패'}`),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/sales-data/mappings/${id}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['alias-mappings'] }); flash('삭제되었습니다'); },
+  });
+
+  const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3000); };
+
+  const activeStores = (stores as any[]).filter((s: any) => s.showOnLogin);
+
+  return (
+    <div className="glass" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)' }}>
+        <span style={{ fontWeight: 600 }}>매장 별칭 매핑</span>
+        <span className="hide-mobile" style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>— 구글 시트의 실적대리점명 → 매장 연결 (수주금액/납기일정 반영에 필요)</span>
+      </div>
+      {msg && <div style={{ margin: '8px 20px 0', padding: '8px 12px', background: 'rgba(16,185,129,0.1)', borderRadius: 8, fontSize: 12, color: '#059669' }}>{msg}</div>}
+      <div style={{ padding: '16px 20px' }}>
+        {/* 추가 폼 */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+          <input
+            value={newAlias}
+            onChange={(e) => setNewAlias(e.target.value)}
+            placeholder="구글 시트 대리점명 (예: 강남점)"
+            style={{ flex: 2, minWidth: 160, fontSize: 12 }}
+          />
+          <select
+            value={newStoreId}
+            onChange={(e) => setNewStoreId(e.target.value)}
+            style={{ flex: 2, minWidth: 140, fontSize: 12 }}
+          >
+            <option value="">매장 선택</option>
+            {activeStores.map((s: any) => (
+              <option key={s.id} value={s.id}>{s.displayName ?? s.name} ({s.code})</option>
+            ))}
+          </select>
+          <button
+            className="btn btn-primary"
+            style={{ fontSize: 12, padding: '7px 16px', whiteSpace: 'nowrap' }}
+            onClick={() => { if (newAlias.trim() && newStoreId) createMutation.mutate({ aliasName: newAlias.trim(), storeId: newStoreId }); }}
+            disabled={!newAlias.trim() || !newStoreId || createMutation.isPending}
+          >
+            + 추가
+          </button>
+        </div>
+        {/* 매핑 목록 */}
+        {mappingsLoading ? (
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 16 }}>불러오는 중...</div>
+        ) : (mappings as any[]).length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '16px 0' }}>
+            매핑이 없습니다. 구글 시트의 실적대리점명과 매장을 연결하세요.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {(mappings as any[]).map((m: any) => (
+              <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>{m.aliasName}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>→</span>
+                  <span style={{ fontSize: 13 }}>{m.store?.name ?? m.storeId}</span>
+                </div>
+                <button
+                  onClick={() => deleteMutation.mutate(m.id)}
+                  style={{ fontSize: 11, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                  disabled={deleteMutation.isPending}
+                >
+                  삭제
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── 매장 운영 현황 섹터 (정렬 + 실시간 체크박스) ───
 function StoreOpsSection() {
   const qc = useQueryClient();
@@ -586,6 +757,8 @@ export default function HqAdminTab() {
 
       <MetricsStoresSection />
       <StoreUrlSection />
+      <SyncSection />
+      <AliasMappingSection />
       <StoreOpsSection />
 
       {/* 본사 PIN */}

@@ -75,4 +75,59 @@ export class AppConfigService {
     const config = await this.prisma.appConfig.findUnique({ where: { key: 'deliveryUrl' } });
     return { url: config?.value ?? null };
   }
+
+  /** 구글 시트 납기일정 URL → CSV fetch → salesRawData 저장 */
+  async syncDeliveryFromSheet(userId?: string) {
+    const config = await this.prisma.appConfig.findUnique({ where: { key: 'deliveryUrl' } });
+    if (!config?.value) throw new BadRequestException('납기일정 URL이 설정되지 않았습니다');
+
+    const csvUrl = toGoogleSheetCsvUrl(config.value);
+
+    let buffer: Buffer;
+    try {
+      const res = await fetch(csvUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const arrayBuffer = await res.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    } catch (e: any) {
+      throw new BadRequestException(`구글 시트 fetch 실패: ${e.message}. 시트가 공개(공유) 설정인지 확인하세요.`);
+    }
+
+    return this.salesDataService.uploadCsv(buffer, 'delivery-sheet-sync.csv', userId);
+  }
+
+  /** 매장별 납기일정 조회 (confirmedDate 기준) */
+  async getDeliverySchedule(storeId: string, year: number, month: number) {
+    // storeId → aliasNames 조회
+    const mappings = await this.prisma.storeAliasMapping.findMany({
+      where: { storeId },
+      select: { aliasName: true },
+    });
+    if (mappings.length === 0) return {};
+
+    const aliasNames = mappings.map((m: { aliasName: string }) => m.aliasName);
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 1);
+
+    const rows = await this.prisma.salesRawData.findMany({
+      where: {
+        storeAlias: { in: aliasNames },
+        confirmedDate: { gte: startDate, lt: endDate },
+      },
+      select: { confirmedDate: true, itemName: true, orderNumber: true },
+      orderBy: { confirmedDate: 'asc' },
+    });
+
+    // day → items 맵
+    const result: Record<number, { itemName: string; orderNumber: string }[]> = {};
+    for (const row of rows) {
+      const day = new Date(row.confirmedDate).getDate();
+      if (!result[day]) result[day] = [];
+      result[day].push({
+        itemName: row.itemName ?? '',
+        orderNumber: row.orderNumber,
+      });
+    }
+    return result;
+  }
 }

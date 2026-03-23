@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put, Request } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, Request } from '@nestjs/common';
 import { AppConfigService } from './app-config.service';
 import { Roles } from '../../common/decorators';
 import { Role } from '../../common/types/roles.enum';
@@ -29,5 +29,22 @@ export class AppConfigController {
   @Get('delivery-sheet-url')
   getDeliverySheetUrl() {
     return this.appConfigService.getDeliverySheetUrl();
+  }
+
+  /** 구글 시트 납기일정 동기화 */
+  @Post('sync-delivery-sheet')
+  @Roles(Role.HQ_ADMIN)
+  syncDeliverySheet(@Request() req: any) {
+    return this.appConfigService.syncDeliveryFromSheet(req.user?.id);
+  }
+
+  /** 매장별 납기일정 조회 */
+  @Get('delivery-schedule/:storeId')
+  getDeliverySchedule(
+    @Param('storeId') storeId: string,
+    @Query('year') year: string,
+    @Query('month') month: string,
+  ) {
+    return this.appConfigService.getDeliverySchedule(storeId, Number(year), Number(month));
   }
 }
