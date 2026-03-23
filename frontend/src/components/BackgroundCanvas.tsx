@@ -78,9 +78,15 @@ export default function BackgroundCanvas() {
   useEffect(() => {
     function advance() {
       const n = (current + 1) % slides.length;
+      // Mount next slide at opacity 0 first, then trigger fade-in on next frame
       setNext(n);
-      setFading(true);
-      // After fade completes, swap current → next, keep next visible until next cycle
+      setFading(false);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setFading(true);
+        });
+      });
+      // After fade completes, swap current → next
       timerRef.current = setTimeout(() => {
         setCurrent(n);
         setNext(null);
@@ -112,7 +118,7 @@ export default function BackgroundCanvas() {
               backgroundImage: `url(${slides[next]})`,
               animation: `kenburns-${next % 3} ${SLIDE_DURATION + FADE_DURATION}ms ease-in-out forwards`,
               opacity: fading ? 1 : 0,
-              transition: `opacity ${FADE_DURATION}ms ease-in-out`,
+              transition: fading ? `opacity ${FADE_DURATION}ms ease-in-out` : 'none',
             }}
           />
         )}
