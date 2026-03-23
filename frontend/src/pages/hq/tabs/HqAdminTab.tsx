@@ -87,6 +87,10 @@ function StoreOpsSection() {
   const [overrideYear, setOverrideYear] = useState(new Date().getFullYear());
   const [overrideMonth, setOverrideMonth] = useState(new Date().getMonth() + 1);
   const [overrideChannel, setOverrideChannel] = useState('ROAD');
+  const [overrideLabel, setOverrideLabel] = useState('');
+  const [overrideUseDateRange, setOverrideUseDateRange] = useState(false);
+  const [overrideStartDate, setOverrideStartDate] = useState('');
+  const [overrideEndDate, setOverrideEndDate] = useState('');
   const [createModal, setCreateModal] = useState(false);
   const [newStore, setNewStore] = useState({ name: '', code: '', defaultChannel: 'ROAD', showOnLogin: false, displayName: '' });
   const [msg, setMsg] = useState('');
@@ -195,7 +199,14 @@ function StoreOpsSection() {
                     }}
                     onToggleShow={() => settingsMutation.mutate({ id: s.id, data: { showOnLogin: !s.showOnLogin } })}
                     onChannelChange={(ch) => settingsMutation.mutate({ id: s.id, data: { defaultChannel: ch } })}
-                    onAddOverride={() => { setOverrideModal({ storeId: s.id, storeName: s.name }); setOverrideChannel(s.defaultChannel ?? 'ROAD'); }}
+                    onAddOverride={() => {
+                      setOverrideModal({ storeId: s.id, storeName: s.name });
+                      setOverrideChannel(s.defaultChannel ?? 'ROAD');
+                      setOverrideLabel('');
+                      setOverrideUseDateRange(false);
+                      setOverrideStartDate('');
+                      setOverrideEndDate('');
+                    }}
                   />
                 ))}
               </tbody>
@@ -207,9 +218,11 @@ function StoreOpsSection() {
       {/* 채널 오버라이드 모달 */}
       {overrideModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
-          <div className="glass" style={{ padding: 28, width: 340 }}>
+          <div className="glass" style={{ padding: 28, width: 360 }}>
             <div style={{ fontWeight: 700, marginBottom: 4 }}>{overrideModal.storeName}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>월별 채널 오버라이드 설정</div>
+
+            {/* 연도 / 월 */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>연도</label>
@@ -220,15 +233,73 @@ function StoreOpsSection() {
                 <input type="number" min={1} max={12} value={overrideMonth} onChange={(e) => setOverrideMonth(Number(e.target.value))} style={{ fontSize: 13 }} />
               </div>
             </div>
-            <div style={{ marginBottom: 20 }}>
+
+            {/* 채널 */}
+            <div style={{ marginBottom: 12 }}>
               <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>채널</label>
               <select value={overrideChannel} onChange={(e) => setOverrideChannel(e.target.value)} style={{ width: '100%', fontSize: 13 }}>
                 {CHANNEL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
+
+            {/* 라벨 (메모) */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>메모 <span style={{ opacity: 0.5 }}>(선택)</span></label>
+              <input
+                value={overrideLabel}
+                onChange={(e) => setOverrideLabel(e.target.value)}
+                placeholder="예: 현대백화점 팝업"
+                style={{ fontSize: 13 }}
+              />
+            </div>
+
+            {/* 기간 설정 토글 */}
+            <div style={{ marginBottom: overrideUseDateRange ? 12 : 20 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                <input
+                  type="checkbox"
+                  checked={overrideUseDateRange}
+                  onChange={(e) => setOverrideUseDateRange(e.target.checked)}
+                  style={{ accentColor: 'var(--accent)', width: 14, height: 14 }}
+                />
+                <span>기간 지정 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>— 팝업 등 월 중 일부 기간만 적용</span></span>
+              </label>
+            </div>
+
+            {/* 기간 입력 */}
+            {overrideUseDateRange && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 20, padding: '12px 14px', background: 'rgba(200,149,108,0.08)', borderRadius: 10, border: '1px solid rgba(200,149,108,0.2)' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>시작일</label>
+                  <input type="date" value={overrideStartDate} onChange={(e) => setOverrideStartDate(e.target.value)} style={{ fontSize: 12 }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>종료일</label>
+                  <input type="date" value={overrideEndDate} onChange={(e) => setOverrideEndDate(e.target.value)} style={{ fontSize: 12 }} />
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setOverrideModal(null)}>취소</button>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => overrideMutation.mutate({ id: overrideModal.storeId, data: { year: overrideYear, month: overrideMonth, channel: overrideChannel } })} disabled={overrideMutation.isPending}>저장</button>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => overrideMutation.mutate({
+                  id: overrideModal.storeId,
+                  data: {
+                    year: overrideYear,
+                    month: overrideMonth,
+                    channel: overrideChannel,
+                    label: overrideLabel || undefined,
+                    startDate: overrideUseDateRange && overrideStartDate ? overrideStartDate : undefined,
+                    endDate: overrideUseDateRange && overrideEndDate ? overrideEndDate : undefined,
+                  },
+                })}
+                disabled={overrideMutation.isPending}
+              >
+                저장
+              </button>
             </div>
           </div>
         </div>
@@ -316,8 +387,11 @@ function StoreRow({ store, displayNameValue, onDisplayNameChange, onDisplayNameS
       <td>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
           {store.channelOverrides?.slice(0, 2).map((o: any) => (
-            <span key={o.id} style={{ fontSize: 11, background: 'rgba(255,255,255,0.08)', borderRadius: 4, padding: '2px 6px' }}>
-              {o.year}/{String(o.month).padStart(2, '0')} <ChannelBadge channel={o.channel} />
+            <span key={o.id} style={{ fontSize: 11, background: 'rgba(255,255,255,0.08)', borderRadius: 4, padding: '2px 6px', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span>{o.year}/{String(o.month).padStart(2, '0')}</span>
+              {o.startDate && <span style={{ color: 'var(--text-muted)' }}>({new Date(o.startDate).getDate()}~{o.endDate ? new Date(o.endDate).getDate() : '?'}일)</span>}
+              <ChannelBadge channel={o.channel} />
+              {o.label && <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{o.label}</span>}
             </span>
           ))}
           <button className="btn btn-ghost" style={{ fontSize: 10, padding: '2px 6px' }} onClick={onAddOverride}>+ 추가</button>

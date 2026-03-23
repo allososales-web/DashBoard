@@ -76,9 +76,9 @@ export class StoresController {
   @Roles(Role.HQ_ADMIN)
   upsertChannelOverride(
     @Param('storeId') storeId: string,
-    @Body() dto: { year: number; month: number; channel: ChannelType },
+    @Body() dto: { year: number; month: number; channel: ChannelType; startDate?: string; endDate?: string; label?: string },
   ) {
-    return this.storesService.upsertChannelOverride(storeId, dto.year, dto.month, dto.channel);
+    return this.storesService.upsertChannelOverride(storeId, dto);
   }
 
   // 채널 오버라이드 삭제

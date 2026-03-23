@@ -117,7 +117,7 @@ export class StoresService {
           },
         },
         channelOverrides: {
-          select: { id: true, year: true, month: true, channel: true },
+          select: { id: true, year: true, month: true, channel: true, startDate: true, endDate: true, label: true },
           orderBy: [{ year: 'desc' }, { month: 'desc' }],
         },
       },
@@ -138,12 +138,22 @@ export class StoresService {
   }
 
   // 채널 오버라이드 설정
-  async upsertChannelOverride(storeId: string, year: number, month: number, channel: ChannelType) {
+  async upsertChannelOverride(
+    storeId: string,
+    dto: { year: number; month: number; channel: ChannelType; startDate?: string; endDate?: string; label?: string },
+  ) {
     await this.findOne(storeId);
+    const { year, month, channel, startDate, endDate, label } = dto;
+    const data: any = {
+      channel,
+      label: label ?? null,
+      startDate: startDate ? new Date(startDate) : null,
+      endDate: endDate ? new Date(endDate) : null,
+    };
     return this.prisma.storeChannelOverride.upsert({
       where: { storeId_year_month: { storeId, year, month } },
-      update: { channel },
-      create: { storeId, year, month, channel },
+      update: data,
+      create: { storeId, year, month, ...data },
     });
   }
 

@@ -216,6 +216,9 @@ model StoreChannelOverride {
   year      Int
   month     Int
   channel   ChannelType
+  startDate DateTime?   @map("start_date") @db.Date
+  endDate   DateTime?   @map("end_date") @db.Date
+  label     String?
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
 
