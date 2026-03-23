@@ -26,7 +26,7 @@ export class SalesDataController {
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  uploadCsv(@UploadedFile() file: Express.Multer.File, @Request() req: any) {
+  uploadCsv(@UploadedFile() file: { buffer: Buffer; originalname: string }, @Request() req: any) {
     return this.salesDataService.uploadCsv(
       file.buffer,
       file.originalname,
