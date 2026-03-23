@@ -45,7 +45,11 @@ export default function StoreDashboardDeliveryWorkTab() {
   const [editCell, setEditCell] = useState<{ day: number; staffId: string } | null>(null);
 
   // ── 납기 URL ──
-  // (URL 관리는 본사 관리자 탭에서 일괄 처리)
+  const { data: deliverySheetData } = useQuery({
+    queryKey: ['delivery-sheet-url'],
+    queryFn: () => api.get('/app-config/delivery-sheet-url').then((r) => r.data),
+  });
+  const deliverySheetUrl = deliverySheetData?.url ?? null;
 
   // ── 근무 스케줄 상태 ──
   const [workTypes, setWorkTypes] = useState<WorkType[]>([
@@ -259,6 +263,27 @@ export default function StoreDashboardDeliveryWorkTab() {
   return (
     <div>
       <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 24 }}>납기 & 근무 현황</div>
+
+      {/* ══ 납기일정 구글 시트 연동 ══ */}
+      {deliverySheetUrl && (
+        <div className="glass" style={{ padding: 20, marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>📦 납기 일정 (구글 시트 연동)</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>본사에서 관리하는 전체 납기 일정</div>
+            </div>
+            <a href={deliverySheetUrl} target="_blank" rel="noopener noreferrer"
+              className="btn btn-ghost" style={{ fontSize: 12, padding: '6px 14px', whiteSpace: 'nowrap' }}>
+              시트 열기 ↗
+            </a>
+          </div>
+          <iframe
+            src={deliverySheetUrl.replace('/edit', '/preview').replace('/pub', '/preview')}
+            style={{ width: '100%', height: 400, border: 'none', borderRadius: 8, background: 'rgba(0,0,0,0.02)' }}
+            title="납기 일정 구글 시트"
+          />
+        </div>
+      )}
 
       {/* ══ 통합 캘린더 ══ */}
       <div className="glass" style={{ padding: 20, marginBottom: 20 }}>

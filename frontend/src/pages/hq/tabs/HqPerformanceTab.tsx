@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '../../../services/api';
 import { useMetricsStores } from '../../../hooks/useMetricsStores';
 import DataModeSelector from '../../../components/DataModeSelector';
@@ -473,6 +473,7 @@ export default function HqPerformanceTab() {
   const [customEnd, setCustomEnd] = useState('');
   const [activeChannels, setActiveChannels] = useState<Set<string>>(new Set(CHANNEL_FILTERS.map(c => c.value)));
   const [dataMode, setDataMode] = useState<DataMode>('ORDER');
+  const [syncMsg, setSyncMsg] = useState('');
   const { includedIds, count: metricsCount } = useMetricsStores();
 
   const primaryMonth = period === 'custom'
@@ -482,6 +483,18 @@ export default function HqPerformanceTab() {
   const { data: allStores = [], isLoading } = useQuery({
     queryKey: ['hq-all-metrics', year, primaryMonth, dataMode],
     queryFn: () => api.get(`/dashboard/all?year=${year}&month=${primaryMonth}&dataMode=${dataMode}`).then((r) => r.data).catch(() => []),
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: () => api.post('/app-config/sync-sales-sheet').then((r) => r.data),
+    onSuccess: (data) => {
+      setSyncMsg(`동기화 완료 — ${data.savedRows}건 저장, ${data.skippedRows}건 스킵`);
+      setTimeout(() => setSyncMsg(''), 5000);
+    },
+    onError: (e: any) => {
+      setSyncMsg(`오류: ${e?.response?.data?.message ?? e?.message ?? '동기화 실패'}`);
+      setTimeout(() => setSyncMsg(''), 5000);
+    },
   });
 
   const { data: adminStores = [] } = useQuery({
@@ -560,6 +573,18 @@ export default function HqPerformanceTab() {
           <DataModeSelector value={dataMode} onChange={setDataMode} />
           {metricsCount > 0 && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>실적 반영 {metricsCount}개 매장 기준</span>}
           {metricsCount === 0 && <span style={{ fontSize: 11, color: 'var(--warning)' }}>⚠ 실적 반영 매장 미설정 — 관리자 탭에서 설정하세요</span>}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+            {syncMsg && <span style={{ fontSize: 11, color: syncMsg.startsWith('오류') ? '#ef4444' : '#059669' }}>{syncMsg}</span>}
+            <button
+              className="btn btn-ghost"
+              style={{ fontSize: 11, padding: '5px 12px', whiteSpace: 'nowrap' }}
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+              title="관리자 탭에서 설정한 매출 실적 URL(구글 시트)에서 데이터를 가져옵니다"
+            >
+              {syncMutation.isPending ? '동기화 중...' : '📊 매출 실적 동기화'}
+            </button>
+          </div>
         </div>
       </div>
 
