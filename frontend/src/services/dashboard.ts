@@ -1,22 +1,24 @@
 import api from './api';
-import { MetricsResponse } from '../types/dashboard.types';
+import { MetricsResponse, DataMode } from '../types/dashboard.types';
 
 export const dashboardApi = {
-  getMetrics: async (storeId: string, year?: number, month?: number) => {
+  getMetrics: async (storeId: string, year?: number, month?: number, dataMode?: DataMode) => {
     const { data } = await api.get<MetricsResponse>(`/stores/${storeId}/metrics`, {
-      params: { year, month },
+      params: { year, month, dataMode },
     });
     return data;
   },
 
-  getMetricsByMonth: async (storeId: string, year: number, month: number) => {
-    const { data } = await api.get<MetricsResponse>(`/stores/${storeId}/metrics/${year}/${month}`);
+  getMetricsByMonth: async (storeId: string, year: number, month: number, dataMode?: DataMode) => {
+    const { data } = await api.get<MetricsResponse>(`/stores/${storeId}/metrics/${year}/${month}`, {
+      params: { dataMode },
+    });
     return data;
   },
 
-  recalculate: async (storeId: string, year?: number, month?: number) => {
+  recalculate: async (storeId: string, year?: number, month?: number, dataMode?: DataMode) => {
     const { data } = await api.post(`/stores/${storeId}/metrics/recalculate`, null, {
-      params: { year, month },
+      params: { year, month, dataMode },
     });
     return data;
   },

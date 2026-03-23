@@ -20,6 +20,7 @@ import { InsightsModule } from './modules/insights/insights.module';
 import { ExportModule } from './modules/export/export.module';
 import { BannerModule } from './modules/banner/banner.module';
 import { AppConfigModule } from './modules/app-config/app-config.module';
+import { SalesDataModule } from './modules/sales-data/sales-data.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
@@ -46,6 +47,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     ExportModule,
     BannerModule,
     AppConfigModule,
+    SalesDataModule,
   ],
   controllers: [],
   providers: [

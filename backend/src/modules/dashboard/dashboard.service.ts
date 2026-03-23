@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KpiCalculatorService } from './kpi-calculator.service';
+import { SalesKpiService, DataMode } from './sales-kpi.service';
 import {
   KpiResult,
   MetricsResponseDto,
@@ -12,12 +13,14 @@ export class DashboardService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly kpiCalculator: KpiCalculatorService,
+    private readonly salesKpi: SalesKpiService,
   ) {}
 
   async getMetrics(
     storeId: string,
     year: number,
     month: number,
+    dataMode?: DataMode,
   ): Promise<MetricsResponseDto> {
     // Try to find cached monthly_metrics
     const cached = await this.prisma.monthlyMetric.findUnique({
@@ -42,6 +45,15 @@ export class DashboardService {
       metrics = await this.kpiCalculator.calculateMonthlyKpi(storeId, year, month);
     }
 
+    // Append sales raw data KPIs if dataMode provided
+    if (dataMode) {
+      const salesKpi = await this.salesKpi.calculateSalesKpi(storeId, year, month, dataMode);
+      metrics.orderAmount = salesKpi.orderAmount;
+      metrics.salesAmount = salesKpi.salesAmount;
+      metrics.orderCount = salesKpi.orderCount;
+      metrics.dataMode = dataMode;
+    }
+
     // Fetch monthly goal for comparison
     const goal = await this.getGoalComparison(storeId, year, month, metrics);
 
@@ -52,8 +64,16 @@ export class DashboardService {
     storeId: string,
     year: number,
     month: number,
+    dataMode?: DataMode,
   ): Promise<MetricsResponseDto> {
     const metrics = await this.kpiCalculator.calculateMonthlyKpi(storeId, year, month);
+    if (dataMode) {
+      const salesKpi = await this.salesKpi.calculateSalesKpi(storeId, year, month, dataMode);
+      metrics.orderAmount = salesKpi.orderAmount;
+      metrics.salesAmount = salesKpi.salesAmount;
+      metrics.orderCount = salesKpi.orderCount;
+      metrics.dataMode = dataMode;
+    }
     const goal = await this.getGoalComparison(storeId, year, month, metrics);
     return { metrics, goal };
   }
@@ -92,7 +112,7 @@ export class DashboardService {
     return results;
   }
 
-  async getAllStoresMetrics(year: number, month: number) {
+  async getAllStoresMetrics(year: number, month: number, dataMode?: DataMode) {
     const stores = await this.prisma.store.findMany({
       where: { isActive: true },
       select: { id: true, name: true, code: true },
@@ -109,10 +129,16 @@ export class DashboardService {
           const consultCount = await this.prisma.consult.count({
             where: { storeId: store.id, createdAt: { gte: startOfMonth, lte: endOfMonth } },
           });
+          let salesData: { orderAmount?: number; salesAmount?: number; orderCount?: number } = {};
+          if (dataMode) {
+            const sk = await this.salesKpi.calculateSalesKpi(store.id, year, month, dataMode);
+            salesData = { orderAmount: sk.orderAmount, salesAmount: sk.salesAmount, orderCount: sk.orderCount };
+          }
           return {
             storeName: store.name,
             storeCode: store.code,
             ...metrics,
+            ...salesData,
             storeId: store.id,
             consultCount,
           };

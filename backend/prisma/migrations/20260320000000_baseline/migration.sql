@@ -1,3 +1,6 @@
+-- Baseline migration: full schema as of 2026-03-20
+-- This replaces all previous migrations
+
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('HQ_ADMIN', 'STORE_MANAGER', 'STORE_STAFF', 'READONLY');
 
@@ -30,6 +33,9 @@ CREATE TYPE "ShiftType" AS ENUM ('MORNING', 'AFTERNOON', 'FULL', 'OFF');
 
 -- CreateEnum
 CREATE TYPE "DeliveryStatus" AS ENUM ('SCHEDULED', 'IN_TRANSIT', 'DELIVERED', 'FAILED');
+
+-- CreateEnum
+CREATE TYPE "ChannelType" AS ENUM ('ROAD', 'DEPARTMENT', 'MALL', 'STARFIELD', 'POPUP', 'OTHER');
 
 -- CreateEnum
 CREATE TYPE "NoticePriority" AS ENUM ('NORMAL', 'IMPORTANT', 'URGENT');
@@ -92,6 +98,9 @@ CREATE TABLE "stores" (
     "phone" TEXT,
     "region" TEXT,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "show_on_login" BOOLEAN NOT NULL DEFAULT false,
+    "display_name" TEXT,
+    "default_channel" "ChannelType" NOT NULL DEFAULT 'ROAD',
     "settings" JSONB DEFAULT '{}',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -100,14 +109,45 @@ CREATE TABLE "stores" (
 );
 
 -- CreateTable
+CREATE TABLE "store_channel_overrides" (
+    "id" UUID NOT NULL,
+    "store_id" UUID NOT NULL,
+    "year" INTEGER NOT NULL,
+    "month" INTEGER NOT NULL,
+    "channel" "ChannelType" NOT NULL,
+    "start_date" DATE,
+    "end_date" DATE,
+    "label" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "store_channel_overrides_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "store_auth" (
     "id" UUID NOT NULL,
     "store_id" UUID NOT NULL,
     "pin_hash" TEXT NOT NULL,
+    "plain_pin" TEXT,
+    "is_first_login" BOOLEAN NOT NULL DEFAULT true,
+    "pin_changed_at" TIMESTAMP(3),
     "updated_at" TIMESTAMP(3) NOT NULL,
     "updated_by" UUID,
 
     CONSTRAINT "store_auth_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "hq_auth" (
+    "id" UUID NOT NULL,
+    "pin_hash" TEXT NOT NULL,
+    "plain_pin" TEXT,
+    "is_first_login" BOOLEAN NOT NULL DEFAULT true,
+    "pin_changed_at" TIMESTAMP(3),
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "hq_auth_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -303,6 +343,26 @@ CREATE TABLE "schedules" (
 );
 
 -- CreateTable
+CREATE TABLE "work_records" (
+    "id" UUID NOT NULL,
+    "store_id" UUID NOT NULL,
+    "staff_id" UUID NOT NULL,
+    "work_date" DATE NOT NULL,
+    "start_time" TEXT,
+    "end_time" TEXT,
+    "total_hours" DECIMAL(4,2),
+    "is_off" BOOLEAN NOT NULL DEFAULT false,
+    "off_reason" TEXT,
+    "year" INTEGER NOT NULL,
+    "month" INTEGER NOT NULL,
+    "notes" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "work_records_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "deliveries" (
     "id" UUID NOT NULL,
     "store_id" UUID NOT NULL,
@@ -365,6 +425,16 @@ CREATE TABLE "hq_delivery_rules" (
 );
 
 -- CreateTable
+CREATE TABLE "app_configs" (
+    "id" UUID NOT NULL,
+    "key" TEXT NOT NULL,
+    "value" TEXT,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "app_configs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "audit_logs" (
     "id" UUID NOT NULL,
     "user_id" UUID NOT NULL,
@@ -380,6 +450,47 @@ CREATE TABLE "audit_logs" (
     CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "sales_raw_data" (
+    "id" UUID NOT NULL,
+    "upload_batch_id" UUID NOT NULL,
+    "order_number" TEXT NOT NULL,
+    "item_code" TEXT NOT NULL,
+    "store_alias" TEXT NOT NULL,
+    "order_date" DATE NOT NULL,
+    "confirmed_date" DATE NOT NULL,
+    "series_code" TEXT,
+    "order_amount" DECIMAL(15,2) NOT NULL,
+    "quantity" INTEGER NOT NULL DEFAULT 1,
+    "item_name" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "sales_raw_data_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "sales_upload_history" (
+    "id" UUID NOT NULL,
+    "file_name" TEXT NOT NULL,
+    "uploaded_by" UUID,
+    "total_rows" INTEGER NOT NULL,
+    "saved_rows" INTEGER NOT NULL,
+    "skipped_rows" INTEGER NOT NULL,
+    "uploaded_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "sales_upload_history_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "store_alias_mappings" (
+    "id" UUID NOT NULL,
+    "alias_name" TEXT NOT NULL,
+    "store_id" UUID NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "store_alias_mappings_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 
@@ -391,6 +502,9 @@ CREATE UNIQUE INDEX "refresh_tokens_token_key" ON "refresh_tokens"("token");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "stores_code_key" ON "stores"("code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "store_channel_overrides_store_id_year_month_key" ON "store_channel_overrides"("store_id", "year", "month");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "store_auth_store_id_key" ON "store_auth"("store_id");
@@ -414,6 +528,15 @@ CREATE UNIQUE INDEX "contracts_contract_number_key" ON "contracts"("contract_num
 CREATE UNIQUE INDEX "contract_cancellations_contract_id_key" ON "contract_cancellations"("contract_id");
 
 -- CreateIndex
+CREATE INDEX "work_records_store_id_year_month_idx" ON "work_records"("store_id", "year", "month");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "work_records_store_id_staff_id_work_date_key" ON "work_records"("store_id", "staff_id", "work_date");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "app_configs_key_key" ON "app_configs"("key");
+
+-- CreateIndex
 CREATE INDEX "audit_logs_user_id_idx" ON "audit_logs"("user_id");
 
 -- CreateIndex
@@ -424,6 +547,21 @@ CREATE INDEX "audit_logs_resource_type_resource_id_idx" ON "audit_logs"("resourc
 
 -- CreateIndex
 CREATE INDEX "audit_logs_created_at_idx" ON "audit_logs"("created_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "sales_raw_data_order_number_item_code_key" ON "sales_raw_data"("order_number", "item_code");
+
+-- CreateIndex
+CREATE INDEX "sales_raw_data_store_alias_idx" ON "sales_raw_data"("store_alias");
+
+-- CreateIndex
+CREATE INDEX "sales_raw_data_order_date_idx" ON "sales_raw_data"("order_date");
+
+-- CreateIndex
+CREATE INDEX "sales_raw_data_confirmed_date_idx" ON "sales_raw_data"("confirmed_date");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "store_alias_mappings_alias_name_key" ON "store_alias_mappings"("alias_name");
 
 -- AddForeignKey
 ALTER TABLE "roles" ADD CONSTRAINT "roles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -439,6 +577,9 @@ ALTER TABLE "user_store_permissions" ADD CONSTRAINT "user_store_permissions_gran
 
 -- AddForeignKey
 ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "store_channel_overrides" ADD CONSTRAINT "store_channel_overrides_store_id_fkey" FOREIGN KEY ("store_id") REFERENCES "stores"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "store_auth" ADD CONSTRAINT "store_auth_store_id_fkey" FOREIGN KEY ("store_id") REFERENCES "stores"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -489,6 +630,12 @@ ALTER TABLE "schedules" ADD CONSTRAINT "schedules_store_id_fkey" FOREIGN KEY ("s
 ALTER TABLE "schedules" ADD CONSTRAINT "schedules_staff_id_fkey" FOREIGN KEY ("staff_id") REFERENCES "staffs"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "work_records" ADD CONSTRAINT "work_records_store_id_fkey" FOREIGN KEY ("store_id") REFERENCES "stores"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "work_records" ADD CONSTRAINT "work_records_staff_id_fkey" FOREIGN KEY ("staff_id") REFERENCES "staffs"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_store_id_fkey" FOREIGN KEY ("store_id") REFERENCES "stores"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -499,3 +646,6 @@ ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_store_id_fkey" FOREIGN KEY ("store_id") REFERENCES "stores"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "store_alias_mappings" ADD CONSTRAINT "store_alias_mappings_store_id_fkey" FOREIGN KEY ("store_id") REFERENCES "stores"("id") ON DELETE CASCADE ON UPDATE CASCADE;

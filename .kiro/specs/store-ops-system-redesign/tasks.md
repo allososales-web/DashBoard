@@ -460,3 +460,122 @@
 - 모든 매장 관련 API는 반드시 StoreAccessGuard를 적용하여 store_id 기반 접근 제어를 수행합니다
 - KPI 계산은 반드시 서버(KpiCalculatorService)에서 수행하며, 클라이언트에서 계산하지 않습니다
 - 계약 생성/취소 시 자동으로 KPI 재계산이 트리거됩니다
+
+
+---
+
+## 수주/매출 로우데이터 연동 태스크
+
+- [x] 25. Prisma 스키마 확장 - 수주/매출 데이터 테이블
+  - [x] 25.1 신규 모델 추가 및 마이그레이션
+    - `prisma/schema.prisma`에 `SalesRawData`, `SalesUploadHistory`, `StoreAliasMapping` 모델 추가
+    - `Store` 모델에 `storeAliasMappings StoreAliasMapping[]` 관계 추가
+    - `npx prisma migrate dev --name add_sales_raw_data` 실행
+    - _Requirements: 21.1, 22.1, 25.2_
+
+- [x] 26. SalesData 모듈 구현 (백엔드)
+  - [x] 26.1 SalesDataModule 기본 구조 생성
+    - `backend/src/modules/sales-data/` 디렉토리 생성
+    - `sales-data.module.ts`, `sales-data.controller.ts`, `sales-data.service.ts` 생성
+    - `app.module.ts`에 SalesDataModule 등록
+    - `multer` 패키지 설치 (`@nestjs/platform-express` 내장)
+    - _Requirements: 21.1_
+
+  - [x] 26.2 CSV 파싱 서비스 구현
+    - `sales-data.service.ts`에 `parseCsv(buffer: Buffer)` 메서드 구현:
+      - `iconv-lite` 패키지로 EUC-KR → UTF-8 인코딩 변환 지원
+      - `csv-parse` 패키지로 CSV 파싱 (헤더 행 기준 컬럼 매핑)
+      - 숫자 필드 쉼표 제거 후 `parseFloat` 변환
+      - `수주단가*수량▲` = 0인 행 필터링
+      - 파싱 결과: `{ rows: ParsedRow[], skippedCount: number }`
+    - _Requirements: 21.2, 21.3, 21.6_
+
+  - [x] 26.3 CSV 업로드 및 저장 구현
+    - `uploadCsv(file, userId)` 메서드 구현:
+      - `SalesUploadHistory` 레코드 생성 (배치 ID 발급)
+      - `SalesRawData` upsert (orderNumber + itemCode 기준)
+      - 매핑 안 된 대리점명 목록 추출 (`StoreAliasMapping`에 없는 `storeAlias` 값)
+      - 결과 반환: `{ batchId, savedRows, skippedRows, unmappedAliases }`
+    - _Requirements: 21.1, 21.4, 21.5, 22.5, 25.1_
+
+  - [x] 26.4 대리점-매장 매핑 CRUD 구현
+    - `createMapping(dto)`: aliasName + storeId 매핑 저장 (UNIQUE 제약)
+    - `findAllMappings()`: 전체 매핑 목록 (store 정보 포함)
+    - `deleteMapping(id)`: 매핑 삭제
+    - _Requirements: 22.1, 22.2, 22.3, 22.4_
+
+  - [x] 26.5 업로드 이력 및 롤백 구현
+    - `getUploadHistory()`: 업로드 이력 목록 반환
+    - `rollbackBatch(batchId)`: 해당 배치 ID의 `SalesRawData` 삭제 + `SalesUploadHistory` 상태 업데이트
+    - _Requirements: 25.2, 25.3, 25.4_
+
+  - [x] 26.6 SalesDataController 구현
+    - `POST /sales-data/upload` (@Roles(HQ_ADMIN), @UseInterceptors(FileInterceptor('file'))): CSV 업로드
+    - `GET /sales-data/upload-history` (@Roles(HQ_ADMIN)): 업로드 이력
+    - `DELETE /sales-data/upload-history/:batchId` (@Roles(HQ_ADMIN)): 배치 롤백
+    - `GET /sales-data/store-mappings` (@Roles(HQ_ADMIN)): 매핑 목록
+    - `POST /sales-data/store-mappings` (@Roles(HQ_ADMIN)): 매핑 추가
+    - `DELETE /sales-data/store-mappings/:id` (@Roles(HQ_ADMIN)): 매핑 삭제
+    - _Requirements: 21.1, 22.1, 22.2, 22.3, 25.3_
+
+- [x] 27. KPI 계산 엔진 확장 - 수주/매출 모드
+  - [x] 27.1 SalesKpiService 구현
+    - `backend/src/modules/dashboard/sales-kpi.service.ts` 생성:
+    - `calculateSalesKpi(storeId, year, month, dataMode, referenceDate?)`:
+      - `dataMode=ORDER`: `order_date` 기준 해당 월 행 집계
+      - `dataMode=SALES`: `confirmed_date` 기준 해당 월 + `confirmed_date <= referenceDate` 행 집계
+      - 매장 필터: `StoreAliasMapping`으로 해당 storeId의 aliasName 목록 조회 → `storeAlias IN (...)` 조건
+      - HQ_ADMIN: storeId 없이 전체 집계 가능
+      - 반환: `{ orderAmount, salesAmount, orderCount, seriesBreakdown }`
+    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 23.7_
+
+  - [x] 27.2 DashboardService 확장
+    - `getMetrics(storeId, year, month, dataMode?)` 시그니처 확장
+    - `dataMode` 파라미터가 있으면 `SalesKpiService` 호출하여 `orderAmount`, `salesAmount`, `orderCount` 추가
+    - `KpiResult` DTO에 `orderAmount`, `salesAmount`, `orderCount`, `dataMode` 필드 추가
+    - _Requirements: 23.1, 23.2_
+
+  - [x] 27.3 DashboardController 확장
+    - `GET /stores/:storeId/metrics` 엔드포인트에 `dataMode` 쿼리 파라미터 추가 (`ORDER` | `SALES`, 기본값 `ORDER`)
+    - `MetricsQueryDto`에 `dataMode` 필드 추가
+    - _Requirements: 23.1, 23.2_
+
+- [x] 28. 프론트엔드 - 수주/매출 전환 UI
+  - [x] 28.1 DataModeSelector 컴포넌트 구현
+    - `frontend/src/components/DataModeSelector.tsx` 생성:
+      - `<select>` 또는 토글 버튼 형태
+      - 옵션: `수주 (ORDER)` / `매출 (SALES)`
+      - `onChange` 콜백으로 부모에 모드 전달
+    - _Requirements: 24.1_
+
+  - [x] 28.2 DashboardPage 수주/매출 전환 연동
+    - `frontend/src/pages/store/DashboardPage.tsx` 수정:
+      - `dataMode` 상태 추가 (기본값: `'ORDER'`)
+      - `DataModeSelector` 컴포넌트 대시보드 상단에 배치
+      - `dataMode` 변경 시 API 재호출 (`?dataMode=ORDER|SALES`)
+      - KPI 카드 금액 레이블 동적 변경: `dataMode === 'ORDER' ? '수주금액' : '매출금액'`
+      - 금액 표시: `dataMode === 'ORDER' ? metrics.orderAmount : metrics.salesAmount`
+    - _Requirements: 24.2, 24.3, 24.4, 24.5_
+
+  - [x] 28.3 dashboard.types.ts 타입 확장
+    - `frontend/src/types/dashboard.types.ts`에 `orderAmount`, `salesAmount`, `orderCount`, `dataMode` 필드 추가
+    - `DataMode = 'ORDER' | 'SALES'` 타입 추가
+    - _Requirements: 24.2, 24.3_
+
+- [x] 29. HQ 대시보드 - 전체 매장 수주/매출 현황
+  - [x] 29.1 HQ 전체 매장 수주/매출 API 확장
+    - `DashboardService.getAllStoresMetrics(year, month, dataMode?)` 확장:
+      - 각 매장별 `SalesKpiService` 호출하여 수주/매출 금액 포함
+    - _Requirements: 23.7_
+
+  - [x] 29.2 HqPerformanceTab 수주/매출 전환 연동
+    - `frontend/src/pages/hq/tabs/HqPerformanceTab.tsx` 수정:
+      - `DataModeSelector` 추가
+      - 매장별 수주금액/매출금액 표시 전환
+    - _Requirements: 24.1, 24.2_
+
+- [x] 30. Checkpoint - 수주/매출 연동 검증
+  - CSV 업로드 → 파싱 → DB 저장 → KPI 조회 전체 흐름 확인
+  - 대리점-매장 매핑 후 매장별 필터링 동작 확인
+  - 수주/매출 전환 선택박스 UI 동작 확인
+  - 사용자에게 질문이 있으면 확인

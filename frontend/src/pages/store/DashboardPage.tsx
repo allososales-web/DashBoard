@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dashboardApi } from "../../services/dashboard";
 import api from "../../services/api";
+import DataModeSelector from "../../components/DataModeSelector";
+import { DataMode } from "../../types/dashboard.types";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -156,11 +158,12 @@ export default function DashboardPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [dataMode, setDataMode] = useState<DataMode>('ORDER');
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["metrics", storeId, year, month],
-    queryFn: () => dashboardApi.getMetricsByMonth(storeId!, year, month),
+    queryKey: ["metrics", storeId, year, month, dataMode],
+    queryFn: () => dashboardApi.getMetricsByMonth(storeId!, year, month, dataMode),
     enabled: !!storeId,
   });
 
@@ -181,15 +184,21 @@ export default function DashboardPage() {
 
   const recalcMutation = useMutation({
     mutationFn: () => dashboardApi.recalculate(storeId!, year, month),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["metrics", storeId, year, month] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["metrics", storeId, year, month, dataMode] }),
   });
 
   const m = data?.metrics;
   const g = data?.goal;
 
+  // Use sales raw data amounts when available, fall back to contract amounts
+  const displayAmount = dataMode === 'SALES'
+    ? (m?.salesAmount ?? Number(m?.contractAmount ?? 0))
+    : (m?.orderAmount ?? Number(m?.contractAmount ?? 0));
+  const amountLabel = dataMode === 'ORDER' ? '수주금액' : '매출금액';
+
   const allStores: any[] = allMetrics ?? [];
   const totalAmount = allStores.reduce((sum: number, s: any) => sum + Number(s.contractAmount ?? 0), 0);
-  const myAmount = Number(m?.contractAmount ?? 0);
+  const myAmount = displayAmount;
   const myShare = totalAmount > 0 ? ((myAmount / totalAmount) * 100) : 0;
   const sortedByAmount = [...allStores].sort((a, b) => Number(b.contractAmount) - Number(a.contractAmount));
   const myRank = sortedByAmount.findIndex((s: any) => s.storeId === storeId) + 1;
@@ -200,7 +209,7 @@ export default function DashboardPage() {
   const hqAmountRate = hqGoal && hqGoal.targetAmount > 0 ? Math.min((totalAmount / hqGoal.targetAmount) * 100, 100) : 0;
   const conversionPct = Number(m?.conversionRate ?? 0) * 100;
 
-  const countedAmount = useCountUp(myAmount, 1400);
+  const countedAmount = useCountUp(displayAmount, 1400);
 
   const delMonths = useMemo(() => {
     const result = [];
@@ -233,6 +242,8 @@ export default function DashboardPage() {
       <div className="dashboard-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div style={{ fontSize: 20, fontWeight: 800 }}>매장 대시보드</div>
         <div className="dashboard-header-controls" style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          {/* 수주/매출 전환 */}
+          <DataModeSelector value={dataMode} onChange={setDataMode} />
           {/* 연도 네비게이터 */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.80)", border: "1.5px solid var(--border)", borderRadius: 99, padding: "5px 12px" }}>
             <button onClick={() => setYear(y => y - 1)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 14, lineHeight: 1, padding: "0 2px" }}>‹</button>
@@ -282,7 +293,7 @@ export default function DashboardPage() {
 
         {/* 이달 매출 — 카운트업 */}
         <div className="glass" style={{ padding: 20, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", alignSelf: "flex-start" }}>이달 매출</div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", alignSelf: "flex-start" }}>{amountLabel}</div>
           <div style={{ fontSize: 26, fontWeight: 900, color: "var(--accent)", lineHeight: 1 }}>
             {countedAmount >= 10000
               ? `${Math.round(countedAmount / 10000).toLocaleString()}만`

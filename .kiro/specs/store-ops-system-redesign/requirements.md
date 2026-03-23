@@ -258,3 +258,80 @@
 5. THE API_서버 SHALL contract_cancellations.contract_id에 UNIQUE 제약을 적용하여 계약당 최대 1건의 취소만 허용한다.
 6. THE API_서버 SHALL 모든 테이블의 id를 UUID v4로 생성한다.
 7. THE API_서버 SHALL Prisma ORM을 통해 PostgreSQL에 접근하며, 클라이언트의 직접 DB 접근을 금지한다.
+
+---
+
+## 수주/매출 로우데이터 연동 (Sales Raw Data Integration)
+
+### 용어 추가
+
+- **SalesRawData**: CSV 파일에서 파싱된 수주/매출 원시 데이터를 저장하는 테이블.
+- **수주금액(orderAmount)**: `수주일자` 기준 해당 월에 속하는 행의 `수주단가*수량▲` 합산. 금액 0인 행 제외.
+- **매출금액(salesAmount)**: `확정납기` 기준 오늘 날짜 이전인 행의 `수주단가*수량▲` 합산. 금액 0인 행 제외.
+- **수주건수(orderCount)**: 수주번호(수주번호) 기준 중복 제거 후 건수. 금액 0인 행 제외.
+- **대리점-매장 매핑(StoreAliasMapping)**: CSV의 `대리점` 컬럼 값과 시스템 매장명을 연결하는 매핑 테이블.
+- **시리즈구분(seriesCode)**: CSV의 `시리즈구분` 컬럼. 기존 `collectionBreakdown`에 매핑.
+- **DataMode**: 대시보드에서 수주/매출 중 어느 데이터를 표시할지 선택하는 모드 (`ORDER` | `SALES`).
+
+### 요구사항 21: CSV 파일 업로드 및 파싱
+
+**사용자 스토리:** HQ 관리자로서, 수주/매출 원시 데이터 CSV 파일을 업로드하여 전체 매장 대시보드에 반영하고 싶다.
+
+#### 수용 기준
+
+1. WHEN HQ_ADMIN이 POST /sales-data/upload 요청으로 CSV 파일을 업로드하면, THE API_서버 SHALL 파일을 파싱하여 `sales_raw_data` 테이블에 저장한다.
+2. THE API_서버 SHALL CSV 파싱 시 `수주단가*수량▲` 값이 0인 행을 저장에서 제외한다.
+3. THE API_서버 SHALL CSV 파싱 시 숫자 필드의 쉼표(,)를 제거하고 숫자로 변환한다.
+4. WHEN 동일한 `수주번호` + `단품코드` 조합이 이미 존재하면, THE API_서버 SHALL 해당 행을 upsert(덮어쓰기)한다.
+5. THE API_서버 SHALL 업로드 결과로 저장된 행 수, 제외된 행 수, 처리 시간을 반환한다.
+6. WHEN CSV 파일의 인코딩이 EUC-KR인 경우, THE API_서버 SHALL 자동으로 UTF-8로 변환하여 처리한다.
+7. THE API_서버 SHALL 파일 크기 제한을 50MB로 설정한다.
+
+### 요구사항 22: 대리점-매장 매핑 관리
+
+**사용자 스토리:** HQ 관리자로서, CSV의 대리점명과 시스템 매장을 연결하여 매장별 데이터 필터링이 가능하도록 하고 싶다.
+
+#### 수용 기준
+
+1. WHEN HQ_ADMIN이 POST /sales-data/store-mappings 요청을 보내면, THE API_서버 SHALL 대리점명(aliasName)과 매장 ID(storeId)를 매핑하여 저장한다.
+2. WHEN HQ_ADMIN이 GET /sales-data/store-mappings 요청을 보내면, THE API_서버 SHALL 전체 매핑 목록을 반환한다.
+3. WHEN HQ_ADMIN이 DELETE /sales-data/store-mappings/:id 요청을 보내면, THE API_서버 SHALL 해당 매핑을 삭제한다.
+4. THE API_서버 SHALL 동일한 aliasName에 대해 중복 매핑을 허용하지 않는다 (UNIQUE 제약).
+5. WHEN CSV 업로드 시 매핑되지 않은 대리점명이 존재하면, THE API_서버 SHALL 해당 대리점명 목록을 응답에 포함하여 관리자가 매핑을 추가할 수 있도록 안내한다.
+
+### 요구사항 23: 수주/매출 KPI 계산
+
+**사용자 스토리:** 매장 직원으로서, 대시보드에서 수주 또는 매출 기준으로 전환하여 월간 실적을 확인하고 싶다.
+
+#### 수용 기준
+
+1. WHEN `dataMode=ORDER`로 조회하면, THE API_서버 SHALL `수주일자` 기준 해당 월에 속하는 행의 `수주단가*수량▲` 합산을 `orderAmount`로 반환한다.
+2. WHEN `dataMode=SALES`로 조회하면, THE API_서버 SHALL `확정납기`가 조회 기준일 이전인 행의 `수주단가*수량▲` 합산을 `salesAmount`로 반환한다.
+3. THE API_서버 SHALL 두 모드 모두에서 `수주단가*수량▲` 값이 0인 행을 집계에서 제외한다.
+4. THE API_서버 SHALL `수주건수`를 `수주번호` 기준 중복 제거 후 건수로 계산한다.
+5. THE API_서버 SHALL `시리즈구분` 컬럼 값을 기존 `collectionBreakdown` 구조에 매핑하여 시리즈별 금액 분류를 제공한다.
+6. WHEN 매장 사용자가 조회하면, THE API_서버 SHALL 해당 매장에 매핑된 대리점의 데이터만 반환한다.
+7. WHEN HQ_ADMIN이 조회하면, THE API_서버 SHALL 전체 매장 데이터를 반환한다.
+
+### 요구사항 24: 대시보드 수주/매출 전환 UI
+
+**사용자 스토리:** 매장 직원으로서, 대시보드에서 수주와 매출을 선택박스로 전환하여 각각의 실적을 확인하고 싶다.
+
+#### 수용 기준
+
+1. THE 클라이언트 SHALL 대시보드 상단에 수주/매출 전환 선택박스(select)를 표시한다.
+2. WHEN 사용자가 선택박스에서 '수주'를 선택하면, THE 클라이언트 SHALL `dataMode=ORDER` 파라미터로 API를 호출하고 수주금액을 표시한다.
+3. WHEN 사용자가 선택박스에서 '매출'을 선택하면, THE 클라이언트 SHALL `dataMode=SALES` 파라미터로 API를 호출하고 매출금액을 표시한다.
+4. THE 클라이언트 SHALL 선택된 모드에 따라 KPI 카드의 금액 레이블을 '수주금액' 또는 '매출금액'으로 변경한다.
+5. THE 클라이언트 SHALL 선택된 모드를 로컬 상태로 유지하며, 페이지 새로고침 시 기본값은 '수주'로 설정한다.
+
+### 요구사항 25: 분기별 데이터 누적 업로드
+
+**사용자 스토리:** HQ 관리자로서, 분기별로 여러 시트를 하나로 합산하여 업로드하고 기존 데이터와 누적 관리하고 싶다.
+
+#### 수용 기준
+
+1. WHEN 새 CSV 파일을 업로드하면, THE API_서버 SHALL 기존 데이터를 삭제하지 않고 `수주번호` + `단품코드` 기준으로 upsert하여 누적 저장한다.
+2. THE API_서버 SHALL 업로드 이력(파일명, 업로드 시각, 처리 행 수)을 `sales_upload_history` 테이블에 기록한다.
+3. WHEN HQ_ADMIN이 GET /sales-data/upload-history 요청을 보내면, THE API_서버 SHALL 업로드 이력 목록을 반환한다.
+4. WHEN HQ_ADMIN이 특정 업로드를 롤백하고 싶으면, THE API_서버 SHALL 해당 업로드 배치의 데이터를 삭제하는 기능을 제공한다.

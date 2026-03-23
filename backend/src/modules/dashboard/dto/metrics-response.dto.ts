@@ -18,6 +18,11 @@ export interface KpiResult {
   conversionRate: number;
   avgOrderValue: number;
   collectionBreakdown: CollectionBreakdown;
+  // Sales raw data fields (optional)
+  orderAmount?: number;
+  salesAmount?: number;
+  orderCount?: number;
+  dataMode?: string;
 }
 
 export interface MonthlyGoalComparison {

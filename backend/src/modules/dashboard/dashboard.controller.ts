@@ -22,11 +22,12 @@ export class HqDashboardController {
   getAllMetrics(
     @Query('year') year: string,
     @Query('month') month: string,
+    @Query('dataMode') dataMode?: string,
   ) {
     const now = new Date();
     const y = year ? parseInt(year, 10) : now.getFullYear();
     const m = month ? parseInt(month, 10) : now.getMonth() + 1;
-    return this.dashboardService.getAllStoresMetrics(y, m);
+    return this.dashboardService.getAllStoresMetrics(y, m, dataMode as any);
   }
 }
 
@@ -44,7 +45,7 @@ export class DashboardController {
     const now = new Date();
     const year = query.year ?? now.getFullYear();
     const month = query.month ?? now.getMonth() + 1;
-    return this.dashboardService.getMetrics(storeId, year, month);
+    return this.dashboardService.getMetrics(storeId, year, month, query.dataMode);
   }
 
   @Get('metrics/:year/:month')
@@ -53,11 +54,13 @@ export class DashboardController {
     @Param('storeId') storeId: string,
     @Param('year') year: string,
     @Param('month') month: string,
+    @Query() query: MetricsQueryDto,
   ) {
     return this.dashboardService.getMetrics(
       storeId,
       parseInt(year, 10),
       parseInt(month, 10),
+      query.dataMode,
     );
   }
 
@@ -70,7 +73,7 @@ export class DashboardController {
     const now = new Date();
     const year = query.year ?? now.getFullYear();
     const month = query.month ?? now.getMonth() + 1;
-    return this.dashboardService.recalculate(storeId, year, month);
+    return this.dashboardService.recalculate(storeId, year, month, query.dataMode);
   }
 
   @Get('kpi/summary')

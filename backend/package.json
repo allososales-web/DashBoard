@@ -19,6 +19,8 @@
     "test:debug": "jest --debug",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:push": "prisma db push",
+    "build:prod": "prisma generate && prisma db push && nest build",
     "prisma:seed": "ts-node prisma/seed.ts",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio"
@@ -35,6 +37,8 @@
     "bcrypt": "^5.1.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
+    "csv-parse": "^6.2.1",
+    "iconv-lite": "^0.7.2",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",

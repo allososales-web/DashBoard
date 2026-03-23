@@ -4212,3 +4212,180 @@ export class ContractsService {
 | Controller / Service / DTO 분리 | 각 모듈 폴더 구조 | 코드 리뷰 + 아키텍처 테스트 |
 | 견적번호/계약번호 유니크 | DB UNIQUE 제약 + 시퀀스 생성 로직 | 동시성 테스트 |
 | 트랜잭션 원자성 | Prisma $transaction 사용 | 실패 시나리오 테스트 |
+
+
+---
+
+## 9. Sales Raw Data Integration (수주/매출 로우데이터 연동)
+
+### 9.1 신규 DB 스키마
+
+```prisma
+// 수주/매출 원시 데이터
+model SalesRawData {
+  id              String   @id @default(uuid()) @db.Uuid
+  uploadBatchId   String   @map("upload_batch_id") @db.Uuid  // 업로드 배치 ID
+  orderNumber     String   @map("order_number")               // 수주번호
+  itemCode        String   @map("item_code")                  // 단품코드
+  storeAlias      String   @map("store_alias")                // 대리점명 (원본)
+  orderDate       DateTime @map("order_date") @db.Date        // 수주일자
+  confirmedDate   DateTime @map("confirmed_date") @db.Date    // 확정납기
+  seriesCode      String?  @map("series_code")                // 시리즈구분
+  orderAmount     Decimal  @map("order_amount") @db.Decimal(15, 2)  // 수주단가*수량▲
+  quantity        Int      @default(1)                        // 수주수량
+  itemName        String?  @map("item_name")                  // 단품명칭(한글)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([orderNumber, itemCode])
+  @@index([storeAlias])
+  @@index([orderDate])
+  @@index([confirmedDate])
+  @@map("sales_raw_data")
+}
+
+// 업로드 이력
+model SalesUploadHistory {
+  id            String   @id @default(uuid()) @db.Uuid
+  fileName      String   @map("file_name")
+  uploadedBy    String?  @map("uploaded_by") @db.Uuid
+  totalRows     Int      @map("total_rows")
+  savedRows     Int      @map("saved_rows")
+  skippedRows   Int      @map("skipped_rows")
+  uploadedAt    DateTime @default(now()) @map("uploaded_at")
+
+  @@map("sales_upload_history")
+}
+
+// 대리점-매장 매핑
+model StoreAliasMapping {
+  id          String   @id @default(uuid()) @db.Uuid
+  aliasName   String   @unique @map("alias_name")  // CSV의 대리점명
+  storeId     String   @map("store_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@map("store_alias_mappings")
+}
+```
+
+### 9.2 CSV 컬럼 매핑
+
+| CSV 컬럼 | DB 필드 | 비고 |
+|---|---|---|
+| `수주번호` | `order_number` | 수주 식별자 |
+| `단품코드` | `item_code` | 단품 식별자 |
+| `대리점` | `store_alias` | 매장 매핑 기준 |
+| `수주일자` | `order_date` | 수주 기준일 |
+| `확정납기` | `confirmed_date` | 매출 기준일 |
+| `시리즈구분` | `series_code` | collectionBreakdown 매핑 |
+| `수주단가*수량▲` | `order_amount` | 금액 (쉼표 제거 후 숫자 변환) |
+| `수주수량` | `quantity` | 수량 |
+| `단품명칭(한글)` | `item_name` | 참고용 |
+
+### 9.3 제외 조건
+
+- `수주단가*수량▲` = 0 인 행 → 저장 및 집계에서 제외
+- 위 조건으로 GOODS(룸슈즈), CLEANING(클리닝), ZERO_P(창고이동) 자동 제외됨
+
+### 9.4 시리즈구분 → Collection 매핑
+
+```typescript
+const SERIES_TO_COLLECTION: Record<string, Collection | null> = {
+  'SATI': Collection.SATI,
+  'QUERENCIA': Collection.QUERENCIA,
+  'ELMER': Collection.ELMER,
+  'BONUM': Collection.BONUM,
+  'VARD': Collection.VARD,
+  'EVERYDAY': null,       // 기타로 분류
+  'CLEKT': null,
+  'LOVA': null,
+  'HOLIDAY': null,
+  'LIME': null,
+  'MOUVE': null,
+  'PEILI': null,
+  'PET STEPS': null,
+  'PET BED': null,
+  // 매핑 없는 값은 'OTHER'로 처리
+};
+```
+
+### 9.5 KPI 계산 로직
+
+```typescript
+// 수주금액 계산 (ORDER 모드)
+// - 기준: order_date가 해당 월에 속하는 행
+// - 집계: SUM(order_amount) WHERE order_amount > 0
+
+// 매출금액 계산 (SALES 모드)
+// - 기준: confirmed_date <= 오늘 날짜 AND confirmed_date가 해당 월에 속하는 행
+// - 집계: SUM(order_amount) WHERE order_amount > 0
+
+// 수주건수 계산
+// - 기준: order_date가 해당 월에 속하는 행
+// - 집계: COUNT(DISTINCT order_number) WHERE order_amount > 0
+
+// 매장 필터링
+// - store_alias IN (SELECT alias_name FROM store_alias_mappings WHERE store_id = :storeId)
+```
+
+### 9.6 신규 API 엔드포인트
+
+| Method | Endpoint | 설명 | 권한 |
+|---|---|---|---|
+| POST | `/sales-data/upload` | CSV 파일 업로드 | HQ_ADMIN |
+| GET | `/sales-data/upload-history` | 업로드 이력 조회 | HQ_ADMIN |
+| DELETE | `/sales-data/upload-history/:batchId` | 특정 배치 롤백 | HQ_ADMIN |
+| GET | `/sales-data/store-mappings` | 대리점-매장 매핑 목록 | HQ_ADMIN |
+| POST | `/sales-data/store-mappings` | 매핑 추가 | HQ_ADMIN |
+| DELETE | `/sales-data/store-mappings/:id` | 매핑 삭제 | HQ_ADMIN |
+| GET | `/stores/:storeId/metrics?dataMode=ORDER\|SALES` | 수주/매출 KPI 조회 | READONLY+ |
+
+### 9.7 KpiResult 확장
+
+```typescript
+// 기존 KpiResult에 필드 추가
+interface KpiResult {
+  // ... 기존 필드 유지 ...
+  contractAmount: number;       // 기존 (계약 기반)
+  
+  // 신규 필드
+  orderAmount: number;          // 수주금액 (CSV 기반, ORDER 모드)
+  salesAmount: number;          // 매출금액 (CSV 기반, SALES 모드)
+  orderCount: number;           // 수주건수 (수주번호 기준 중복 제거)
+  dataMode: 'ORDER' | 'SALES';  // 현재 조회 모드
+}
+```
+
+### 9.8 프론트엔드 변경사항
+
+```
+DashboardPage.tsx
+├── DataModeSelector (수주/매출 선택박스)
+│   ├── value: 'ORDER' | 'SALES'
+│   └── onChange: setDataMode → API 재호출
+├── KpiCards
+│   ├── 금액 카드: dataMode에 따라 orderAmount/salesAmount 표시
+│   └── 레이블: '수주금액' / '매출금액' 동적 변경
+└── CollectionBreakdown
+    └── CSV 시리즈구분 기반 데이터 표시
+```
+
+### 9.9 파일 업로드 처리 흐름
+
+```mermaid
+sequenceDiagram
+    participant Admin as HQ 관리자
+    participant API as API 서버
+    participant DB as PostgreSQL
+
+    Admin->>API: POST /sales-data/upload (CSV 파일)
+    API->>API: 인코딩 감지 (EUC-KR → UTF-8 변환)
+    API->>API: CSV 파싱 (헤더 매핑)
+    API->>API: 금액 0인 행 필터링
+    API->>API: 숫자 필드 쉼표 제거
+    API->>DB: sales_upload_history INSERT (배치 생성)
+    API->>DB: sales_raw_data UPSERT (order_number + item_code 기준)
+    API->>DB: 매핑 안 된 대리점명 조회
+    API-->>Admin: { savedRows, skippedRows, unmappedAliases[] }
+```

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../services/api';
 import { useMetricsStores } from '../../../hooks/useMetricsStores';
+import DataModeSelector from '../../../components/DataModeSelector';
+import { DataMode } from '../../../types/dashboard.types';
 
 type Period = 'month' | 'q1' | 'q2' | 'q3' | 'q4' | 'h1' | 'h2' | 'year' | 'custom';
 type ChartView = 'annual' | 'quarterly' | 'recent3';
@@ -470,6 +472,7 @@ export default function HqPerformanceTab() {
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [activeChannels, setActiveChannels] = useState<Set<string>>(new Set(CHANNEL_FILTERS.map(c => c.value)));
+  const [dataMode, setDataMode] = useState<DataMode>('ORDER');
   const { includedIds, count: metricsCount } = useMetricsStores();
 
   const primaryMonth = period === 'custom'
@@ -477,8 +480,8 @@ export default function HqPerformanceTab() {
     : getPrimaryMonth(period, now);
 
   const { data: allStores = [], isLoading } = useQuery({
-    queryKey: ['hq-all-metrics', year, primaryMonth],
-    queryFn: () => api.get(`/dashboard/all?year=${year}&month=${primaryMonth}`).then((r) => r.data).catch(() => []),
+    queryKey: ['hq-all-metrics', year, primaryMonth, dataMode],
+    queryFn: () => api.get(`/dashboard/all?year=${year}&month=${primaryMonth}&dataMode=${dataMode}`).then((r) => r.data).catch(() => []),
   });
 
   const { data: adminStores = [] } = useQuery({
@@ -501,10 +504,16 @@ export default function HqPerformanceTab() {
   const metricsFiltered = (allStores as any[]).filter((s: any) => includedIds.has(s.storeId));
   const filteredList = metricsFiltered.filter((s: any) => activeChannels.has(channelMap[s.storeId] ?? 'ROAD'));
 
-  const totalAmount = filteredList.reduce((sum: number, st: any) => sum + Number(st.contractAmount ?? 0), 0);
+  const getDisplayAmount = (s: any) => {
+    if (dataMode === 'SALES' && s.salesAmount != null) return Number(s.salesAmount);
+    if (dataMode === 'ORDER' && s.orderAmount != null) return Number(s.orderAmount);
+    return Number(s.contractAmount ?? 0);
+  };
+
+  const totalAmount = filteredList.reduce((sum: number, st: any) => sum + getDisplayAmount(st), 0);
   const totalContracts = filteredList.reduce((sum: number, st: any) => sum + Number(st.contractCount ?? 0), 0);
   const totalQuotes = filteredList.reduce((sum: number, st: any) => sum + Number(st.quoteCount ?? 0), 0);
-  const sortedByAmount = [...filteredList].sort((a, b) => Number(b.contractAmount) - Number(a.contractAmount));
+  const sortedByAmount = [...filteredList].sort((a, b) => getDisplayAmount(b) - getDisplayAmount(a));
 
   const channelAmounts: Record<string, number> = {};
   filteredList.forEach((s: any) => {
@@ -548,6 +557,7 @@ export default function HqPerformanceTab() {
           </div>
         )}
         <div style={{ display: 'flex', gap: 6, marginTop: 12, alignItems: 'center' }}>
+          <DataModeSelector value={dataMode} onChange={setDataMode} />
           {metricsCount > 0 && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>실적 반영 {metricsCount}개 매장 기준</span>}
           {metricsCount === 0 && <span style={{ fontSize: 11, color: 'var(--warning)' }}>⚠ 실적 반영 매장 미설정 — 관리자 탭에서 설정하세요</span>}
         </div>

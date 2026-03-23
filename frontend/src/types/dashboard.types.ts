@@ -1,5 +1,7 @@
 import { Collection } from './common.types';
 
+export type DataMode = 'ORDER' | 'SALES';
+
 export interface KpiResult {
   storeId: string;
   year: number;
@@ -12,6 +14,11 @@ export interface KpiResult {
   conversionRate: number | string;
   avgOrderValue: number | string;
   collectionBreakdown: CollectionBreakdown;
+  // Sales raw data fields
+  orderAmount?: number;
+  salesAmount?: number;
+  orderCount?: number;
+  dataMode?: DataMode;
 }
 
 export interface CollectionBreakdownItem {

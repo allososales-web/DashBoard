@@ -205,7 +205,8 @@ model Store {
   workRecords      WorkRecord[]
   deliveries       Delivery[]
   auditLogs        AuditLog[]
-  channelOverrides StoreChannelOverride[]
+  channelOverrides    StoreChannelOverride[]
+  storeAliasMappings  StoreAliasMapping[]
 
   @@map("stores")
 }
@@ -609,4 +610,52 @@ model AuditLog {
   @@index([resourceType, resourceId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────
+// 수주/매출 로우데이터 도메인
+// ─────────────────────────────────────────────
+
+model SalesRawData {
+  id            String   @id @default(uuid()) @db.Uuid
+  uploadBatchId String   @map("upload_batch_id") @db.Uuid
+  orderNumber   String   @map("order_number")
+  itemCode      String   @map("item_code")
+  storeAlias    String   @map("store_alias")
+  orderDate     DateTime @map("order_date") @db.Date
+  confirmedDate DateTime @map("confirmed_date") @db.Date
+  seriesCode    String?  @map("series_code")
+  orderAmount   Decimal  @map("order_amount") @db.Decimal(15, 2)
+  quantity      Int      @default(1)
+  itemName      String?  @map("item_name")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([orderNumber, itemCode])
+  @@index([storeAlias])
+  @@index([orderDate])
+  @@index([confirmedDate])
+  @@map("sales_raw_data")
+}
+
+model SalesUploadHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  fileName    String   @map("file_name")
+  uploadedBy  String?  @map("uploaded_by") @db.Uuid
+  totalRows   Int      @map("total_rows")
+  savedRows   Int      @map("saved_rows")
+  skippedRows Int      @map("skipped_rows")
+  uploadedAt  DateTime @default(now()) @map("uploaded_at")
+
+  @@map("sales_upload_history")
+}
+
+model StoreAliasMapping {
+  id        String   @id @default(uuid()) @db.Uuid
+  aliasName String   @unique @map("alias_name")
+  storeId   String   @map("store_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@map("store_alias_mappings")
 }

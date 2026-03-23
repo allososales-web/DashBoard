@@ -67,7 +67,7 @@ git push origin main
 | Branch | `main` |
 | Root Directory | `backend` |
 | Runtime | `Node` |
-| Build Command | `npm install && npx prisma generate && npx prisma migrate deploy && npm run build` |
+| Build Command | `npm install && npx prisma generate && npx prisma db push && npm run build` |
 | Start Command | `npm run start:prod` |
 | Plan | `Free` 또는 `Starter` |
 
@@ -185,17 +185,14 @@ React Router가 동작하려면 모든 경로를 index.html로 보내야 함.
 - Free 플랜은 15분 비활성 시 sleep → 첫 요청에 30초 정도 걸림
 
 ### Prisma 마이그레이션 실패
-- Build Command에 `npx prisma migrate deploy`가 포함되어 있는지 확인
+- Build Command에 `npx prisma db push`가 포함되어 있는지 확인
 - `DATABASE_URL`이 올바른지 확인
-- 마이그레이션 파일이 `backend/prisma/migrations/` 에 있는지 확인
-- 최초 배포 시 마이그레이션 파일이 없으면 로컬에서 먼저 생성:
-  ```bash
-  cd backend
-  npx prisma migrate dev --name init
-  git add prisma/migrations
-  git commit -m "add initial migration"
-  git push origin main
-  ```
+- `prisma db push`는 migration 히스토리 없이 스키마를 직접 적용하므로 Neon/Render 환경에 적합
+
+> **참고**: `prisma migrate deploy` 대신 `prisma db push`를 사용하는 이유
+> - 로컬에서 `db push --force-reset`으로 스키마를 적용한 경우 migration 히스토리가 없음
+> - `prisma migrate deploy`는 `_prisma_migrations` 테이블을 기반으로 동작하므로 P3005 에러 발생
+> - `prisma db push`는 현재 스키마를 DB에 직접 동기화 (idempotent)
 
 ### 프론트엔드 빈 화면
 - Redirects/Rewrites에 `/* → /index.html (Rewrite)` 설정 확인

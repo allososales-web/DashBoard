@@ -1,5 +1,7 @@
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsEnum, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+
+export type DataMode = 'ORDER' | 'SALES';
 
 export class MetricsQueryDto {
   @IsOptional()
@@ -14,6 +16,10 @@ export class MetricsQueryDto {
   @Min(1)
   @Max(12)
   month?: number;
+
+  @IsOptional()
+  @IsEnum(['ORDER', 'SALES'])
+  dataMode?: DataMode;
 }
 
 export class KpiSummaryQueryDto {
