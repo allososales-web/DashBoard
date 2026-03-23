@@ -76,6 +76,128 @@ function MetricsStoresSection() {
 type SortKey = 'name' | 'code' | 'showOnLogin' | 'defaultChannel';
 type SortDir = 'asc' | 'desc';
 
+// ─── 데이터 연동 URL 섹터 ───
+function StoreUrlSection() {
+  const qc = useQueryClient();
+  const [editingUrls, setEditingUrls] = useState<Record<string, { deliveryUrl: string; loginInfoUrl: string }>>({});
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState('');
+
+  const { data: stores = [], isLoading } = useQuery({
+    queryKey: ['admin-stores'],
+    queryFn: () => api.get('/stores/admin/all').then((r) => r.data),
+  });
+
+  const activeStores = (stores as any[]).filter((s: any) => s.showOnLogin);
+  const filtered = activeStores.filter((s: any) =>
+    (s.displayName ?? s.name).toLowerCase().includes(search.toLowerCase()) ||
+    s.code.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const getVal = (s: any, key: 'deliveryUrl' | 'loginInfoUrl') =>
+    editingUrls[s.id]?.[key] ?? (s[key] ?? '');
+
+  const setVal = (id: string, key: 'deliveryUrl' | 'loginInfoUrl', val: string) => {
+    setEditingUrls(prev => ({
+      ...prev,
+      [id]: { deliveryUrl: prev[id]?.deliveryUrl ?? '', loginInfoUrl: prev[id]?.loginInfoUrl ?? '', [key]: val },
+    }));
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => api.patch(`/stores/${id}/settings`, data),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: ['admin-stores'] });
+      setSavedIds(prev => { const s = new Set(prev); s.add(id); return s; });
+      setTimeout(() => setSavedIds(prev => { const s = new Set(prev); s.delete(id); return s; }), 2000);
+    },
+  });
+
+  const saveStore = (s: any) => {
+    saveMutation.mutate({
+      id: s.id,
+      data: {
+        deliveryUrl: getVal(s, 'deliveryUrl') || null,
+        loginInfoUrl: getVal(s, 'loginInfoUrl') || null,
+      },
+    });
+  };
+
+  return (
+    <div className="glass" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 600 }}>데이터 연동 URL</span>
+          <span className="hide-mobile" style={{ fontSize: 11, color: 'var(--text-muted)' }}>— 매장별 로그인 정보 / 납기 일정 외부 URL 관리</span>
+        </div>
+        <input placeholder="매장명 / 코드 검색" value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 180, fontSize: 12, padding: '6px 10px' }} />
+      </div>
+      {isLoading ? (
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 24 }}>불러오는 중...</div>
+      ) : (
+        <div style={{ padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {filtered.length === 0 && (
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 0' }}>운영 중인 매장 없음</div>
+          )}
+          {filtered.map((s: any) => {
+            const saved = savedIds.has(s.id);
+            const deliveryVal = getVal(s, 'deliveryUrl');
+            const loginVal = getVal(s, 'loginInfoUrl');
+            return (
+              <div key={s.id} style={{ padding: '14px 16px', borderRadius: 12, background: 'rgba(255,255,255,0.6)', border: '1px solid var(--glass-border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 600, fontSize: 13 }}>{s.displayName ?? s.name}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s.code}</span>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    style={{ fontSize: 11, padding: '4px 12px', background: saved ? 'rgba(16,185,129,0.8)' : undefined }}
+                    onClick={() => saveStore(s)}
+                    disabled={saveMutation.isPending}
+                  >
+                    {saved ? '✓ 저장됨' : '저장'}
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {/* 로그인 정보 URL */}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 80, flexShrink: 0 }}>🔑 로그인 정보</span>
+                    <input
+                      value={loginVal}
+                      onChange={(e) => setVal(s.id, 'loginInfoUrl', e.target.value)}
+                      placeholder="매장 로그인 정보 URL (구글 시트 등)"
+                      style={{ flex: 1, fontSize: 12, padding: '5px 10px' }}
+                    />
+                    {loginVal && (
+                      <button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 8px', whiteSpace: 'nowrap' }}
+                        onClick={() => window.open(loginVal, '_blank')}>열기</button>
+                    )}
+                  </div>
+                  {/* 납기 일정 URL */}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 80, flexShrink: 0 }}>📦 납기 일정</span>
+                    <input
+                      value={deliveryVal}
+                      onChange={(e) => setVal(s.id, 'deliveryUrl', e.target.value)}
+                      placeholder="납기 일정 URL (구글 시트 등)"
+                      style={{ flex: 1, fontSize: 12, padding: '5px 10px' }}
+                    />
+                    {deliveryVal && (
+                      <button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 8px', whiteSpace: 'nowrap' }}
+                        onClick={() => window.open(deliveryVal, '_blank')}>열기</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── 매장 운영 현황 섹터 (정렬 + 실시간 체크박스) ───
 function StoreOpsSection() {
   const qc = useQueryClient();
@@ -447,6 +569,7 @@ export default function HqAdminTab() {
       {msg && <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#059669' }}>{msg}</div>}
 
       <MetricsStoresSection />
+      <StoreUrlSection />
       <StoreOpsSection />
 
       {/* 본사 PIN */}

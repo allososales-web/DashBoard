@@ -109,6 +109,8 @@ export class StoresService {
         showOnLogin: true,
         displayName: true,
         defaultChannel: true,
+        deliveryUrl: true,
+        loginInfoUrl: true,
         storeAuth: {
           select: {
             plainPin: true,
@@ -125,10 +127,10 @@ export class StoresService {
     });
   }
 
-  // 매장 운영 설정 업데이트 (showOnLogin, displayName, defaultChannel)
+  // 매장 운영 설정 업데이트 (showOnLogin, displayName, defaultChannel, URLs)
   async updateStoreSettings(
     storeId: string,
-    dto: { showOnLogin?: boolean; displayName?: string; defaultChannel?: ChannelType },
+    dto: { showOnLogin?: boolean; displayName?: string; defaultChannel?: ChannelType; deliveryUrl?: string; loginInfoUrl?: string },
   ) {
     await this.findOne(storeId);
     return this.prisma.store.update({

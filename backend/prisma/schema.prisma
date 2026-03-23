@@ -186,6 +186,8 @@ model Store {
   showOnLogin    Boolean     @default(false) @map("show_on_login")
   displayName    String?     @map("display_name")
   defaultChannel ChannelType @default(ROAD) @map("default_channel")
+  deliveryUrl    String?     @map("delivery_url")
+  loginInfoUrl   String?     @map("login_info_url")
   settings       Json?       @default("{}")
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")

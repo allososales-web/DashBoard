@@ -45,7 +45,7 @@ export default function StoreDashboardDeliveryWorkTab() {
   const [editCell, setEditCell] = useState<{ day: number; staffId: string } | null>(null);
 
   // ── 납기 URL ──
-  const [deliveryUrl, setDeliveryUrl] = useState('');
+  // (URL 관리는 본사 관리자 탭에서 일괄 처리)
 
   // ── 근무 스케줄 상태 ──
   const [workTypes, setWorkTypes] = useState<WorkType[]>([
@@ -330,26 +330,6 @@ export default function StoreDashboardDeliveryWorkTab() {
       {/* ══ 고객 납기 현황 ══ */}
       <div className="glass" style={{ padding: 20, marginBottom: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>📦 고객 납기 현황</div>
-
-        {/* 연동 URL 입력란 */}
-        <div style={{ marginBottom: 20, padding: 16, background: 'rgba(139,124,248,0.04)', borderRadius: 12, border: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)' }}>외부 납기 데이터 연동 URL (선택)</div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              value={deliveryUrl}
-              onChange={e => setDeliveryUrl(e.target.value)}
-              placeholder="https://docs.google.com/spreadsheets/... 또는 외부 데이터 URL"
-              style={{ flex: 1, fontSize: 12 }}
-            />
-            <button className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 14px', whiteSpace: 'nowrap' }}
-              onClick={() => { if (deliveryUrl) window.open(deliveryUrl, '_blank'); }}>
-              열기
-            </button>
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-            구글 스프레드시트 등 외부 납기 데이터 URL을 입력하면 바로 열 수 있습니다.
-          </div>
-        </div>
 
         {/* 납기 리스트 */}
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>
