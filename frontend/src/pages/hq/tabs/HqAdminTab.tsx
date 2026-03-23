@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../services/api';
 import { useMetricsStores } from '../../../hooks/useMetricsStores';
@@ -89,16 +89,23 @@ function UrlCard({
   const [val, setVal] = useState(currentValue ?? '');
   const [saved, setSaved] = useState(false);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
 
   // 서버 값이 바뀌면 동기화
-  useMemo(() => { setVal(currentValue ?? ''); }, [currentValue]);
+  useEffect(() => { setVal(currentValue ?? ''); }, [currentValue]);
 
   const handleSave = async () => {
     setPending(true);
-    await onSave(urlKey, val || null);
-    setPending(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setError('');
+    try {
+      await onSave(urlKey, val || null);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? e?.message ?? '저장 실패');
+    } finally {
+      setPending(false);
+    }
   };
 
   return (
@@ -134,6 +141,7 @@ function UrlCard({
           {saved ? '✓ 저장됨' : '저장'}
         </button>
       </div>
+      {error && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 6 }}>{error}</div>}
     </div>
   );
 }
