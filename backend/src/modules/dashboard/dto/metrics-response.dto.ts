@@ -21,7 +21,8 @@ export interface KpiResult {
   // Sales raw data fields (optional)
   orderAmount?: number;
   salesAmount?: number;
-  orderCount?: number;
+  orderCount?: number;   // 수주일자 기준 distinct 수주건명 수
+  salesCount?: number;   // 확정납기 기준 distinct 수주건명 수
   dataMode?: string;
 }
 

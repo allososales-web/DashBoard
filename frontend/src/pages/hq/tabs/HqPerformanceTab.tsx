@@ -310,7 +310,8 @@ function GoalProgressChart({
         const m = i + 1;
         const goal = getGoal(m);
         const actual = getActual(m);
-        const rate = goal > 0 ? (actual / goal) * 100 : 0;
+        // 목표가 있으면 달성률, 없으면 실적 금액 기준으로 상대 높이 계산용 rate 사용
+        const rate = goal > 0 ? (actual / goal) * 100 : actual > 0 ? -1 : 0; // -1 = 목표없음+실적있음
         const isFuture = m > now.getMonth() + 1 && chartYear === now.getFullYear();
         return { label: MONTH_LABELS[i], rate: isFuture ? 0 : rate, actual, goal, color: 'var(--accent)' };
       });
@@ -323,7 +324,7 @@ function GoalProgressChart({
       ].map(({ label, months }) => {
         const goal = months.reduce((s, m) => s + getGoal(m), 0);
         const actual = months.reduce((s, m) => s + getActual(m), 0);
-        const rate = goal > 0 ? (actual / goal) * 100 : 0;
+        const rate = goal > 0 ? (actual / goal) * 100 : actual > 0 ? -1 : 0;
         const colors = ['#6b8f71','#7a8f8a','#8a7f6e','#6e7a8a'];
         return { label, rate, actual, goal, color: colors[['Q1','Q2','Q3','Q4'].indexOf(label)] };
       });
@@ -335,12 +336,19 @@ function GoalProgressChart({
       const mo = m + offset <= 0 ? m + offset + 12 : m + offset;
       const goal = getGoal(mo);
       const actual = getActual(mo);
-      const rate = goal > 0 ? (actual / goal) * 100 : 0;
+      const rate = goal > 0 ? (actual / goal) * 100 : actual > 0 ? -1 : 0;
       return { label: MONTH_LABELS[mo - 1], rate, actual, goal, color: ['#8a7f6e','#7a8f8a','#6b8f71'][i] };
     });
   })();
 
   const maxRate = Math.max(...bars.map(b => b.rate), 100);
+  // 목표없음(-1) 케이스: 실적 금액 기준 상대 높이 계산
+  const maxActual = Math.max(...bars.map(b => b.actual), 1);
+  const getBarHeight = (bar: BarItem) => {
+    if (bar.rate === -1) return (bar.actual / maxActual) * 100; // 목표없음: 실적 상대 높이
+    if (bar.rate === 0) return 0;
+    return (bar.rate / maxRate) * 100;
+  };
 
   return (
     <div className="glass" style={{ padding: 24 }}>
@@ -374,39 +382,44 @@ function GoalProgressChart({
           {/* 막대 그래프 */}
           <div style={{ display: 'flex', gap: view === 'annual' ? 6 : 16, alignItems: 'flex-end', height: 140, marginBottom: 8 }}>
             {bars.map((bar, i) => {
-              const heightPct = maxRate > 0 ? (bar.rate / maxRate) * 100 : 0;
+              const heightPct = getBarHeight(bar);
               const animH = animated ? heightPct : 0;
               const over = bar.rate > 100;
+              const noGoal = bar.rate === -1; // 목표없음+실적있음
               return (
                 <div key={bar.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
                   {/* 달성률 레이블 */}
                   <div style={{
                     fontSize: view === 'annual' ? 9 : 11, fontWeight: 700,
-                    color: over ? 'var(--success)' : bar.rate > 0 ? 'var(--accent)' : 'var(--text-light)',
+                    color: over ? 'var(--success)' : noGoal ? 'var(--text-muted)' : bar.rate > 0 ? 'var(--accent)' : 'var(--text-light)',
                     opacity: animated ? 1 : 0,
                     transition: `opacity 0.4s ease ${0.3 + i * 0.05}s`,
                     whiteSpace: 'nowrap',
                   }}>
-                    {bar.rate > 0 ? `${bar.rate.toFixed(0)}%` : '—'}
+                    {over ? `${bar.rate.toFixed(0)}%` : noGoal ? '실적' : bar.rate > 0 ? `${bar.rate.toFixed(0)}%` : '—'}
                   </div>
                   {/* 막대 */}
                   <div style={{ width: '100%', position: 'relative', display: 'flex', alignItems: 'flex-end', height: 110 }}>
-                    {/* 목표선 (100% 위치) */}
-                    <div style={{
-                      position: 'absolute', left: 0, right: 0,
-                      bottom: `${Math.min((100 / maxRate) * 100, 100)}%`,
-                      height: 1, background: 'rgba(0,0,0,0.12)',
-                      borderTop: '1px dashed rgba(0,0,0,0.15)',
-                    }} />
+                    {/* 목표선 (100% 위치) — 목표있을 때만 */}
+                    {!noGoal && bar.goal > 0 && (
+                      <div style={{
+                        position: 'absolute', left: 0, right: 0,
+                        bottom: `${Math.min((100 / maxRate) * 100, 100)}%`,
+                        height: 1, background: 'rgba(0,0,0,0.12)',
+                        borderTop: '1px dashed rgba(0,0,0,0.15)',
+                      }} />
+                    )}
                     <div style={{
                       width: '100%',
                       height: `${animH}%`,
-                      minHeight: bar.rate > 0 ? 3 : 0,
+                      minHeight: (bar.rate > 0 || noGoal) ? 3 : 0,
                       background: over
                         ? `linear-gradient(180deg, var(--success) 0%, ${bar.color} 100%)`
-                        : bar.rate > 0
-                          ? `linear-gradient(180deg, ${bar.color}cc 0%, ${bar.color} 100%)`
-                          : 'rgba(0,0,0,0.06)',
+                        : noGoal
+                          ? `linear-gradient(180deg, ${bar.color}88 0%, ${bar.color}cc 100%)`
+                          : bar.rate > 0
+                            ? `linear-gradient(180deg, ${bar.color}cc 0%, ${bar.color} 100%)`
+                            : 'rgba(0,0,0,0.06)',
                       borderRadius: '4px 4px 2px 2px',
                       transition: `height 0.9s cubic-bezier(0.22,1,0.36,1) ${i * 0.04}s`,
                       boxShadow: over ? `0 -2px 8px ${bar.color}50` : 'none',
@@ -449,6 +462,10 @@ function GoalProgressChart({
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)' }}>
               <div style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--success)' }} />
               목표 초과 달성
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)' }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--accent)', opacity: 0.4 }} />
+              목표 미설정 (실적만)
             </div>
             <div style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>
               {bars.filter(b => b.rate >= 100).length > 0 && (
@@ -525,8 +542,13 @@ export default function HqPerformanceTab() {
     return Number(s.contractAmount ?? 0);
   };
 
+  const getDisplayCount = (s: any) => {
+    if (dataMode === 'SALES') return Number(s.salesCount ?? s.orderCount ?? s.contractCount ?? 0);
+    return Number(s.orderCount ?? s.contractCount ?? 0);
+  };
+
   const totalAmount = filteredList.reduce((sum: number, st: any) => sum + getDisplayAmount(st), 0);
-  const totalContracts = filteredList.reduce((sum: number, st: any) => sum + Number(st.orderCount ?? st.contractCount ?? 0), 0);
+  const totalContracts = filteredList.reduce((sum: number, st: any) => sum + getDisplayCount(st), 0);
   const sortedByAmount = [...filteredList].sort((a, b) => getDisplayAmount(b) - getDisplayAmount(a));
 
   const channelAmounts: Record<string, number> = {};
@@ -683,7 +705,7 @@ export default function HqPerformanceTab() {
             <thead>
               <tr>
                 <th>매장</th>
-                <th style={{ textAlign: 'right' }}>수주건수</th>
+                <th style={{ textAlign: 'right' }}>{dataMode === 'SALES' ? '매출건수' : '수주건수'}</th>
                 <th style={{ textAlign: 'right' }}>수주금액</th>
                 <th style={{ textAlign: 'right' }}>매출금액</th>
                 <th style={{ textAlign: 'right' }}>비중</th>
@@ -694,11 +716,12 @@ export default function HqPerformanceTab() {
                 const orderAmt = Number(s.orderAmount ?? s.contractAmount ?? 0);
                 const salesAmt = Number(s.salesAmount ?? 0);
                 const displayAmt = getDisplayAmount(s);
+                const displayCnt = getDisplayCount(s);
                 const ratio = totalAmount > 0 ? ((displayAmt / totalAmount) * 100).toFixed(1) : '0.0';
                 return (
                   <tr key={s.storeId}>
                     <td style={{ fontWeight: 500 }}>{s.storeName}</td>
-                    <td style={{ textAlign: 'right' }}>{s.orderCount ?? s.contractCount ?? 0}건</td>
+                    <td style={{ textAlign: 'right' }}>{displayCnt}건</td>
                     <td style={{ textAlign: 'right' }}>{orderAmt >= 10000 ? `${(orderAmt/10000).toFixed(0)}만` : orderAmt.toLocaleString()}원</td>
                     <td style={{ textAlign: 'right' }}>{salesAmt >= 10000 ? `${(salesAmt/10000).toFixed(0)}만` : salesAmt.toLocaleString()}원</td>
                     <td style={{ textAlign: 'right' }}>

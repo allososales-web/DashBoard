@@ -51,6 +51,7 @@ export class DashboardService {
       metrics.orderAmount = salesKpi.orderAmount;
       metrics.salesAmount = salesKpi.salesAmount;
       metrics.orderCount = salesKpi.orderCount;
+      metrics.salesCount = salesKpi.salesCount;
       metrics.dataMode = dataMode;
     }
 
@@ -72,6 +73,7 @@ export class DashboardService {
       metrics.orderAmount = salesKpi.orderAmount;
       metrics.salesAmount = salesKpi.salesAmount;
       metrics.orderCount = salesKpi.orderCount;
+      metrics.salesCount = salesKpi.salesCount;
       metrics.dataMode = dataMode;
     }
     const goal = await this.getGoalComparison(storeId, year, month, metrics);
@@ -132,8 +134,9 @@ export class DashboardService {
             orderAmount: sk.orderAmount,
             salesAmount: sk.salesAmount,
             orderCount: sk.orderCount,
+            salesCount: sk.salesCount,
             contractAmount: dataMode === 'SALES' ? sk.salesAmount : sk.orderAmount,
-            contractCount: sk.orderCount,
+            contractCount: dataMode === 'SALES' ? sk.salesCount : sk.orderCount,
             quoteCount: 0,
             conversionRate: 0,
             channel: sk.channel,
@@ -147,6 +150,7 @@ export class DashboardService {
             orderAmount: 0,
             salesAmount: 0,
             orderCount: 0,
+            salesCount: 0,
             contractAmount: 0,
             contractCount: 0,
             quoteCount: 0,

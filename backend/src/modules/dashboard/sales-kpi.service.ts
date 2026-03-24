@@ -26,7 +26,8 @@ export interface StoreKpiResult {
   aliasName: string;
   orderAmount: number;
   salesAmount: number;
-  orderCount: number;        // distinct itemName 기준
+  orderCount: number;        // distinct itemName 기준 (수주일자)
+  salesCount: number;        // distinct itemName 기준 (확정납기)
   channel: string;
 }
 
@@ -181,7 +182,7 @@ export class SalesKpiService {
       if (aliases.length === 0) {
         results.push({
           storeId: store.id, storeName: store.name, storeCode: store.code,
-          aliasName: '', orderAmount: 0, salesAmount: 0, orderCount: 0,
+          aliasName: '', orderAmount: 0, salesAmount: 0, orderCount: 0, salesCount: 0,
           channel: store.defaultChannel ?? 'ROAD',
         });
         continue;
@@ -205,7 +206,7 @@ export class SalesKpiService {
 
       const salesRows = await this.prisma.salesRawData.findMany({
         where: { ...baseFilter, confirmedDate: { gte: startDate, lt: endDate } },
-        select: { orderAmount: true },
+        select: { orderAmount: true, itemName: true },
       });
 
       results.push({
@@ -216,6 +217,7 @@ export class SalesKpiService {
         orderAmount: orderRows.reduce((s, r) => s + Number(r.orderAmount), 0),
         salesAmount: salesRows.reduce((s, r) => s + Number(r.orderAmount), 0),
         orderCount: new Set(orderRows.map((r) => r.itemName).filter(Boolean)).size,
+        salesCount: new Set(salesRows.map((r) => r.itemName).filter(Boolean)).size,
         channel: store.defaultChannel ?? 'ROAD',
       });
     }
