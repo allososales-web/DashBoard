@@ -14,6 +14,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { Role } from '../../common/types/roles.enum';
 import { SalesDataService } from './sales-data.service';
 import { CreateStoreMappingDto } from './dto/upload-result.dto';
@@ -65,6 +66,7 @@ export class SalesDataController {
   }
 
   @Get('debug-sample')
+  @Public()
   debugSample() {
     return this.salesDataService.getDebugSample();
   }
