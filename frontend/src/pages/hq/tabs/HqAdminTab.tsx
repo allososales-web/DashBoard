@@ -219,6 +219,8 @@ function SyncSection() {
   const qc = useQueryClient();
   const [salesMsg, setSalesMsg] = useState('');
   const [deliveryMsg, setDeliveryMsg] = useState('');
+  const [csvPreview, setCsvPreview] = useState<{ firstLine: string; secondLine: string } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const salesSyncMutation = useMutation({
     mutationFn: () => api.post('/app-config/sync-sales-sheet').then((r) => r.data),
@@ -264,11 +266,36 @@ function SyncSection() {
             <div style={{ fontSize: 13, fontWeight: 600 }}>📊 매출 실적 동기화</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>매출 실적 URL의 구글 시트 → DB 저장 (수주금액/매출금액 반영)</div>
             {salesMsg && <div style={{ fontSize: 11, marginTop: 4, color: salesMsg.startsWith('오류') ? '#ef4444' : '#059669' }}>{salesMsg}</div>}
+            {csvPreview && (
+              <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(0,0,0,0.04)', borderRadius: 8, fontSize: 11, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text-muted)' }}>헤더 행:</div>
+                <div style={{ color: 'var(--accent)' }}>{csvPreview.firstLine}</div>
+                <div style={{ fontWeight: 700, margin: '6px 0 4px', color: 'var(--text-muted)' }}>첫 번째 데이터 행:</div>
+                <div>{csvPreview.secondLine}</div>
+              </div>
+            )}
           </div>
-          <button className="btn btn-primary" style={{ fontSize: 12, padding: '7px 16px', whiteSpace: 'nowrap' }}
-            onClick={() => salesSyncMutation.mutate()} disabled={salesSyncMutation.isPending}>
-            {salesSyncMutation.isPending ? '동기화 중...' : '동기화'}
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: '7px 12px', whiteSpace: 'nowrap' }}
+              disabled={previewLoading}
+              onClick={async () => {
+                setPreviewLoading(true);
+                try {
+                  const res = await api.get('/app-config/preview-sales-csv');
+                  setCsvPreview(res.data);
+                } catch (e: any) {
+                  setSalesMsg(`미리보기 오류: ${e?.response?.data?.message ?? e?.message}`);
+                } finally {
+                  setPreviewLoading(false);
+                }
+              }}>
+              {previewLoading ? '확인 중...' : '컬럼 확인'}
+            </button>
+            <button className="btn btn-primary" style={{ fontSize: 12, padding: '7px 16px', whiteSpace: 'nowrap' }}
+              onClick={() => salesSyncMutation.mutate()} disabled={salesSyncMutation.isPending}>
+              {salesSyncMutation.isPending ? '동기화 중...' : '동기화'}
+            </button>
+          </div>
         </div>
         {/* 납기일정 동기화 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingTop: 12, borderTop: '1px solid var(--glass-border)' }}>
