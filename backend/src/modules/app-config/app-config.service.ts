@@ -154,6 +154,7 @@ export class AppConfigService {
     // day → items 맵
     const result: Record<number, { itemName: string; orderNumber: string }[]> = {};
     for (const row of rows) {
+      if (!row.confirmedDate) continue;
       const day = new Date(row.confirmedDate).getDate();
       if (!result[day]) result[day] = [];
       result[day].push({
