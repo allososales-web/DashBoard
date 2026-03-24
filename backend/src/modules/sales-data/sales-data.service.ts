@@ -101,6 +101,11 @@ export class SalesDataService {
     return { rows, skippedCount };
   }
 
+  private isUuid(val?: string): boolean {
+    if (!val) return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+  }
+
   async uploadCsv(buffer: Buffer, fileName: string, userId?: string) {
     const { rows, skippedCount } = this.parseCsv(buffer);
     const batchId = uuidv4();
@@ -109,7 +114,7 @@ export class SalesDataService {
       data: {
         id: batchId,
         fileName,
-        uploadedBy: userId || null,
+        uploadedBy: this.isUuid(userId) ? userId : null,
         totalRows: rows.length + skippedCount,
         savedRows: 0,
         skippedRows: skippedCount,
