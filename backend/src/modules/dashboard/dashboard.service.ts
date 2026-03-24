@@ -169,6 +169,10 @@ export class DashboardService {
     return this.salesKpi.calculateWeeklyKpi(storeId, year, month);
   }
 
+  async getSeriesTop(year: number, month: number, dataMode?: DataMode) {
+    return this.salesKpi.calculateSeriesTop(year, month, dataMode ?? 'ORDER');
+  }
+
   private async getGoalComparison(
     storeId: string,
     year: number,

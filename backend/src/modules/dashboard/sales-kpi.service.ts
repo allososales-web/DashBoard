@@ -161,6 +161,43 @@ export class SalesKpiService {
     return results;
   }
 
+  /** 시리즈별 TOP (품목별 매출/건수/평균단가) */
+  async calculateSeriesTop(year: number, month: number, dataMode: DataMode = 'ORDER') {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 1);
+
+    const baseFilter = { itemCode: { not: { startsWith: 'DELIVERY_' } } };
+
+    const rows = await this.prisma.salesRawData.findMany({
+      where: dataMode === 'SALES'
+        ? { ...baseFilter, confirmedDate: { gte: startDate, lt: endDate } }
+        : {
+            ...baseFilter,
+            OR: [
+              { orderDate: { gte: startDate, lt: endDate } },
+              { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
+            ],
+          },
+      select: { seriesCode: true, orderAmount: true, itemName: true },
+    });
+
+    // 시리즈별 집계: amount 합계, distinct itemName 수
+    const map: Record<string, { amount: number; itemNames: Set<string> }> = {};
+    for (const row of rows) {
+      const key = row.seriesCode?.trim() || '기타';
+      if (!map[key]) map[key] = { amount: 0, itemNames: new Set() };
+      map[key].amount += Number(row.orderAmount);
+      if (row.itemName) map[key].itemNames.add(row.itemName);
+    }
+
+    return Object.entries(map).map(([series, v]) => ({
+      series,
+      amount: v.amount,
+      count: v.itemNames.size,
+      avgPrice: v.itemNames.size > 0 ? Math.round(v.amount / v.itemNames.size) : 0,
+    }));
+  }
+
   /** 전체 매장별 KPI */
   async calculateAllStoresKpi(year: number, month: number): Promise<StoreKpiResult[]> {
     const startDate = new Date(year, month - 1, 1);

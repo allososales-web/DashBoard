@@ -617,7 +617,7 @@ export default function HqPerformanceTab() {
       {/* KPI 카드 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
         {[
-          { label: 'REVENUE', title: '매출 달성률', value: `${(totalAmount / 10000).toFixed(0)}만원`, rate: amountRate, goal: goalAmount > 0 ? `목표 ${(goalAmount / 10000).toFixed(0)}만원` : '목표 미설정' },
+          { label: 'REVENUE', title: '매출 달성률', value: `${Math.round(totalAmount / 10000).toLocaleString()}만원`, rate: amountRate, goal: goalAmount > 0 ? `목표 ${Math.round(goalAmount / 10000).toLocaleString()}만원` : '목표 미설정' },
           { label: 'ORDERS', title: '판매 달성률', value: `${totalContracts}건`, rate: contractRate, goal: goalContracts > 0 ? `목표 ${goalContracts}건` : '목표 미설정' },
         ].map((c) => (
           <div key={c.label} className="glass" style={{ padding: 20, borderLeft: `3px solid ${c.rate >= 100 ? 'var(--success)' : c.rate > 0 ? 'var(--accent)' : 'var(--glass-border)'}` }}>
@@ -676,7 +676,7 @@ export default function HqPerformanceTab() {
                       </span>
                       <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
                         {displayAmt >= 10000
-                          ? `${(displayAmt / 10000).toFixed(0)}만원`
+                          ? `${Math.round(displayAmt / 10000).toLocaleString()}만원`
                           : `${displayAmt.toLocaleString()}원`}
                       </span>
                     </div>

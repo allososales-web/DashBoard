@@ -290,7 +290,7 @@ export default function DashboardPage() {
               <div style={{ fontSize: 18, fontWeight: 900, color: "var(--accent)", lineHeight: 1 }}>{myShare.toFixed(1)}%</div>
             </div>
           </div>
-          <div style={{ fontSize: 10, color: "var(--text-muted)" }}>전체 {(totalAmount / 10000).toFixed(0)}만원</div>
+          <div style={{ fontSize: 10, color: "var(--text-muted)" }}>전체 {Math.round(totalAmount / 10000).toLocaleString()}만원</div>
         </div>
 
         {/* 이달 매출 — 카운트업 */}
