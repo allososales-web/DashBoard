@@ -73,17 +73,7 @@ export class SalesDataService {
     }
 
     for (const record of records) {
-      const amountRaw =
-        record['수주단가*수량'] || record['수주금액'] || record['금액'] || '';
-      const amount = this.parseNumber(amountRaw);
-
-      if (amount === 0) {
-        skippedCount++;
-        continue;
-      }
-
       const orderDate = this.parseDate(record['수주일자'] || record['주문일자'] || record['발주일자'] || '');
-      const confirmedDate = this.parseDate(record['확정납기'] || record['납기일'] || record['납기일자'] || '');
 
       if (!orderDate) {
         skippedCount++;
@@ -97,6 +87,10 @@ export class SalesDataService {
         skippedCount++;
         continue;
       }
+
+      const amountRaw = record['수주단가*수량'] || record['수주금액'] || record['금액'] || '';
+      const amount = this.parseNumber(amountRaw);
+      const confirmedDate = this.parseDate(record['확정납기'] || record['납기일'] || record['납기일자'] || '');
 
       rows.push({
         orderNumber,
