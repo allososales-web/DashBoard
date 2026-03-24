@@ -66,7 +66,7 @@ function IconMetrics({ active }: { active?: boolean }) {
 }
 
 const navItems = [
-  { to: 'dashboard',     label: '매장 대시보드', Icon: IconDashboard },
+  { to: 'dashboard',     label: '매장 요약',  Icon: IconDashboard },
   { to: 'analysis',      label: '매장 분석',  Icon: IconAnalysis },
   { to: 'store-issue',   label: '매장 이슈',  Icon: IconIssue },
   { to: 'delivery-work', label: '납기 & 근무', Icon: IconDelivery },
@@ -160,6 +160,22 @@ export default function StoreLayout() {
             <span className="mobile-nav-label">{label}</span>
           </NavLink>
         ))}
+        <button
+          onClick={() => { logout(); navigate('/'); }}
+          className="mobile-nav-item"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: 'var(--text-muted)', fontSize: 10, padding: '6px 4px' }}
+        >
+          <span className="mobile-nav-icon" style={{ fontSize: 20 }}>⇄</span>
+          <span className="mobile-nav-label">매장변경</span>
+        </button>
+        <button
+          onClick={logout}
+          className="mobile-nav-item"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: 'var(--danger)', fontSize: 10, padding: '6px 4px' }}
+        >
+          <span className="mobile-nav-icon" style={{ fontSize: 20 }}>⏻</span>
+          <span className="mobile-nav-label">로그아웃</span>
+        </button>
       </nav>
     </div>
   );

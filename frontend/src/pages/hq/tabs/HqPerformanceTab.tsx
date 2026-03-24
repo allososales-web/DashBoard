@@ -534,7 +534,7 @@ export default function HqPerformanceTab() {
   };
 
   const metricsFiltered = includedIds.size === 0
-    ? (allStores as any[])
+    ? (allStores as any[]).filter((s: any) => (adminStores as any[]).some((a: any) => a.id === s.storeId && a.showOnLogin))
     : (allStores as any[]).filter((s: any) => includedIds.has(s.storeId));
   const filteredList = metricsFiltered.filter((s: any) => activeChannels.has(channelMap[s.storeId] ?? 'ROAD'));
 

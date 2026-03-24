@@ -492,6 +492,12 @@ function StoreOpsSection() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-stores'] }); setCreateModal(false); setNewStore({ name: '', code: '', defaultChannel: 'ROAD', showOnLogin: false, displayName: '' }); flash('매장이 생성되었습니다'); },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/stores/${id}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-stores'] }); flash('매장이 삭제되었습니다'); },
+    onError: (e: any) => flash(`삭제 실패: ${e?.response?.data?.message ?? e?.message}`),
+  });
+
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3000); };
 
   const handleSort = (key: SortKey) => {
@@ -561,6 +567,7 @@ function StoreOpsSection() {
                   <th>표시 명칭</th>
                   <SortTh label="기본 채널" k="defaultChannel" />
                   <th>월별 오버라이드</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -582,6 +589,11 @@ function StoreOpsSection() {
                       setOverrideUseDateRange(false);
                       setOverrideStartDate('');
                       setOverrideEndDate('');
+                    }}
+                    onDelete={() => {
+                      if (confirm(`"${s.displayName ?? s.name}" 매장을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+                        deleteMutation.mutate(s.id);
+                      }
                     }}
                   />
                 ))}
@@ -719,7 +731,7 @@ function StoreOpsSection() {
   );
 }
 
-function StoreRow({ store, displayNameValue, onDisplayNameChange, onDisplayNameSave, onToggleShow, onChannelChange, onAddOverride }: {
+function StoreRow({ store, displayNameValue, onDisplayNameChange, onDisplayNameSave, onToggleShow, onChannelChange, onAddOverride, onDelete }: {
   store: any;
   displayNameValue: string;
   onDisplayNameChange: (v: string) => void;
@@ -727,6 +739,7 @@ function StoreRow({ store, displayNameValue, onDisplayNameChange, onDisplayNameS
   onToggleShow: () => void;
   onChannelChange: (ch: string) => void;
   onAddOverride: () => void;
+  onDelete: () => void;
 }) {
   const [editingName, setEditingName] = useState(false);
   return (
@@ -772,6 +785,14 @@ function StoreRow({ store, displayNameValue, onDisplayNameChange, onDisplayNameS
           ))}
           <button className="btn btn-ghost" style={{ fontSize: 10, padding: '2px 6px' }} onClick={onAddOverride}>+ 추가</button>
         </div>
+      </td>
+      <td>
+        <button
+          onClick={onDelete}
+          style={{ fontSize: 11, color: '#ef4444', background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, cursor: 'pointer', padding: '3px 8px', whiteSpace: 'nowrap' }}
+        >
+          삭제
+        </button>
       </td>
     </tr>
   );

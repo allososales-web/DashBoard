@@ -5,6 +5,7 @@ import MiniDatePicker from "../../../components/MiniDatePicker";
 
 type NoticePriority = "NORMAL" | "IMPORTANT" | "URGENT";
 type DeliveryStatus = "available" | "unavailable" | "partial";
+type IssuePriority = "NORMAL" | "IMPORTANT" | "URGENT";
 
 interface HqEvent { id: string; title: string; description?: string; startDate: string; endDate: string; isActive: boolean; }
 interface HqNotice { id: string; title: string; content: string; priority: NoticePriority; isPublished: boolean; createdAt: string; }
@@ -68,6 +69,9 @@ export default function HqGoalEventTab() {
   const [showEventForm, setShowEventForm] = useState(false);
   const [eventForm, setEventForm] = useState({ title: "", description: "", startDate: "", endDate: "" });
   const [showHistory, setShowHistory] = useState(false);
+  // 이슈 폼 내 공지사항 필드
+  const [noticeForm, setNoticeForm] = useState({ title: "", content: "", priority: "NORMAL" as IssuePriority, isPersistent: false });
+  const [addNotice, setAddNotice] = useState(false);
 
   // ── 납기 캘린더 상태 ──
   const [delYear, setDelYear] = useState(now.getFullYear());
@@ -141,6 +145,16 @@ export default function HqGoalEventTab() {
     onError: (err: any) => {
       const msg = err?.response?.data?.message ?? err?.message ?? "등록 실패";
       alert(`이슈 등록 실패: ${msg}`);
+    },
+  });
+
+  const createNotice = useMutation({
+    mutationFn: (dto: { title: string; content: string; priority: string; isPublished: boolean }) =>
+      api.post("/hq/notices", dto).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["hq-notices"] }),
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message ?? err?.message ?? "공지 등록 실패";
+      alert(`공지 등록 실패: ${msg}`);
     },
   });
   const deleteEvent = useMutation({
@@ -263,16 +277,68 @@ export default function HqGoalEventTab() {
               const isToday = dateStr === todayStr;
               const isSelected = selectedDay === dateStr;
               const dow = new Date(calYear, calMonth-1, day).getDay();
+              // 이 날짜에서 시작하는 이벤트 (바 시작점)
+              const startingEvs = evs.filter(ev => ev.startDate?.slice(0,10) === dateStr);
               return (
                 <div key={i} onClick={() => setSelectedDay(isSelected ? null : dateStr)} style={{
-                  padding: "6px 2px", textAlign: "center", borderRadius: 8, cursor: "pointer",
-                  background: isSelected ? "rgba(124,106,247,0.15)" : evs.length > 0 ? "rgba(245,158,11,0.10)" : "transparent",
+                  padding: "4px 2px 2px", textAlign: "center", borderRadius: 6, cursor: "pointer",
+                  background: isSelected ? "rgba(124,106,247,0.15)" : "transparent",
                   border: isSelected ? "1.5px solid var(--accent)" : isToday ? "1.5px solid rgba(124,106,247,0.4)" : "1.5px solid transparent",
+                  minHeight: 44,
+                  position: "relative",
                 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: dow===0?"#ef4444":dow===6?"#3b82f6":"var(--text)" }}>{day}</div>
-                  {evs.length > 0 && <div style={{ display: "flex", justifyContent: "center", gap: 2, marginTop: 2 }}>
-                    {evs.slice(0,3).map((_, ei) => <span key={ei} style={{ width: 4, height: 4, borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />)}
-                  </div>}
+                  <div style={{ fontSize: 12, fontWeight: 600, color: dow===0?"#ef4444":dow===6?"#3b82f6":"var(--text)", marginBottom: 2 }}>{day}</div>
+                  {/* 이 날짜에서 시작하는 이벤트 바 */}
+                  {startingEvs.slice(0, 2).map((ev, ei) => {
+                    const startStr = ev.startDate?.slice(0,10) ?? dateStr;
+                    const endStr = ev.endDate?.slice(0,10) ?? startStr;
+                    const [sy, sm, sd] = startStr.split("-").map(Number);
+                    const [ey, em, ed] = endStr.split("-").map(Number);
+                    const startD = new Date(sy, sm-1, sd);
+                    const endD = new Date(ey, em-1, ed);
+                    const durationDays = Math.round((endD.getTime() - startD.getTime()) / 86400000) + 1;
+                    // 이번 달 끝까지만 표시
+                    const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+                    const remainDays = daysInMonth - day + 1;
+                    const barSpan = Math.min(durationDays, remainDays);
+                    const barColors = ["#f59e0b", "#8b7cf8", "#10b981", "#ef4444", "#3b82f6"];
+                    const color = barColors[ei % barColors.length];
+                    return (
+                      <div key={ev.id} style={{
+                        position: "absolute",
+                        left: 0,
+                        right: barSpan > 1 ? `calc(-${(barSpan - 1) * 100}% - ${(barSpan - 1) * 2}px)` : 0,
+                        bottom: 4 + ei * 10,
+                        height: 7,
+                        background: color,
+                        borderRadius: barSpan > 1 ? "4px 0 0 4px" : 4,
+                        opacity: 0.85,
+                        zIndex: 2,
+                        pointerEvents: "none",
+                      }} />
+                    );
+                  })}
+                  {/* 이 날짜에서 계속되는 이벤트 (시작점 아님) */}
+                  {evs.filter(ev => ev.startDate?.slice(0,10) !== dateStr).slice(0, 2).map((ev, ei) => {
+                    const endStr = ev.endDate?.slice(0,10) ?? dateStr;
+                    const isLast = endStr === dateStr;
+                    const barColors = ["#f59e0b", "#8b7cf8", "#10b981", "#ef4444", "#3b82f6"];
+                    const color = barColors[ei % barColors.length];
+                    return (
+                      <div key={ev.id + "-cont"} style={{
+                        position: "absolute",
+                        left: 0,
+                        right: isLast ? "20%" : 0,
+                        bottom: 4 + ei * 10,
+                        height: 7,
+                        background: color,
+                        borderRadius: isLast ? "0 4px 4px 0" : 0,
+                        opacity: 0.65,
+                        zIndex: 1,
+                        pointerEvents: "none",
+                      }} />
+                    );
+                  })}
                 </div>
               );
             })}
@@ -298,9 +364,51 @@ export default function HqGoalEventTab() {
                   <input className="input" value={eventForm.description} onChange={e => setEventForm(f => ({...f, description: e.target.value}))} placeholder="이슈에 대한 설명을 입력하세요" />
                 </div>
               </div>
+
+              {/* 공지사항 통합 */}
+              <div style={{ marginTop: 14, borderTop: "1px solid rgba(124,106,247,0.12)", paddingTop: 14 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--text-muted)" }}>
+                  <input type="checkbox" checked={addNotice} onChange={e => setAddNotice(e.target.checked)} style={{ accentColor: "var(--accent)", width: 14, height: 14 }} />
+                  📢 공지사항도 함께 등록
+                </label>
+                {addNotice && (
+                  <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div style={{ gridColumn: "1/-1" }}>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4, fontWeight: 600 }}>공지 제목 *</div>
+                      <input value={noticeForm.title} onChange={e => setNoticeForm(f => ({...f, title: e.target.value}))} placeholder="공지 제목" />
+                    </div>
+                    <div style={{ gridColumn: "1/-1" }}>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4, fontWeight: 600 }}>공지 내용</div>
+                      <input value={noticeForm.content} onChange={e => setNoticeForm(f => ({...f, content: e.target.value}))} placeholder="공지 내용 (선택)" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4, fontWeight: 600 }}>우선순위</div>
+                      <select value={noticeForm.priority} onChange={e => setNoticeForm(f => ({...f, priority: e.target.value as IssuePriority}))}>
+                        <option value="NORMAL">일반</option>
+                        <option value="IMPORTANT">중요</option>
+                        <option value="URGENT">긴급</option>
+                      </select>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", paddingTop: 20 }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12 }}>
+                        <input type="checkbox" checked={noticeForm.isPersistent} onChange={e => setNoticeForm(f => ({...f, isPersistent: e.target.checked}))} style={{ accentColor: "var(--accent)" }} />
+                        지속 공지
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
                 <button
-                  onClick={() => createEvent.mutate({ ...eventForm, endDate: eventForm.endDate || eventForm.startDate })}
+                  onClick={async () => {
+                    await createEvent.mutateAsync({ ...eventForm, endDate: eventForm.endDate || eventForm.startDate });
+                    if (addNotice && noticeForm.title) {
+                      await createNotice.mutateAsync({ title: noticeForm.title, content: noticeForm.content, priority: noticeForm.priority, isPublished: true });
+                    }
+                    setAddNotice(false);
+                    setNoticeForm({ title: "", content: "", priority: "NORMAL", isPersistent: false });
+                  }}
                   disabled={!eventForm.title || !eventForm.startDate || createEvent.isPending}
                   className="btn btn-primary"
                   style={{ flex: 1, fontSize: 13, opacity: createEvent.isPending ? 0.6 : 1 }}
@@ -308,15 +416,12 @@ export default function HqGoalEventTab() {
                   {createEvent.isPending ? "등록 중..." : "✓ 등록"}
                 </button>
                 <button
-                  onClick={() => { setShowEventForm(false); setEventForm({ title: "", description: "", startDate: "", endDate: "" }); }}
+                  onClick={() => { setShowEventForm(false); setEventForm({ title: "", description: "", startDate: "", endDate: "" }); setAddNotice(false); }}
                   className="btn btn-ghost"
                   style={{ flex: 1, fontSize: 13 }}
                 >
                   ✕ 취소
                 </button>
-              </div>
-            </div>
-          )}
           {selectedDay && selectedEvents.length > 0 && (
             <div style={{ marginTop: 12, padding: 12, background: "rgba(245,158,11,0.08)", borderRadius: 8, borderLeft: "3px solid #f59e0b" }}>
               <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: "var(--text)" }}>{selectedDay} 이슈</div>
@@ -495,24 +600,6 @@ export default function HqGoalEventTab() {
         </div>
       </div>
 
-      {/* ── 공지사항 ── */}
-      <div className="glass" style={{ padding: 20 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>공지사항</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {notices.length === 0 && <div style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>등록된 공지 없음</div>}
-          {notices.map(n => (
-            <div key={n.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "12px 14px", background: "rgba(255,255,255,0.04)", borderRadius: 8 }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: priorityColor(n.priority), background: `${priorityColor(n.priority)}20`, padding: "2px 8px", borderRadius: 99 }}>{priorityLabel(n.priority)}</span>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>{n.title}</span>
-                </div>
-                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{n.content}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

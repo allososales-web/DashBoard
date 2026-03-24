@@ -16,13 +16,26 @@ export default function MiniDatePicker({ value, onChange, placeholder = '날짜 
   const [open, setOpen] = useState(false);
   const [viewYear, setViewYear] = useState(parsed?.getFullYear() ?? now.getFullYear());
   const [viewMonth, setViewMonth] = useState(parsed ? parsed.getMonth() + 1 : now.getMonth() + 1);
+  const [popupPos, setPopupPos] = useState({ top: 0, left: 0 });
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const popupHeight = 320;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const top = spaceBelow >= popupHeight ? rect.bottom + 6 : rect.top - popupHeight - 6;
+      setPopupPos({ top, left: rect.left });
+    }
+    setOpen(o => !o);
+  };
 
   const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
   const firstDow = new Date(viewYear, viewMonth - 1, 1).getDay();
@@ -40,7 +53,7 @@ export default function MiniDatePicker({ value, onChange, placeholder = '날짜 
 
   return (
     <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
-      <button onClick={() => setOpen(o => !o)} style={{
+      <button ref={btnRef} onClick={handleOpen} style={{
         display: 'flex', alignItems: 'center', gap: 6,
         background: 'rgba(255,255,255,0.85)', border: '1.5px solid rgba(0,0,0,0.10)',
         borderRadius: 8, padding: '6px 12px', color: displayValue ? 'var(--text)' : '#b0b8c4',
@@ -56,7 +69,7 @@ export default function MiniDatePicker({ value, onChange, placeholder = '날짜 
 
       {open && (
         <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 9999,
+          position: 'fixed', top: popupPos.top, left: popupPos.left, zIndex: 99999,
           background: '#fff', border: '1.5px solid rgba(0,0,0,0.09)',
           borderRadius: 14, padding: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
           width: 248,
