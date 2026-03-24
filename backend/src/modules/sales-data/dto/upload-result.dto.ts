@@ -1,3 +1,5 @@
+import { IsString, IsUUID } from 'class-validator';
+
 export class UploadResultDto {
   batchId: string;
   savedRows: number;
@@ -7,6 +9,9 @@ export class UploadResultDto {
 }
 
 export class CreateStoreMappingDto {
+  @IsString()
   aliasName: string;
+
+  @IsUUID()
   storeId: string;
 }
