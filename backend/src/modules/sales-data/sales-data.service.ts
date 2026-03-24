@@ -59,9 +59,15 @@ export class SalesDataService {
     const rows: ParsedRow[] = [];
     let skippedCount = 0;
 
+    // 첫 번째 레코드의 컬럼명 로깅 (디버그용)
+    if (records.length > 0) {
+      console.log('[SalesData] CSV columns:', Object.keys(records[0]));
+      console.log('[SalesData] First row sample:', JSON.stringify(records[0]));
+    }
+
     for (const record of records) {
       const amountRaw =
-        record['수주단가*수량▲'] || record['수주단가*수량'] || '';
+        record['수주단가*수량▲'] || record['수주단가*수량'] || record['수주금액'] || record['금액'] || '';
       const amount = this.parseNumber(amountRaw);
 
       if (amount === 0) {
@@ -69,16 +75,16 @@ export class SalesDataService {
         continue;
       }
 
-      const orderDate = this.parseDate(record['수주일자']);
-      const confirmedDate = this.parseDate(record['확정납기']);
+      const orderDate = this.parseDate(record['수주일자'] || record['주문일자'] || record['발주일자'] || '');
+      const confirmedDate = this.parseDate(record['확정납기'] || record['납기일'] || record['납기일자'] || '');
 
       if (!orderDate || !confirmedDate) {
         skippedCount++;
         continue;
       }
 
-      const orderNumber = (record['수주번호'] || '').trim();
-      const itemCode = (record['단품코드'] || '').trim();
+      const orderNumber = (record['수주번호'] || record['주문번호'] || record['발주번호'] || '').trim();
+      const itemCode = (record['단품코드'] || record['품목코드'] || record['코드'] || '').trim();
 
       if (!orderNumber || !itemCode) {
         skippedCount++;
