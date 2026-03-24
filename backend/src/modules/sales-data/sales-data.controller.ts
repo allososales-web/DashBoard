@@ -67,7 +67,13 @@ export class SalesDataController {
 
   @Get('debug-sample')
   @Public()
-  debugSample() {
+  async debugSample() {
     return this.salesDataService.getDebugSample();
+  }
+
+  @Get('debug-mappings')
+  @Public()
+  async debugMappings() {
+    return this.salesDataService.findAllMappings();
   }
 }
