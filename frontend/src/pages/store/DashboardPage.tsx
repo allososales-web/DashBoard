@@ -168,8 +168,8 @@ export default function DashboardPage() {
   });
 
   const { data: allMetrics } = useQuery({
-    queryKey: ["all-metrics", year, month],
-    queryFn: () => api.get(`/dashboard/all?year=${year}&month=${month}`).then(r => r.data).catch(() => []),
+    queryKey: ["all-metrics", year, month, dataMode],
+    queryFn: () => api.get(`/dashboard/store-rank?year=${year}&month=${month}&dataMode=${dataMode}`).then(r => r.data).catch(() => []),
   });
 
   const { data: notices = [] } = useQuery({
@@ -197,10 +197,12 @@ export default function DashboardPage() {
   const amountLabel = dataMode === 'ORDER' ? '수주금액' : '매출금액';
 
   const allStores: any[] = allMetrics ?? [];
-  const totalAmount = allStores.reduce((sum: number, s: any) => sum + Number(s.orderAmount ?? s.contractAmount ?? 0), 0);
+  const getStoreAmount = (s: any) =>
+    dataMode === 'SALES' ? Number(s.salesAmount ?? 0) : Number(s.orderAmount ?? s.contractAmount ?? 0);
+  const totalAmount = allStores.reduce((sum: number, s: any) => sum + getStoreAmount(s), 0);
   const myAmount = displayAmount;
   const myShare = totalAmount > 0 ? ((myAmount / totalAmount) * 100) : 0;
-  const sortedByAmount = [...allStores].sort((a, b) => Number(b.orderAmount ?? b.contractAmount ?? 0) - Number(a.orderAmount ?? a.contractAmount ?? 0));
+  const sortedByAmount = [...allStores].sort((a, b) => getStoreAmount(b) - getStoreAmount(a));
   const myRank = sortedByAmount.findIndex((s: any) => s.storeId === storeId) + 1;
 
   const amountRate = g && Number(g.targetAmount) > 0 ? Math.min((myAmount / Number(g.targetAmount)) * 100, 100) : 0;

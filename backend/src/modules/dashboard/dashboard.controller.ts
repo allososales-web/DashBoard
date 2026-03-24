@@ -41,6 +41,20 @@ export class HqDashboardController {
     const m = month ? parseInt(month, 10) : now.getMonth() + 1;
     return this.dashboardService.getWeeklyKpi(null, y, m);
   }
+
+  // 매장 사용자도 접근 가능한 전체 순위 엔드포인트 (금액 노출 없이 순위만)
+  @Get('store-rank')
+  @Roles(Role.READONLY)
+  getStoreRank(
+    @Query('year') year: string,
+    @Query('month') month: string,
+    @Query('dataMode') dataMode?: string,
+  ) {
+    const now = new Date();
+    const y = year ? parseInt(year, 10) : now.getFullYear();
+    const m = month ? parseInt(month, 10) : now.getMonth() + 1;
+    return this.dashboardService.getAllStoresMetrics(y, m, dataMode as any);
+  }
 }
 
 @Controller('stores/:storeId')
