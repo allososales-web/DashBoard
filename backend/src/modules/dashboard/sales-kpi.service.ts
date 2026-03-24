@@ -39,11 +39,14 @@ export class SalesKpiService {
 
     const aliasFilter = aliasNames ? { storeAlias: { in: aliasNames } } : {};
 
-    // ORDER mode: filter by orderDate
+    // ORDER mode: filter by orderDate, fallback to confirmedDate if orderDate is null
     const orderRows = await this.prisma.salesRawData.findMany({
       where: {
         ...aliasFilter,
-        orderDate: { gte: startDate, lt: endDate },
+        OR: [
+          { orderDate: { gte: startDate, lt: endDate } },
+          { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
+        ],
       },
       select: { orderAmount: true, quantity: true, seriesCode: true },
     });
