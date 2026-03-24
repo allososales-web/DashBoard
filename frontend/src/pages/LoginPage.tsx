@@ -124,12 +124,12 @@ export default function LoginPage() {
         maxWidth: 1100,
         display: 'flex',
         gap: 0,
-        background: 'rgba(255,255,255,0.88)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        border: '1px solid var(--border)',
+        background: 'var(--bg)',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+        border: '1px solid rgba(255,255,255,0.60)',
         borderRadius: 20,
-        boxShadow: '0 8px 48px rgba(139,124,248,0.18), 0 0 0 1px rgba(139,124,248,0.10)',
+        boxShadow: 'var(--neu-shadow-lg)',
         overflow: 'hidden',
         minHeight: 640,
       }}>
@@ -140,8 +140,8 @@ export default function LoginPage() {
           flexDirection: 'column',
           padding: '48px 40px',
           overflowY: 'auto',
-          borderRight: '1px solid var(--border)',
-          background: 'rgba(255,255,255,0.60)',
+          borderRight: '1px solid rgba(0,0,0,0.05)',
+          background: 'var(--bg)',
         }}>
           {/* 브랜드 헤더 */}
           <div style={{ marginBottom: 36 }}>
@@ -197,7 +197,7 @@ export default function LoginPage() {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '56px 48px',
-          background: 'rgba(245,243,254,0.75)',
+          background: 'var(--bg2)',
         }}>
           {step === 'select' && (
             <div style={{ textAlign: 'center', width: '100%' }}>
@@ -234,17 +234,17 @@ export default function LoginPage() {
                     disabled={submitting || (!d && d !== '0')}
                     style={{
                       height: 56, borderRadius: 10,
-                      border: '1.5px solid rgba(139,124,248,0.12)',
-                      background: d === '⌫' ? 'rgba(240,112,112,0.08)' : d ? 'rgba(255,255,255,0.90)' : 'transparent',
+                      border: '1px solid rgba(255,255,255,0.55)',
+                      background: d ? 'var(--bg)' : 'transparent',
                       color: d === '⌫' ? 'var(--danger)' : 'var(--text)',
                       fontSize: 18, fontWeight: 500,
                       cursor: d ? 'pointer' : 'default',
                       opacity: !d && d !== '0' ? 0 : 1,
-                      transition: 'background 0.12s',
-                      boxShadow: d ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+                      transition: 'box-shadow 0.12s',
+                      boxShadow: d ? 'var(--neu-shadow-sm)' : 'none',
                     }}
-                    onMouseEnter={(e) => { if (d) e.currentTarget.style.background = d === '⌫' ? 'rgba(240,112,112,0.15)' : 'rgba(139,124,248,0.08)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = d === '⌫' ? 'rgba(240,112,112,0.08)' : d ? 'rgba(255,255,255,0.90)' : 'transparent'; }}
+                    onMouseEnter={(e) => { if (d) e.currentTarget.style.boxShadow = 'var(--neu-shadow)'; }}
+                    onMouseLeave={(e) => { if (d) e.currentTarget.style.boxShadow = 'var(--neu-shadow-sm)'; }}
                   >
                     {submitting && d === '0' ? '...' : d}
                   </button>

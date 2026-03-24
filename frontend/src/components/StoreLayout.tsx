@@ -92,15 +92,15 @@ export default function StoreLayout() {
       {/* Sidebar */}
       <aside className="store-sidebar" style={{
         width: 210,
-        background: 'var(--surface)',
-        borderRight: '1px solid var(--border)',
+        background: 'var(--bg)',
+        borderRight: 'none',
         display: 'flex', flexDirection: 'column',
         flexShrink: 0,
         position: 'sticky', top: 0, height: '100vh',
         overflowY: 'auto',
-        boxShadow: '1px 0 0 rgba(139,124,248,0.08)',
+        boxShadow: '4px 0 16px rgba(170,178,165,0.30), 1px 0 0 rgba(255,255,255,0.60)',
       }}>
-        <div style={{ padding: '22px 18px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ padding: '22px 18px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
           <img src={allosoLogo} alt="Alloso" style={{ height: 26, mixBlendMode: 'multiply', objectFit: 'contain', marginBottom: 2 }} />
           <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {storeName}
@@ -131,7 +131,7 @@ export default function StoreLayout() {
           ))}
         </nav>
 
-        <div style={{ padding: '12px 10px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <button onClick={() => { logout(); navigate('/'); }} className="btn btn-ghost" style={{ width: '100%', fontSize: 12, padding: '8px 0' }}>
             매장 변경
           </button>

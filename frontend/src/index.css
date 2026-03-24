@@ -1,14 +1,14 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* ── Pastel Light Palette ── */
-  --bg:       #f8f6ff;
-  --bg2:      #f2f0fc;
-  --surface:  #ffffff;
-  --surface2: #f5f3fe;
-  --surface3: #ede9fb;
+  /* ── Neumorphism Base ── */
+  --bg:       #eef0eb;
+  --bg2:      #e8ebe5;
+  --surface:  #eef0eb;
+  --surface2: #e8ebe5;
+  --surface3: #e2e5df;
 
-  /* ── Accent: Soft Lavender-Violet ── */
+  /* ── Accent: Soft Lavender-Violet (기존 유지) ── */
   --accent:       #8b7cf8;
   --accent2:      #a99cf9;
   --accent-light: rgba(139,124,248,0.10);
@@ -27,30 +27,34 @@
   --dark2: #5a4dd4;
 
   /* ── Text ── */
-  --text:       #2d2b3d;
-  --text-muted: #9490b0;
-  --text-light: #c4c0d8;
+  --text:       #3a3d36;
+  --text-muted: #8a9080;
+  --text-light: #b0b8a8;
 
   /* ── Borders ── */
-  --border:        rgba(139,124,248,0.14);
-  --border2:       rgba(139,124,248,0.07);
-  --border-accent: rgba(139,124,248,0.30);
+  --border:        rgba(139,124,248,0.10);
+  --border2:       rgba(139,124,248,0.05);
+  --border-accent: rgba(139,124,248,0.25);
 
   /* ── Status ── */
   --success: #5ec4a0;
   --warning: #f5a623;
   --danger:  #f07070;
 
-  /* ── Shadows ── */
-  --shadow-sm: 0 1px 6px rgba(139,124,248,0.08);
-  --shadow:    0 2px 16px rgba(139,124,248,0.10);
-  --shadow-md: 0 4px 28px rgba(139,124,248,0.14);
-  --shadow-lg: 0 8px 48px rgba(139,124,248,0.18);
+  /* ── Neumorphism Shadows ── */
+  --neu-shadow:    6px 6px 14px rgba(180,185,175,0.55), -4px -4px 10px rgba(255,255,255,0.80);
+  --neu-shadow-sm: 3px 3px 8px rgba(180,185,175,0.45), -2px -2px 6px rgba(255,255,255,0.75);
+  --neu-shadow-lg: 10px 10px 24px rgba(170,178,165,0.60), -6px -6px 16px rgba(255,255,255,0.85);
+  --neu-inset:     inset 3px 3px 8px rgba(170,178,165,0.45), inset -2px -2px 6px rgba(255,255,255,0.70);
 
   /* ── Legacy compat ── */
-  --glass:        rgba(255,255,255,0.92);
-  --glass-border: rgba(139,124,248,0.14);
-  --blur:         blur(20px);
+  --shadow-sm: var(--neu-shadow-sm);
+  --shadow:    var(--neu-shadow);
+  --shadow-md: var(--neu-shadow-lg);
+  --shadow-lg: var(--neu-shadow-lg);
+  --glass:        rgba(238,240,235,0.95);
+  --glass-border: rgba(139,124,248,0.10);
+  --blur:         blur(0px);
 }
 
 body {
@@ -90,7 +94,7 @@ body {
 .bg-slide-current { z-index: 1; }
 .bg-slide-next    { z-index: 2; }
 
-/* Pastel overlay — softens photos to match brand palette */
+/* Pastel overlay */
 .bg-overlay {
   position: absolute;
   inset: 0;
@@ -98,17 +102,17 @@ body {
   background:
     linear-gradient(
       160deg,
-      rgba(248,246,255,0.82) 0%,
-      rgba(242,240,252,0.72) 40%,
-      rgba(248,246,255,0.78) 100%
+      rgba(238,240,235,0.82) 0%,
+      rgba(232,235,229,0.72) 40%,
+      rgba(238,240,235,0.78) 100%
     ),
-    radial-gradient(ellipse 70% 60% at 5% 5%,   rgba(184,212,248,0.30) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 50% at 95% 10%,  rgba(248,200,212,0.22) 0%, transparent 50%),
-    radial-gradient(ellipse 55% 45% at 50% 95%,  rgba(184,240,224,0.20) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 40% at 90% 90%,  rgba(224,212,248,0.25) 0%, transparent 50%);
+    radial-gradient(ellipse 70% 60% at 5% 5%,   rgba(184,240,224,0.20) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 95% 10%,  rgba(184,212,248,0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 55% 45% at 50% 95%,  rgba(224,212,248,0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 40% at 90% 90%,  rgba(248,200,212,0.12) 0%, transparent 50%);
 }
 
-/* ── Ken Burns keyframes (3 variants) ── */
+/* ── Ken Burns keyframes ── */
 @keyframes kenburns-0 {
   0%   { transform: scale(1.08) translate(0%, 0%); }
   100% { transform: scale(1.0)  translate(-1.5%, -1%); }
@@ -122,14 +126,14 @@ body {
   100% { transform: scale(1.0)  translate(1%, -0.5%); }
 }
 
-/* ── Geometric grid lines (subtle) ── */
+/* ── Subtle grid lines ── */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
   background-image:
-    linear-gradient(rgba(139,124,248,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(139,124,248,0.04) 1px, transparent 1px);
+    linear-gradient(rgba(139,124,248,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139,124,248,0.025) 1px, transparent 1px);
   background-size: 56px 56px;
   pointer-events: none;
   z-index: 0;
@@ -137,68 +141,48 @@ body::after {
 
 #root { position: relative; z-index: 1; }
 
-/* ── Glass / Card ── */
+/* ── Glass / Card — Neumorphism ── */
 .glass {
-  background: rgba(255,255,255,0.82);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border);
+  background: var(--bg);
+  border: 1px solid rgba(255,255,255,0.60);
   border-radius: 18px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--neu-shadow);
   position: relative;
   overflow: hidden;
 }
 
-/* Geometric corner accent lines */
-.glass::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 28px; height: 28px;
-  border-top: 2px solid rgba(139,124,248,0.25);
-  border-left: 2px solid rgba(139,124,248,0.25);
-  border-radius: 18px 0 0 0;
-  pointer-events: none;
-  z-index: 1;
-}
+/* 코너 액센트 제거 (뉴모피즘에서는 불필요) */
+.glass::before,
 .glass::after {
-  content: '';
-  position: absolute;
-  bottom: 0; right: 0;
-  width: 20px; height: 20px;
-  border-bottom: 1.5px solid rgba(139,124,248,0.15);
-  border-right: 1.5px solid rgba(139,124,248,0.15);
-  border-radius: 0 0 18px 0;
-  pointer-events: none;
-  z-index: 1;
+  display: none;
 }
 
 .glass-sm {
-  background: rgba(255,255,255,0.88);
-  border: 1px solid var(--border);
+  background: var(--bg);
+  border: 1px solid rgba(255,255,255,0.55);
   border-radius: 10px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--neu-shadow-sm);
 }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(139,124,248,0.20); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(139,124,248,0.38); }
+::-webkit-scrollbar-thumb { background: rgba(139,124,248,0.18); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(139,124,248,0.32); }
 
-/* ── Input / Select / Textarea ── */
+/* ── Input / Select / Textarea — Neumorphism inset ── */
 input, select, textarea {
-  background: rgba(255,255,255,0.90);
-  border: 1.5px solid var(--border);
+  background: var(--bg);
+  border: 1px solid rgba(255,255,255,0.50);
   border-radius: 10px;
   color: var(--text);
   padding: 9px 13px;
   font-size: 13px;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.18s, box-shadow 0.18s;
+  transition: box-shadow 0.18s;
   width: 100%;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--neu-inset);
 }
 select {
   padding-right: 30px;
@@ -207,13 +191,12 @@ select {
   white-space: nowrap;
 }
 input:focus, select:focus, textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(139,124,248,0.14);
+  box-shadow: var(--neu-inset), 0 0 0 2px rgba(139,124,248,0.20);
 }
 input::placeholder, textarea::placeholder { color: var(--text-light); }
-select option { background: #fff; color: var(--text); }
+select option { background: var(--bg); color: var(--text); }
 
-/* ── Button ── */
+/* ── Button — Neumorphism raised ── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -231,52 +214,75 @@ select option { background: #fff; color: var(--text); }
   letter-spacing: -0.01em;
 }
 
-/* Primary CTA — violet */
+/* Primary CTA — violet gradient (기존 유지, 뉴모피즘 위에 포인트) */
 .btn-primary {
   background: linear-gradient(135deg, var(--accent), var(--dark));
   color: #fff;
-  box-shadow: 0 4px 14px rgba(139,124,248,0.35);
+  box-shadow: 4px 4px 10px rgba(108,92,231,0.30), -2px -2px 6px rgba(255,255,255,0.60);
 }
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(139,124,248,0.45);
+  box-shadow: 6px 6px 16px rgba(108,92,231,0.38), -2px -2px 8px rgba(255,255,255,0.65);
+}
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 2px 2px 6px rgba(108,92,231,0.25), inset 1px 1px 3px rgba(0,0,0,0.10);
 }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 
-/* Ghost */
+/* Ghost — Neumorphism raised */
 .btn-ghost {
-  background: rgba(255,255,255,0.80);
-  border: 1.5px solid var(--border);
+  background: var(--bg);
+  border: none;
   color: var(--text-muted);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--neu-shadow-sm);
 }
-.btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+.btn-ghost:hover {
+  color: var(--text);
+  box-shadow: var(--neu-shadow);
+}
+.btn-ghost:active {
+  box-shadow: var(--neu-inset);
+  color: var(--accent);
+}
 
 /* Secondary */
 .btn-secondary {
-  background: var(--accent-light);
-  border: 1.5px solid var(--border-accent);
+  background: var(--bg);
+  border: none;
   color: var(--accent);
+  box-shadow: var(--neu-shadow-sm);
 }
-.btn-secondary:hover { background: var(--accent-mid); }
+.btn-secondary:hover {
+  box-shadow: var(--neu-shadow);
+}
+.btn-secondary:active {
+  box-shadow: var(--neu-inset);
+}
 
 /* Danger */
 .btn-danger {
-  background: rgba(240,112,112,0.08);
-  border: 1.5px solid rgba(240,112,112,0.22);
+  background: var(--bg);
+  border: none;
   color: var(--danger);
+  box-shadow: var(--neu-shadow-sm);
 }
-.btn-danger:hover { background: rgba(240,112,112,0.15); }
+.btn-danger:hover {
+  box-shadow: 4px 4px 10px rgba(240,112,112,0.20), -2px -2px 6px rgba(255,255,255,0.70);
+}
+.btn-danger:active {
+  box-shadow: var(--neu-inset);
+}
 
 /* ── Tab ── */
 .tabs {
   display: flex;
   gap: 2px;
   padding: 4px;
-  background: rgba(255,255,255,0.70);
+  background: var(--bg);
   border-radius: 12px;
-  border: 1px solid var(--border);
-  backdrop-filter: blur(8px);
+  border: none;
+  box-shadow: var(--neu-inset);
 }
 .tab {
   padding: 7px 18px;
@@ -292,13 +298,12 @@ select option { background: #fff; color: var(--text); }
   white-space: nowrap;
 }
 .tab.active {
-  background: linear-gradient(135deg, rgba(139,124,248,0.18), rgba(139,124,248,0.10));
+  background: var(--bg);
   color: var(--accent);
   font-weight: 700;
-  border: 1px solid var(--border-accent);
-  box-shadow: 0 2px 8px rgba(139,124,248,0.12);
+  box-shadow: var(--neu-shadow-sm);
 }
-.tab:hover:not(.active) { color: var(--text); background: rgba(139,124,248,0.06); }
+.tab:hover:not(.active) { color: var(--text); }
 
 /* ── Table ── */
 table { width: 100%; border-collapse: collapse; }
@@ -310,14 +315,14 @@ th {
   text-transform: uppercase;
   padding: 10px 14px;
   text-align: left;
-  border-bottom: 1px solid var(--border);
-  background: rgba(139,124,248,0.04);
+  border-bottom: 1px solid rgba(139,124,248,0.08);
+  background: rgba(0,0,0,0.02);
   white-space: nowrap;
 }
 td {
   padding: 11px 14px;
   font-size: 13px;
-  border-bottom: 1px solid var(--border2);
+  border-bottom: 1px solid rgba(0,0,0,0.04);
   color: var(--text);
 }
 tr:last-child td { border-bottom: none; }
@@ -335,7 +340,7 @@ tr:hover td { background: rgba(139,124,248,0.03); }
 
 /* ── Gradient text ── */
 .gradient-text {
-  background: linear-gradient(135deg, var(--accent), #f8c8d4);
+  background: linear-gradient(135deg, var(--accent), #5ec4a0);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -359,14 +364,12 @@ tr:hover td { background: rgba(139,124,248,0.03); }
     position: fixed;
     bottom: 0; left: 0; right: 0;
     z-index: 200;
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid var(--border);
+    background: var(--bg);
+    border-top: none;
+    box-shadow: 0 -4px 16px rgba(170,178,165,0.40), 0 -1px 0 rgba(255,255,255,0.70);
     padding-bottom: env(safe-area-inset-bottom);
     height: calc(60px + env(safe-area-inset-bottom));
     align-items: stretch;
-    box-shadow: 0 -2px 16px rgba(139,124,248,0.10);
   }
   .mobile-nav-item {
     flex: 1;
@@ -422,7 +425,7 @@ tr:hover td { background: rgba(139,124,248,0.03); }
   }
   .login-store-col {
     border-right: none !important;
-    border-bottom: 1px solid var(--border) !important;
+    border-bottom: 1px solid rgba(0,0,0,0.06) !important;
     max-height: 45vh;
     overflow-y: auto;
     padding: 28px 20px 20px !important;
@@ -513,4 +516,23 @@ tr:hover td { background: rgba(139,124,248,0.03); }
   position: absolute;
   pointer-events: none;
   border-radius: 50%;
+}
+
+/* ── Neumorphism utility classes ── */
+.neu-raised {
+  background: var(--bg);
+  border-radius: 12px;
+  box-shadow: var(--neu-shadow);
+  border: 1px solid rgba(255,255,255,0.55);
+}
+.neu-inset {
+  background: var(--bg);
+  border-radius: 12px;
+  box-shadow: var(--neu-inset);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+.neu-flat {
+  background: var(--bg);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.40);
 }

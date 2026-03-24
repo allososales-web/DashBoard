@@ -11,11 +11,11 @@ export default function HqLayout() {
     <div style={{ minHeight: '100vh' }}>
       <header style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'var(--surface)',
-        borderBottom: '1px solid var(--border)',
+        background: 'var(--bg)',
+        borderBottom: 'none',
         padding: '0 32px',
         height: 58,
-        boxShadow: '0 1px 8px rgba(139,124,248,0.08)',
+        boxShadow: '0 4px 12px rgba(170,178,165,0.28), 0 1px 0 rgba(255,255,255,0.65)',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
