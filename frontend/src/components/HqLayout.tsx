@@ -11,7 +11,7 @@ export default function HqLayout() {
     <div style={{ minHeight: '100vh' }}>
       <header style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'var(--bg)',
+        background: '#f4f6f1',
         borderBottom: 'none',
         padding: '0 32px',
         height: 58,

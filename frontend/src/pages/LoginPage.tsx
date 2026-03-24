@@ -124,12 +124,12 @@ export default function LoginPage() {
         maxWidth: 1100,
         display: 'flex',
         gap: 0,
-        background: 'var(--bg)',
+        background: '#f8f9f6',
         backdropFilter: 'none',
         WebkitBackdropFilter: 'none',
-        border: '1px solid rgba(255,255,255,0.60)',
+        border: '1px solid rgba(255,255,255,0.90)',
         borderRadius: 20,
-        boxShadow: 'var(--neu-shadow-lg)',
+        boxShadow: '14px 14px 36px rgba(150,158,145,0.55), -8px -8px 20px rgba(255,255,255,0.95)',
         overflow: 'hidden',
         minHeight: 640,
       }}>
@@ -140,8 +140,8 @@ export default function LoginPage() {
           flexDirection: 'column',
           padding: '48px 40px',
           overflowY: 'auto',
-          borderRight: '1px solid rgba(0,0,0,0.05)',
-          background: 'var(--bg)',
+          borderRight: '1px solid rgba(0,0,0,0.06)',
+          background: '#f8f9f6',
         }}>
           {/* 브랜드 헤더 */}
           <div style={{ marginBottom: 36 }}>
@@ -197,7 +197,7 @@ export default function LoginPage() {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '56px 48px',
-          background: 'var(--bg2)',
+          background: '#f0f2ed',
         }}>
           {step === 'select' && (
             <div style={{ textAlign: 'center', width: '100%' }}>

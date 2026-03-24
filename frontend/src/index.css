@@ -2,8 +2,8 @@
 
 :root {
   /* ── Neumorphism Base ── */
-  --bg:       #eef0eb;
-  --bg2:      #e8ebe5;
+  --bg:       #e8ebe4;
+  --bg2:      #e2e5de;
   --surface:  #eef0eb;
   --surface2: #e8ebe5;
   --surface3: #e2e5df;
@@ -42,10 +42,10 @@
   --danger:  #f07070;
 
   /* ── Neumorphism Shadows ── */
-  --neu-shadow:    6px 6px 14px rgba(180,185,175,0.55), -4px -4px 10px rgba(255,255,255,0.80);
-  --neu-shadow-sm: 3px 3px 8px rgba(180,185,175,0.45), -2px -2px 6px rgba(255,255,255,0.75);
-  --neu-shadow-lg: 10px 10px 24px rgba(170,178,165,0.60), -6px -6px 16px rgba(255,255,255,0.85);
-  --neu-inset:     inset 3px 3px 8px rgba(170,178,165,0.45), inset -2px -2px 6px rgba(255,255,255,0.70);
+  --neu-shadow:    8px 8px 18px rgba(160,168,155,0.65), -5px -5px 12px rgba(255,255,255,0.90);
+  --neu-shadow-sm: 4px 4px 10px rgba(160,168,155,0.50), -3px -3px 8px rgba(255,255,255,0.85);
+  --neu-shadow-lg: 14px 14px 32px rgba(150,158,145,0.70), -8px -8px 20px rgba(255,255,255,0.95);
+  --neu-inset:     inset 4px 4px 10px rgba(150,158,145,0.50), inset -3px -3px 8px rgba(255,255,255,0.80);
 
   /* ── Legacy compat ── */
   --shadow-sm: var(--neu-shadow-sm);
@@ -102,9 +102,9 @@ body {
   background:
     linear-gradient(
       160deg,
-      rgba(238,240,235,0.82) 0%,
-      rgba(232,235,229,0.72) 40%,
-      rgba(238,240,235,0.78) 100%
+      rgba(238,240,235,0.62) 0%,
+      rgba(232,235,229,0.52) 40%,
+      rgba(238,240,235,0.58) 100%
     ),
     radial-gradient(ellipse 70% 60% at 5% 5%,   rgba(184,240,224,0.20) 0%, transparent 55%),
     radial-gradient(ellipse 60% 50% at 95% 10%,  rgba(184,212,248,0.15) 0%, transparent 50%),
@@ -143,8 +143,8 @@ body::after {
 
 /* ── Glass / Card — Neumorphism ── */
 .glass {
-  background: var(--bg);
-  border: 1px solid rgba(255,255,255,0.60);
+  background: #f4f6f1;
+  border: 1px solid rgba(255,255,255,0.80);
   border-radius: 18px;
   box-shadow: var(--neu-shadow);
   position: relative;
@@ -158,8 +158,8 @@ body::after {
 }
 
 .glass-sm {
-  background: var(--bg);
-  border: 1px solid rgba(255,255,255,0.55);
+  background: #f4f6f1;
+  border: 1px solid rgba(255,255,255,0.75);
   border-radius: 10px;
   box-shadow: var(--neu-shadow-sm);
 }
@@ -232,7 +232,7 @@ select option { background: var(--bg); color: var(--text); }
 
 /* Ghost — Neumorphism raised */
 .btn-ghost {
-  background: var(--bg);
+  background: #f4f6f1;
   border: none;
   color: var(--text-muted);
   box-shadow: var(--neu-shadow-sm);
@@ -248,7 +248,7 @@ select option { background: var(--bg); color: var(--text); }
 
 /* Secondary */
 .btn-secondary {
-  background: var(--bg);
+  background: #f4f6f1;
   border: none;
   color: var(--accent);
   box-shadow: var(--neu-shadow-sm);
@@ -262,7 +262,7 @@ select option { background: var(--bg); color: var(--text); }
 
 /* Danger */
 .btn-danger {
-  background: var(--bg);
+  background: #f4f6f1;
   border: none;
   color: var(--danger);
   box-shadow: var(--neu-shadow-sm);
@@ -298,7 +298,7 @@ select option { background: var(--bg); color: var(--text); }
   white-space: nowrap;
 }
 .tab.active {
-  background: var(--bg);
+  background: #f4f6f1;
   color: var(--accent);
   font-weight: 700;
   box-shadow: var(--neu-shadow-sm);
@@ -520,10 +520,10 @@ tr:hover td { background: rgba(139,124,248,0.03); }
 
 /* ── Neumorphism utility classes ── */
 .neu-raised {
-  background: var(--bg);
+  background: #f4f6f1;
   border-radius: 12px;
   box-shadow: var(--neu-shadow);
-  border: 1px solid rgba(255,255,255,0.55);
+  border: 1px solid rgba(255,255,255,0.75);
 }
 .neu-inset {
   background: var(--bg);
@@ -532,7 +532,7 @@ tr:hover td { background: rgba(139,124,248,0.03); }
   border: 1px solid rgba(0,0,0,0.04);
 }
 .neu-flat {
-  background: var(--bg);
+  background: #f4f6f1;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.40);
+  border: 1px solid rgba(255,255,255,0.55);
 }

@@ -92,7 +92,7 @@ export default function StoreLayout() {
       {/* Sidebar */}
       <aside className="store-sidebar" style={{
         width: 210,
-        background: 'var(--bg)',
+        background: '#f4f6f1',
         borderRight: 'none',
         display: 'flex', flexDirection: 'column',
         flexShrink: 0,
