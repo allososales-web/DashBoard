@@ -12,8 +12,7 @@ async function bootstrap() {
   // ─── CORS ───
   // 모든 origin 허용 (Vercel, localhost 등)
   app.enableCors({
-    origin: true,
-    credentials: true,
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
