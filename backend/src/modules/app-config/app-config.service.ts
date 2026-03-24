@@ -93,7 +93,7 @@ export class AppConfigService {
       throw new BadRequestException(`구글 시트 fetch 실패: ${e.message}. 시트가 공개(공유) 설정인지 확인하세요.`);
     }
 
-    return this.salesDataService.uploadCsv(buffer, 'delivery-sheet-sync.csv', userId);
+    return this.salesDataService.uploadDeliveryCsv(buffer, 'delivery-sheet-sync.csv', userId);
   }
 
   /** 매장별 납기일정 조회 (confirmedDate 기준) */

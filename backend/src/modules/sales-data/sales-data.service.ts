@@ -17,6 +17,13 @@ interface ParsedRow {
   itemName: string | null;
 }
 
+interface ParsedDeliveryRow {
+  orderNumber: string;
+  storeAlias: string;
+  confirmedDate: Date;
+  itemName: string | null;
+}
+
 @Injectable()
 export class SalesDataService {
   constructor(private prisma: PrismaService) {}
@@ -175,6 +182,125 @@ export class SalesDataService {
     const allAliases = [
       ...new Set(rows.map((r) => r.storeAlias).filter(Boolean)),
     ];
+    const unmappedAliases = allAliases.filter((a) => !mappedAliases.has(a));
+
+    return {
+      batchId,
+      savedRows,
+      skippedRows: skippedCount,
+      totalRows: rows.length + skippedCount,
+      unmappedAliases,
+    };
+  }
+
+  parseDeliveryCsv(buffer: Buffer): { rows: ParsedDeliveryRow[]; skippedCount: number } {
+    let text: string;
+    try {
+      text = iconv.decode(buffer, 'euc-kr');
+      if (!text.includes('수주') && !text.includes('대리점')) {
+        text = buffer.toString('utf-8');
+      }
+    } catch {
+      text = buffer.toString('utf-8');
+    }
+
+    let records: Record<string, string>[];
+    try {
+      records = parse(text, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+        bom: true,
+      }) as Record<string, string>[];
+    } catch (e) {
+      throw new BadRequestException(`CSV 파싱 오류: ${e.message}`);
+    }
+
+    if (records.length > 0) {
+      console.log('[Delivery] CSV columns:', Object.keys(records[0]));
+    }
+
+    const rows: ParsedDeliveryRow[] = [];
+    let skippedCount = 0;
+
+    for (const record of records) {
+      const confirmedDate = this.parseDate(record['확정납기'] || record['납기일'] || record['납기일자'] || '');
+      const orderNumber = (record['수주번호'] || record['주문번호'] || '').trim();
+
+      if (!confirmedDate || !orderNumber) {
+        skippedCount++;
+        continue;
+      }
+
+      rows.push({
+        orderNumber,
+        storeAlias: (record['대리점'] || '').trim(),
+        confirmedDate,
+        itemName: (record['수주건명'] || record['단품명칭(한글)'] || '').trim() || null,
+      });
+    }
+
+    return { rows, skippedCount };
+  }
+
+  async uploadDeliveryCsv(buffer: Buffer, fileName: string, userId?: string) {
+    const { rows, skippedCount } = this.parseDeliveryCsv(buffer);
+    const batchId = uuidv4();
+
+    await this.prisma.salesUploadHistory.create({
+      data: {
+        id: batchId,
+        fileName,
+        uploadedBy: this.isUuid(userId) ? userId : null,
+        totalRows: rows.length + skippedCount,
+        savedRows: 0,
+        skippedRows: skippedCount,
+      },
+    });
+
+    const mappings = await this.prisma.storeAliasMapping.findMany({
+      select: { aliasName: true },
+    });
+    const mappedAliases = new Set(mappings.map((m) => m.aliasName));
+
+    let savedRows = 0;
+    for (const row of rows) {
+      // 납기일정은 itemCode가 없으므로 DELIVERY_ 접두사로 고유 키 생성
+      const itemCode = `DELIVERY_${row.orderNumber}`;
+      await this.prisma.salesRawData.upsert({
+        where: {
+          orderNumber_itemCode: {
+            orderNumber: row.orderNumber,
+            itemCode,
+          },
+        },
+        update: {
+          uploadBatchId: batchId,
+          storeAlias: row.storeAlias,
+          confirmedDate: row.confirmedDate,
+          itemName: row.itemName,
+        },
+        create: {
+          uploadBatchId: batchId,
+          orderNumber: row.orderNumber,
+          itemCode,
+          storeAlias: row.storeAlias,
+          orderDate: row.confirmedDate, // 납기일정엔 수주일자 없으므로 confirmedDate로 대체
+          confirmedDate: row.confirmedDate,
+          orderAmount: 0,
+          quantity: 1,
+          itemName: row.itemName,
+        },
+      });
+      savedRows++;
+    }
+
+    await this.prisma.salesUploadHistory.update({
+      where: { id: batchId },
+      data: { savedRows },
+    });
+
+    const allAliases = [...new Set(rows.map((r) => r.storeAlias).filter(Boolean))];
     const unmappedAliases = allAliases.filter((a) => !mappedAliases.has(a));
 
     return {
