@@ -369,43 +369,72 @@ export default function StoreDashboardDeliveryWorkTab() {
       <div className="glass" style={{ padding: 20, marginBottom: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>📦 고객 납기 현황</div>
 
-        {/* 납기 리스트 */}
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>
-          {calYear}년 {calMonth}월 납기 목록
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>총 {deliveries.length}건</span>
-        </div>
-        {deliveries.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '32px 0', background: 'rgba(0,0,0,0.02)', borderRadius: 10 }}>
-            이 달 납기 일정이 없습니다
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table>
-              <thead>
-                <tr><th>고객명</th><th>납기일</th><th>주소</th><th>메모</th><th>상태</th></tr>
-              </thead>
-              <tbody>
-                {deliveries.slice().sort((a,b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()).map(item => {
-                  const s = STATUS_STYLE[item.status] ?? STATUS_STYLE.SCHEDULED;
-                  const d = new Date(item.scheduledDate);
-                  const dow = WEEKDAYS[d.getDay()];
-                  return (
-                    <tr key={item.id}>
-                      <td style={{ fontWeight: 600 }}>{item.customerName}</td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        {`${d.getMonth()+1}/${d.getDate()}`}
-                        <span style={{ fontSize: 10, color: d.getDay()===0?'#ef4444':d.getDay()===6?'#3b82f6':'var(--text-muted)', marginLeft: 4 }}>({dow})</span>
-                      </td>
-                      <td style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.address ?? '—'}</td>
-                      <td style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.notes ?? '—'}</td>
-                      <td><span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 99, fontWeight: 600, background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {/* 구글 시트 납기 목록 */}
+        {(() => {
+          const sheetList = Object.entries(sheetDeliveryByDay)
+            .flatMap(([day, items]) => items.map(item => ({ ...item, day: Number(day) })))
+            .sort((a, b) => a.day - b.day);
+          const totalCount = deliveries.length + sheetList.length;
+
+          return (
+            <>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>
+                {calYear}년 {calMonth}월 납기 목록
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>총 {totalCount}건</span>
+              </div>
+              {totalCount === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '32px 0', background: 'rgba(0,0,0,0.02)', borderRadius: 10 }}>
+                  이 달 납기 일정이 없습니다
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table>
+                    <thead>
+                      <tr><th>건명 / 고객명</th><th>납기일</th><th>수주번호 / 주소</th><th>메모</th><th>상태</th></tr>
+                    </thead>
+                    <tbody>
+                      {/* 구글 시트 납기 */}
+                      {sheetList.map((item, i) => {
+                        const d = new Date(calYear, calMonth - 1, item.day);
+                        const dow = WEEKDAYS[d.getDay()];
+                        return (
+                          <tr key={`sheet-${i}`}>
+                            <td style={{ fontWeight: 600 }}>{item.itemName || '(품명 없음)'}</td>
+                            <td style={{ whiteSpace: 'nowrap' }}>
+                              {`${calMonth}/${item.day}`}
+                              <span style={{ fontSize: 10, color: d.getDay()===0?'#ef4444':d.getDay()===6?'#3b82f6':'var(--text-muted)', marginLeft: 4 }}>({dow})</span>
+                            </td>
+                            <td style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.orderNumber}</td>
+                            <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</td>
+                            <td><span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 99, fontWeight: 600, background: 'rgba(16,185,129,0.12)', color: '#059669', whiteSpace: 'nowrap' }}>확정납기</span></td>
+                          </tr>
+                        );
+                      })}
+                      {/* 수동 등록 납기 */}
+                      {deliveries.slice().sort((a,b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()).map(item => {
+                        const s = STATUS_STYLE[item.status] ?? STATUS_STYLE.SCHEDULED;
+                        const d = new Date(item.scheduledDate);
+                        const dow = WEEKDAYS[d.getDay()];
+                        return (
+                          <tr key={item.id}>
+                            <td style={{ fontWeight: 600 }}>{item.customerName}</td>
+                            <td style={{ whiteSpace: 'nowrap' }}>
+                              {`${d.getMonth()+1}/${d.getDate()}`}
+                              <span style={{ fontSize: 10, color: d.getDay()===0?'#ef4444':d.getDay()===6?'#3b82f6':'var(--text-muted)', marginLeft: 4 }}>({dow})</span>
+                            </td>
+                            <td style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.address ?? '—'}</td>
+                            <td style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.notes ?? '—'}</td>
+                            <td><span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 99, fontWeight: 600, background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {/* ══ 매장 근무 스케줄 ══ */}
