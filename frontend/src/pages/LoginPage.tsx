@@ -110,26 +110,25 @@ export default function LoginPage() {
 
   return (
     <div className="login-wrapper" style={{
+      position: 'relative',
+      zIndex: 1,
       minHeight: '100vh',
-      background: 'transparent',
-      fontFamily: "'Pretendard', 'Apple SD Gothic Neo', sans-serif",
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'center',
       padding: '40px 32px',
+      boxSizing: 'border-box',
     }}>
-      {/* 중앙 컨테이너 — HqLayout maxWidth 1100 패턴 */}
+      {/* 중앙 컨테이너 */}
       <div className="login-card" style={{
         width: '100%',
         maxWidth: 1100,
         display: 'flex',
         gap: 0,
-        background: '#f8f9f6',
-        backdropFilter: 'none',
-        WebkitBackdropFilter: 'none',
+        background: '#f5f6f2',
         border: '1px solid rgba(255,255,255,0.90)',
         borderRadius: 20,
-        boxShadow: '14px 14px 36px rgba(150,158,145,0.55), -8px -8px 20px rgba(255,255,255,0.95)',
+        boxShadow: '0 8px 40px rgba(80,90,75,0.28), 0 2px 8px rgba(80,90,75,0.12)',
         overflow: 'hidden',
         minHeight: 640,
       }}>
@@ -140,8 +139,9 @@ export default function LoginPage() {
           flexDirection: 'column',
           padding: '48px 40px',
           overflowY: 'auto',
-          borderRight: '1px solid rgba(0,0,0,0.06)',
-          background: '#f8f9f6',
+          maxHeight: '85vh',
+          borderRight: '1px solid rgba(0,0,0,0.08)',
+          background: '#f5f6f2',
         }}>
           {/* 브랜드 헤더 */}
           <div style={{ marginBottom: 36 }}>
@@ -197,7 +197,7 @@ export default function LoginPage() {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '56px 48px',
-          background: '#f0f2ed',
+          background: '#eceee9',
         }}>
           {step === 'select' && (
             <div style={{ textAlign: 'center', width: '100%' }}>
