@@ -10,19 +10,9 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
   // ─── CORS ───
-  const corsOrigin = configService.get<string>('CORS_ORIGIN', '*');
-  let originConfig: boolean | string | string[];
-  if (corsOrigin === '*') {
-    originConfig = true; // 모든 origin 허용
-  } else {
-    const list = corsOrigin.split(',').map((o) => o.trim());
-    // 항상 Vercel 도메인 포함
-    const vercelDomain = 'https://dash-board-flame-seven.vercel.app';
-    if (!list.includes(vercelDomain)) list.push(vercelDomain);
-    originConfig = list;
-  }
+  // 모든 origin 허용 (Vercel, localhost 등)
   app.enableCors({
-    origin: originConfig,
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
