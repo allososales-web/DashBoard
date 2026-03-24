@@ -113,45 +113,45 @@ export class DashboardService {
   }
 
   async getAllStoresMetrics(year: number, month: number, dataMode?: DataMode) {
-    const stores = await this.prisma.store.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true, code: true },
-      orderBy: { name: 'asc' },
-    });
+    // salesKpi에서 직접 전체 매장 KPI 계산 (항상 수주/매출 모두 포함)
+    const storeKpis = await this.salesKpi.calculateAllStoresKpi(year, month);
 
     const startOfMonth = new Date(year, month - 1, 1);
     const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
 
     const results = await Promise.all(
-      stores.map(async (store) => {
+      storeKpis.map(async (sk) => {
         try {
-          const metrics = await this.kpiCalculator.calculateMonthlyKpi(store.id, year, month);
           const consultCount = await this.prisma.consult.count({
-            where: { storeId: store.id, createdAt: { gte: startOfMonth, lte: endOfMonth } },
+            where: { storeId: sk.storeId, createdAt: { gte: startOfMonth, lte: endOfMonth } },
           });
-          let salesData: { orderAmount?: number; salesAmount?: number; orderCount?: number } = {};
-          if (dataMode) {
-            const sk = await this.salesKpi.calculateSalesKpi(store.id, year, month, dataMode);
-            salesData = { orderAmount: sk.orderAmount, salesAmount: sk.salesAmount, orderCount: sk.orderCount };
-          }
           return {
-            storeName: store.name,
-            storeCode: store.code,
-            ...metrics,
-            ...salesData,
-            storeId: store.id,
+            storeId: sk.storeId,
+            storeName: sk.storeName,
+            storeCode: sk.storeCode,
+            orderAmount: sk.orderAmount,
+            salesAmount: sk.salesAmount,
+            orderCount: sk.orderCount,
+            contractAmount: dataMode === 'SALES' ? sk.salesAmount : sk.orderAmount,
+            contractCount: sk.orderCount,
+            quoteCount: 0,
+            conversionRate: 0,
+            channel: sk.channel,
             consultCount,
           };
         } catch {
           return {
-            storeId: store.id,
-            storeName: store.name,
-            storeCode: store.code,
-            quoteCount: 0,
-            contractCount: 0,
+            storeId: sk.storeId,
+            storeName: sk.storeName,
+            storeCode: sk.storeCode,
+            orderAmount: 0,
+            salesAmount: 0,
+            orderCount: 0,
             contractAmount: 0,
+            contractCount: 0,
+            quoteCount: 0,
             conversionRate: 0,
-            avgOrderValue: 0,
+            channel: sk.channel,
             consultCount: 0,
           };
         }
@@ -159,6 +159,10 @@ export class DashboardService {
     );
 
     return results;
+  }
+
+  async getWeeklyKpi(storeId: string | null, year: number, month: number) {
+    return this.salesKpi.calculateWeeklyKpi(storeId, year, month);
   }
 
   private async getGoalComparison(

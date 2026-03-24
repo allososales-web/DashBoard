@@ -526,22 +526,24 @@ export default function HqPerformanceTab() {
   };
 
   const totalAmount = filteredList.reduce((sum: number, st: any) => sum + getDisplayAmount(st), 0);
-  const totalContracts = filteredList.reduce((sum: number, st: any) => sum + Number(st.contractCount ?? 0), 0);
-  const totalQuotes = filteredList.reduce((sum: number, st: any) => sum + Number(st.quoteCount ?? 0), 0);
+  const totalContracts = filteredList.reduce((sum: number, st: any) => sum + Number(st.orderCount ?? st.contractCount ?? 0), 0);
   const sortedByAmount = [...filteredList].sort((a, b) => getDisplayAmount(b) - getDisplayAmount(a));
 
   const channelAmounts: Record<string, number> = {};
   filteredList.forEach((s: any) => {
     const ch = channelMap[s.storeId] ?? 'ROAD';
-    channelAmounts[ch] = (channelAmounts[ch] ?? 0) + Number(s.contractAmount ?? 0);
+    channelAmounts[ch] = (channelAmounts[ch] ?? 0) + getDisplayAmount(s);
   });
 
   const goalAmount = Number(hqGoal?.targetAmount ?? 0);
   const goalContracts = Number(hqGoal?.targetContracts ?? 0);
-  const goalQuotes = Number(hqGoal?.targetQuotes ?? 0);
   const amountRate = goalAmount > 0 ? Math.min((totalAmount / goalAmount) * 100, 999) : 0;
   const contractRate = goalContracts > 0 ? Math.min((totalContracts / goalContracts) * 100, 999) : 0;
-  const quoteRate = goalQuotes > 0 ? Math.min((totalQuotes / goalQuotes) * 100, 999) : 0;
+
+  const { data: weeklyKpi = [] } = useQuery({
+    queryKey: ['hq-weekly-kpi', now.getFullYear(), now.getMonth() + 1],
+    queryFn: () => api.get(`/dashboard/weekly?year=${now.getFullYear()}&month=${now.getMonth() + 1}`).then((r) => r.data).catch(() => []),
+  });
 
   const weeks = getWeeksInMonth(now.getFullYear(), now.getMonth() + 1);
 
@@ -595,7 +597,6 @@ export default function HqPerformanceTab() {
         {[
           { label: 'REVENUE', title: '매출 달성률', value: `${(totalAmount / 10000).toFixed(0)}만원`, rate: amountRate, goal: goalAmount > 0 ? `목표 ${(goalAmount / 10000).toFixed(0)}만원` : '목표 미설정' },
           { label: 'ORDERS', title: '판매 달성률', value: `${totalContracts}건`, rate: contractRate, goal: goalContracts > 0 ? `목표 ${goalContracts}건` : '목표 미설정' },
-          { label: 'VISITORS', title: '방문 달성률', value: `${totalQuotes}건`, rate: quoteRate, goal: goalQuotes > 0 ? `목표 ${goalQuotes}건` : '목표 미설정' },
         ].map((c) => (
           <div key={c.label} className="glass" style={{ padding: 20, borderLeft: `3px solid ${c.rate >= 100 ? 'var(--success)' : c.rate > 0 ? 'var(--accent)' : 'var(--glass-border)'}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
@@ -634,19 +635,42 @@ export default function HqPerformanceTab() {
       <div className="glass" style={{ padding: 20 }}>
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>당월 주차별 실적</div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>기간 설정과 무관 — 항상 당월 기준</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {weeks.map((w, i) => (
-            <div key={i}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{w.label} ({now.getMonth() + 1}/{w.start}~{now.getMonth() + 1}/{w.end})</span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>전년비 데이터 준비 중</span>
-              </div>
-              <div style={{ height: 6, background: 'rgba(0,0,0,0.07)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${20 * (i + 1)}%`, background: 'var(--accent)', borderRadius: 3, opacity: 0.7 }} />
-              </div>
+        {weeklyKpi.length === 0 ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', padding: '16px 0' }}>데이터 없음</div>
+        ) : (() => {
+          const maxAmt = Math.max(...(weeklyKpi as any[]).map((w: any) => Math.max(Number(w.orderAmount ?? 0), Number(w.salesAmount ?? 0))), 1);
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {(weeklyKpi as any[]).map((w: any, i: number) => {
+                const orderAmt = Number(w.orderAmount ?? 0);
+                const salesAmt = Number(w.salesAmount ?? 0);
+                const displayAmt = dataMode === 'SALES' ? salesAmt : orderAmt;
+                const barPct = maxAmt > 0 ? (displayAmt / maxAmt) * 100 : 0;
+                return (
+                  <div key={i}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        {w.week}주차 ({now.getMonth() + 1}/{w.startDay}~{now.getMonth() + 1}/{w.endDay})
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
+                        {displayAmt >= 10000
+                          ? `${(displayAmt / 10000).toFixed(0)}만원`
+                          : `${displayAmt.toLocaleString()}원`}
+                      </span>
+                    </div>
+                    <div style={{ height: 6, background: 'rgba(0,0,0,0.07)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${barPct}%`, background: 'var(--accent)', borderRadius: 3, transition: 'width 0.5s' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 3, fontSize: 10, color: 'var(--text-muted)' }}>
+                      <span>수주 {orderAmt >= 10000 ? `${(orderAmt/10000).toFixed(0)}만` : orderAmt.toLocaleString()}원</span>
+                      <span>매출 {salesAmt >= 10000 ? `${(salesAmt/10000).toFixed(0)}만` : salesAmt.toLocaleString()}원</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
+          );
+        })()}
       </div>
 
       {/* 매장별 실적 테이블 */}
@@ -659,25 +683,24 @@ export default function HqPerformanceTab() {
             <thead>
               <tr>
                 <th>매장</th>
-                <th style={{ textAlign: 'right' }}>계약</th>
-                <th style={{ textAlign: 'right' }}>매출</th>
-                <th style={{ textAlign: 'right' }}>견적</th>
-                <th style={{ textAlign: 'right' }}>전환율</th>
+                <th style={{ textAlign: 'right' }}>수주건수</th>
+                <th style={{ textAlign: 'right' }}>수주금액</th>
+                <th style={{ textAlign: 'right' }}>매출금액</th>
                 <th style={{ textAlign: 'right' }}>비중</th>
               </tr>
             </thead>
             <tbody>
               {sortedByAmount.map((s: any) => {
-                const amt = Number(s.contractAmount ?? 0);
-                const ratio = totalAmount > 0 ? ((amt / totalAmount) * 100).toFixed(1) : '0.0';
-                const conv = s.quoteCount > 0 ? ((s.contractCount / s.quoteCount) * 100).toFixed(1) : '0.0';
+                const orderAmt = Number(s.orderAmount ?? s.contractAmount ?? 0);
+                const salesAmt = Number(s.salesAmount ?? 0);
+                const displayAmt = getDisplayAmount(s);
+                const ratio = totalAmount > 0 ? ((displayAmt / totalAmount) * 100).toFixed(1) : '0.0';
                 return (
                   <tr key={s.storeId}>
                     <td style={{ fontWeight: 500 }}>{s.storeName}</td>
-                    <td style={{ textAlign: 'right' }}>{s.contractCount ?? 0}건</td>
-                    <td style={{ textAlign: 'right' }}>{amt.toLocaleString()}원</td>
-                    <td style={{ textAlign: 'right' }}>{s.quoteCount ?? 0}건</td>
-                    <td style={{ textAlign: 'right' }}>{conv}%</td>
+                    <td style={{ textAlign: 'right' }}>{s.orderCount ?? s.contractCount ?? 0}건</td>
+                    <td style={{ textAlign: 'right' }}>{orderAmt >= 10000 ? `${(orderAmt/10000).toFixed(0)}만` : orderAmt.toLocaleString()}원</td>
+                    <td style={{ textAlign: 'right' }}>{salesAmt >= 10000 ? `${(salesAmt/10000).toFixed(0)}만` : salesAmt.toLocaleString()}원</td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
                         <div style={{ width: 60, height: 4, background: 'rgba(0,0,0,0.07)', borderRadius: 2, overflow: 'hidden' }}>
@@ -690,7 +713,7 @@ export default function HqPerformanceTab() {
                 );
               })}
               {filteredList.length === 0 && (
-                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>데이터 없음</td></tr>
+                <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>데이터 없음</td></tr>
               )}
             </tbody>
           </table>

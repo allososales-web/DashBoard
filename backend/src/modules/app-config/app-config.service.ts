@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SalesDataService } from '../sales-data/sales-data.service';
 
@@ -18,11 +18,34 @@ function toGoogleSheetCsvUrl(url: string): string {
 }
 
 @Injectable()
-export class AppConfigService {
+export class AppConfigService implements OnModuleInit {
+  private readonly logger = new Logger(AppConfigService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly salesDataService: SalesDataService,
   ) {}
+
+  /** 서버 시작 시 자동 동기화 */
+  async onModuleInit() {
+    setTimeout(() => this.autoSync(), 5000); // 5초 후 첫 동기화
+  }
+
+  /** 매 시간 자동 동기화 (cron 없이 setInterval 사용) */
+  private startAutoSync() {
+    setInterval(() => this.autoSync(), 60 * 60 * 1000); // 1시간마다
+  }
+
+  private async autoSync() {
+    try {
+      const config = await this.prisma.appConfig.findUnique({ where: { key: 'salesUrl' } });
+      if (!config?.value) return;
+      const result = await this.syncSalesFromSheet();
+      this.logger.log(`[AutoSync] 완료 — ${result.savedRows}건 저장, ${result.skippedRows}건 스킵`);
+    } catch (e: any) {
+      this.logger.warn(`[AutoSync] 실패: ${e.message}`);
+    }
+  }
 
   async getUrls() {
     const configs = await this.prisma.appConfig.findMany({

@@ -29,6 +29,18 @@ export class HqDashboardController {
     const m = month ? parseInt(month, 10) : now.getMonth() + 1;
     return this.dashboardService.getAllStoresMetrics(y, m, dataMode as any);
   }
+
+  @Get('weekly')
+  @Roles(Role.HQ_ADMIN)
+  getWeeklyKpi(
+    @Query('year') year: string,
+    @Query('month') month: string,
+  ) {
+    const now = new Date();
+    const y = year ? parseInt(year, 10) : now.getFullYear();
+    const m = month ? parseInt(month, 10) : now.getMonth() + 1;
+    return this.dashboardService.getWeeklyKpi(null, y, m);
+  }
 }
 
 @Controller('stores/:storeId')
@@ -83,5 +95,18 @@ export class DashboardController {
     @Query() query: KpiSummaryQueryDto,
   ) {
     return this.dashboardService.getKpiSummary(storeId, query.months ?? 6);
+  }
+
+  @Get('kpi/weekly')
+  @Roles(Role.READONLY)
+  getWeeklyKpi(
+    @Param('storeId') storeId: string,
+    @Query('year') year: string,
+    @Query('month') month: string,
+  ) {
+    const now = new Date();
+    const y = year ? parseInt(year, 10) : now.getFullYear();
+    const m = month ? parseInt(month, 10) : now.getMonth() + 1;
+    return this.dashboardService.getWeeklyKpi(storeId, y, m);
   }
 }
