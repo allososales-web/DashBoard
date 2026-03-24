@@ -64,14 +64,20 @@ export class SalesDataController {
   getUnmappedAliases() {
     return this.salesDataService.getUnmappedAliases();
   }
+}
 
-  @Get('debug-sample')
+// 인증 없이 접근 가능한 디버그 컨트롤러 (임시)
+@Controller('debug')
+export class SalesDebugController {
+  constructor(private readonly salesDataService: SalesDataService) {}
+
+  @Get('sales-sample')
   @Public()
   async debugSample() {
     return this.salesDataService.getDebugSample();
   }
 
-  @Get('debug-mappings')
+  @Get('sales-mappings')
   @Public()
   async debugMappings() {
     return this.salesDataService.findAllMappings();
