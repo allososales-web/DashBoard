@@ -343,4 +343,17 @@ export class SalesDataService {
   async deleteMapping(id: string) {
     return this.prisma.storeAliasMapping.delete({ where: { id } });
   }
+
+  async getUnmappedAliases(): Promise<string[]> {
+    const [allAliases, mappings] = await Promise.all([
+      this.prisma.salesRawData.findMany({
+        select: { storeAlias: true },
+        distinct: ['storeAlias'],
+        where: { storeAlias: { not: '' } },
+      }),
+      this.prisma.storeAliasMapping.findMany({ select: { aliasName: true } }),
+    ]);
+    const mappedSet = new Set(mappings.map((m) => m.aliasName));
+    return allAliases.map((r) => r.storeAlias).filter((a) => a && !mappedSet.has(a)).sort();
+  }
 }

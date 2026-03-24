@@ -58,4 +58,9 @@ export class SalesDataController {
   deleteMapping(@Param('id') id: string) {
     return this.salesDataService.deleteMapping(id);
   }
+
+  @Get('unmapped-aliases')
+  getUnmappedAliases() {
+    return this.salesDataService.getUnmappedAliases();
+  }
 }
