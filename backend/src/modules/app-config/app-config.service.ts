@@ -56,6 +56,7 @@ export class AppConfigService {
     if (!config?.value) throw new BadRequestException('매출 실적 URL이 설정되지 않았습니다');
 
     const csvUrl = toGoogleSheetCsvUrl(config.value);
+    console.log('[SalesSync] Fetching CSV from:', csvUrl);
 
     let buffer: Buffer;
     try {
@@ -67,7 +68,39 @@ export class AppConfigService {
       throw new BadRequestException(`구글 시트 fetch 실패: ${e.message}. 시트가 공개(공유) 설정인지 확인하세요.`);
     }
 
+    // 첫 500자 로깅으로 실제 CSV 내용 확인
+    const preview = buffer.slice(0, 500).toString('utf-8');
+    console.log('[SalesSync] CSV preview (utf-8):', preview);
+
     return this.salesDataService.uploadCsv(buffer, 'google-sheet-sync.csv', userId);
+  }
+
+  /** 구글 시트 매출 실적 CSV 컬럼 미리보기 (디버그용) */
+  async previewSalesCsvColumns() {
+    const config = await this.prisma.appConfig.findUnique({ where: { key: 'salesUrl' } });
+    if (!config?.value) throw new BadRequestException('매출 실적 URL이 설정되지 않았습니다');
+
+    const csvUrl = toGoogleSheetCsvUrl(config.value);
+    const res = await fetch(csvUrl);
+    if (!res.ok) throw new BadRequestException(`HTTP ${res.status}`);
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // EUC-KR 시도
+    let text: string;
+    try {
+      const iconv = await import('iconv-lite');
+      text = iconv.decode(buffer, 'euc-kr');
+      if (!text.includes('수주') && !text.includes('대리점')) {
+        text = buffer.toString('utf-8');
+      }
+    } catch {
+      text = buffer.toString('utf-8');
+    }
+
+    const firstLine = text.split('\n')[0];
+    const secondLine = text.split('\n')[1] ?? '';
+    return { firstLine, secondLine, csvUrl };
   }
 
   /** 구글 시트 납기일정 URL 반환 (프론트에서 iframe/링크로 사용) */

@@ -25,6 +25,13 @@ export class AppConfigController {
     return this.appConfigService.syncSalesFromSheet(req.user?.id);
   }
 
+  /** 매출 실적 CSV 컬럼 미리보기 (디버그) */
+  @Get('preview-sales-csv')
+  @Roles(Role.HQ_ADMIN)
+  previewSalesCsv() {
+    return this.appConfigService.previewSalesCsvColumns();
+  }
+
   /** 납기일정 구글 시트 URL 반환 */
   @Get('delivery-sheet-url')
   getDeliverySheetUrl() {
