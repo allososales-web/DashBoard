@@ -232,12 +232,18 @@ function SyncSection() {
     },
   });
 
+  const [deliveryUnmapped, setDeliveryUnmapped] = useState<string[]>([]);
+
   const deliverySyncMutation = useMutation({
     mutationFn: () => api.post('/app-config/sync-delivery-sheet').then((r) => r.data),
     onSuccess: (data) => {
-      setDeliveryMsg(`완료 — ${data.savedRows}건 저장, ${data.skippedRows}건 스킵`);
+      const unmapped: string[] = data.unmappedAliases ?? [];
+      setDeliveryUnmapped(unmapped);
+      const extra = unmapped.length > 0 ? ` (미매핑 ${unmapped.length}개)` : '';
+      setDeliveryMsg(`완료 — ${data.savedRows}건 저장, ${data.skippedRows}건 스킵${extra}`);
       qc.invalidateQueries({ queryKey: ['sheet-delivery-schedule'] });
-      setTimeout(() => setDeliveryMsg(''), 5000);
+      qc.invalidateQueries({ queryKey: ['alias-mappings'] });
+      setTimeout(() => setDeliveryMsg(''), 10000);
     },
     onError: (e: any) => {
       setDeliveryMsg(`오류: ${e?.response?.data?.message ?? e?.message ?? '실패'}`);
@@ -270,6 +276,16 @@ function SyncSection() {
             <div style={{ fontSize: 13, fontWeight: 600 }}>📦 납기일정 동기화</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>납기 일정 URL의 구글 시트 → DB 저장 (매장 캘린더 수주건명 반영)</div>
             {deliveryMsg && <div style={{ fontSize: 11, marginTop: 4, color: deliveryMsg.startsWith('오류') ? '#ef4444' : '#059669' }}>{deliveryMsg}</div>}
+            {deliveryUnmapped.length > 0 && (
+              <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(245,158,11,0.08)', borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#d97706', marginBottom: 4 }}>⚠️ 아래 대리점명이 매핑되지 않았습니다. 아래 "매장 별칭 매핑"에서 등록하세요.</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {deliveryUnmapped.map((a) => (
+                    <span key={a} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: 'rgba(245,158,11,0.15)', color: '#92400e', fontWeight: 600 }}>{a}</span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <button className="btn btn-primary" style={{ fontSize: 12, padding: '7px 16px', whiteSpace: 'nowrap' }}
             onClick={() => deliverySyncMutation.mutate()} disabled={deliverySyncMutation.isPending}>
@@ -290,7 +306,7 @@ function AliasMappingSection() {
 
   const { data: mappings = [], isLoading: mappingsLoading } = useQuery({
     queryKey: ['alias-mappings'],
-    queryFn: () => api.get('/sales-data/mappings').then((r) => r.data).catch(() => []),
+    queryFn: () => api.get('/sales-data/store-mappings').then((r) => r.data).catch(() => []),
   });
 
   const { data: stores = [] } = useQuery({
@@ -298,11 +314,17 @@ function AliasMappingSection() {
     queryFn: () => api.get('/stores/admin/all').then((r) => r.data).catch(() => []),
   });
 
+  const { data: unmappedAliases = [] } = useQuery<string[]>({
+    queryKey: ['unmapped-aliases'],
+    queryFn: () => api.get('/sales-data/unmapped-aliases').then((r) => r.data).catch(() => []),
+  });
+
   const createMutation = useMutation({
     mutationFn: (dto: { aliasName: string; storeId: string }) =>
-      api.post('/sales-data/mappings', dto).then((r) => r.data),
+      api.post('/sales-data/store-mappings', dto).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['alias-mappings'] });
+      qc.invalidateQueries({ queryKey: ['unmapped-aliases'] });
       setNewAlias(''); setNewStoreId('');
       flash('매핑이 추가되었습니다');
     },
@@ -310,8 +332,12 @@ function AliasMappingSection() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/sales-data/mappings/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['alias-mappings'] }); flash('삭제되었습니다'); },
+    mutationFn: (id: string) => api.delete(`/sales-data/store-mappings/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['alias-mappings'] });
+      qc.invalidateQueries({ queryKey: ['unmapped-aliases'] });
+      flash('삭제되었습니다');
+    },
   });
 
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3000); };
@@ -326,6 +352,20 @@ function AliasMappingSection() {
       </div>
       {msg && <div style={{ margin: '8px 20px 0', padding: '8px 12px', background: 'rgba(16,185,129,0.1)', borderRadius: 8, fontSize: 12, color: '#059669' }}>{msg}</div>}
       <div style={{ padding: '16px 20px' }}>
+        {/* 미매핑 alias 힌트 */}
+        {(unmappedAliases as string[]).length > 0 && (
+          <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(245,158,11,0.07)', borderRadius: 10, border: '1px solid rgba(245,158,11,0.25)' }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#d97706', marginBottom: 6 }}>⚠️ 아직 매핑되지 않은 대리점명 — 클릭하면 입력란에 자동 입력됩니다</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {(unmappedAliases as string[]).map((a) => (
+                <button key={a} onClick={() => setNewAlias(a)}
+                  style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, background: 'rgba(245,158,11,0.15)', color: '#92400e', fontWeight: 600, border: '1px solid rgba(245,158,11,0.3)', cursor: 'pointer' }}>
+                  {a}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {/* 추가 폼 */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           <input
