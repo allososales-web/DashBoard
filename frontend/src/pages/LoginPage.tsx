@@ -133,7 +133,7 @@ export default function LoginPage() {
         minHeight: 640,
       }}>
         {/* 좌측: 브랜드 + 매장 목록 */}
-        <div className="login-store-col" style={{
+        <div className={`login-store-col${step !== 'select' ? ' login-store-col-hidden-mobile' : ''}`} style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
@@ -189,7 +189,7 @@ export default function LoginPage() {
         </div>
 
         {/* 우측: PIN 패드 */}
-        <div className="login-pin-col" style={{
+        <div className={`login-pin-col${step === 'select' ? ' login-pin-col-hidden-mobile' : ''}`} style={{
           width: 380,
           flexShrink: 0,
           display: 'flex',
@@ -202,7 +202,7 @@ export default function LoginPage() {
           {step === 'select' && (
             <div style={{ textAlign: 'center', width: '100%' }}>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, letterSpacing: '0.06em' }}>
-                좌측에서 매장을 선택하세요
+                매장을 선택하세요
               </div>
               <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, opacity: 0.2 }}>
                 {Array.from({ length: 12 }).map((_, i) => (

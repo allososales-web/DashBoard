@@ -56,7 +56,7 @@ function useCountUp(target: number, duration = 1200) {
   return val;
 }
 
-// ── SVG 원형 게이지 ──────────────────────────────────────────
+// ── SVG 원형 게이지 — 뉴모피즘 스타일 ──────────────────────────────────────
 function ArcGauge({ pct, size = 80, stroke = 8, color = "var(--accent)", label, sublabel }: {
   pct: number; size?: number; stroke?: number; color?: string; label: string; sublabel?: string;
 }) {
@@ -64,32 +64,42 @@ function ArcGauge({ pct, size = 80, stroke = 8, color = "var(--accent)", label, 
   const circ = 2 * Math.PI * r;
   const dash = (pct / 100) * circ;
   const cx = size / 2, cy = size / 2;
-  // 끝점 도트 좌표
   const endAngle = -Math.PI / 2 + (pct / 100) * 2 * Math.PI;
   const dotX = cx + r * Math.cos(endAngle);
   const dotY = cy + r * Math.sin(endAngle);
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-      <svg width={size} height={size} style={{ transform: "rotate(-90deg)", filter: `drop-shadow(0 0 6px ${color}44)` }}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth={stroke} />
-        {/* 글로우 레이어 */}
-        {pct > 0 && (
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke + 4}
+      <div style={{
+        position: "relative", width: size, height: size,
+        borderRadius: "50%",
+        background: `radial-gradient(circle at 35% 35%, #d8dbd4, #c8cbc4)`,
+        boxShadow: `${size * 0.07}px ${size * 0.07}px ${size * 0.2}px rgba(150,158,145,0.65), -${size * 0.04}px -${size * 0.04}px ${size * 0.12}px rgba(255,255,255,0.90)`,
+      }}>
+        {/* 내부 오목 */}
+        <div style={{
+          position: "absolute", inset: stroke * 0.55, borderRadius: "50%",
+          background: `radial-gradient(circle at 40% 40%, #cdd0c8, #bfc2bb)`,
+          boxShadow: `inset 2px 2px 6px rgba(140,148,135,0.55), inset -1px -1px 4px rgba(255,255,255,0.75)`,
+        }} />
+        <svg width={size} height={size} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.10)" strokeWidth={stroke} />
+          {pct > 0 && (
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke + 4}
+              strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+              opacity={0.22} style={{ filter: "blur(4px)" }} />
+          )}
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke}
             strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-            opacity={0.20} style={{ filter: "blur(4px)" }} />
-        )}
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke}
-          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-          style={{ transition: "stroke-dasharray 1s ease" }} />
-        {/* 끝점 도트 */}
-        {pct > 2 && (
-          <circle cx={dotX} cy={dotY} r={stroke / 2 - 0.5} fill={color}
-            style={{ filter: `drop-shadow(0 0 3px ${color})` }} />
-        )}
-      </svg>
-      <div style={{ marginTop: -size * 0.55, textAlign: "center", pointerEvents: "none" }}>
-        <div style={{ fontSize: size * 0.22, fontWeight: 900, color, lineHeight: 1, textShadow: `0 0 12px ${color}55` }}>{label}</div>
-        {sublabel && <div style={{ fontSize: size * 0.14, color: "var(--text-muted)", marginTop: 2 }}>{sublabel}</div>}
+            style={{ transition: "stroke-dasharray 1s ease" }} />
+          {pct > 2 && (
+            <circle cx={dotX} cy={dotY} r={stroke / 2 - 0.5} fill={color}
+              style={{ filter: `drop-shadow(0 0 3px ${color})` }} />
+          )}
+        </svg>
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+          <div style={{ fontSize: size * 0.22, fontWeight: 900, color, lineHeight: 1, textShadow: `0 0 12px ${color}55` }}>{label}</div>
+          {sublabel && <div style={{ fontSize: size * 0.14, color: "var(--text-muted)", marginTop: 2 }}>{sublabel}</div>}
+        </div>
       </div>
     </div>
   );
@@ -133,26 +143,43 @@ function Speedometer({ pct, size = 90, color = "var(--accent)" }: { pct: number;
   );
 }
 
-// ── 미니 도넛 ────────────────────────────────────────────────
+// ── 미니 도넛 — 뉴모피즘 스타일 ────────────────────────────────────────────
 function MiniDonut({ pct, size = 56, color = "var(--accent)" }: { pct: number; size?: number; color?: string }) {
   const stroke = size * 0.18;
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const dash = (pct / 100) * circ;
   const cx = size / 2, cy = size / 2;
+  const endAngle = -Math.PI / 2 + (pct / 100) * 2 * Math.PI;
+  const dotX = cx + r * Math.cos(endAngle);
+  const dotY = cy + r * Math.sin(endAngle);
   return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)", filter: `drop-shadow(0 0 6px ${color}44)` }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth={stroke} />
-      {/* 글로우 레이어 */}
-      {pct > 0 && (
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke + 4}
+    <div style={{
+      position: "relative", width: size, height: size, borderRadius: "50%",
+      background: `radial-gradient(circle at 35% 35%, #d8dbd4, #c8cbc4)`,
+      boxShadow: `${size * 0.07}px ${size * 0.07}px ${size * 0.2}px rgba(150,158,145,0.65), -${size * 0.04}px -${size * 0.04}px ${size * 0.12}px rgba(255,255,255,0.90)`,
+    }}>
+      <div style={{
+        position: "absolute", inset: stroke * 0.55, borderRadius: "50%",
+        background: `radial-gradient(circle at 40% 40%, #cdd0c8, #bfc2bb)`,
+        boxShadow: `inset 2px 2px 6px rgba(140,148,135,0.55), inset -1px -1px 4px rgba(255,255,255,0.75)`,
+      }} />
+      <svg width={size} height={size} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.10)" strokeWidth={stroke} />
+        {pct > 0 && (
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke + 4}
+            strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+            opacity={0.22} style={{ filter: "blur(4px)" }} />
+        )}
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke}
           strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-          opacity={0.20} style={{ filter: "blur(4px)" }} />
-      )}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke}
-        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-        style={{ transition: "stroke-dasharray 1s ease" }} />
-    </svg>
+          style={{ transition: "stroke-dasharray 1s ease" }} />
+        {pct > 2 && (
+          <circle cx={dotX} cy={dotY} r={stroke / 2 - 0.5} fill={color}
+            style={{ filter: `drop-shadow(0 0 3px ${color})` }} />
+        )}
+      </svg>
+    </div>
   );
 }
 

@@ -393,7 +393,7 @@ tr:hover td { background: rgba(139,124,248,0.03); }
   .mobile-nav-label { font-size: 10px; font-weight: 500; white-space: nowrap; }
 
   header { padding: 0 14px !important; }
-  .hq-main { padding: 16px 14px !important; }
+  .hq-main { padding: 16px 14px 80px 14px !important; }
   .hq-main > div { max-width: 100% !important; }
 
   .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -430,10 +430,16 @@ tr:hover td { background: rgba(139,124,248,0.03); }
     overflow-y: auto;
     padding: 28px 20px 20px !important;
   }
+  .login-store-col-hidden-mobile {
+    display: none !important;
+  }
   .login-pin-col {
     width: 100% !important;
     padding: 28px 24px 36px !important;
     justify-content: flex-start !important;
+  }
+  .login-pin-col-hidden-mobile {
+    display: none !important;
   }
 }
 
@@ -464,6 +470,33 @@ tr:hover td { background: rgba(139,124,248,0.03); }
 @media (max-width: 540px) {
   .kpi-grid { grid-template-columns: 1fr 1fr !important; }
 }
+
+/* ── Channel mix wave chart mobile ── */
+@media (max-width: 640px) {
+  .channel-mix-header { flex-direction: column !important; align-items: flex-start !important; }
+  .channel-mix-filters { flex-wrap: wrap; gap: 4px !important; }
+}
+
+/* ── Goal gauge grid mobile ── */
+@media (max-width: 480px) {
+  .gauge-grid-annual { gap: 10px !important; }
+  .gauge-grid-annual > * { width: calc(25% - 8px) !important; }
+}
+
+/* ── HQ performance tab mobile ── */
+@media (max-width: 768px) {
+  .hq-kpi-cards { grid-template-columns: 1fr !important; }
+  .hq-perf-period { flex-wrap: wrap; gap: 6px !important; }
+}
+
+/* ── Store dashboard goal grid mobile ── */
+@media (max-width: 480px) {
+  .goal-grid { grid-template-columns: repeat(3, 1fr) !important; }
+}
+
+/* ── Table horizontal scroll wrapper ── */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-wrap table { min-width: 480px; }
 
 /* ── Floating logo keyframes ── */
 @keyframes float-a {

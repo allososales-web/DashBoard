@@ -21,9 +21,10 @@ export default function HqDashboardPage() {
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>본사 대시보드</h1>
         <div style={{
-          display: 'inline-flex', overflowX: 'auto', WebkitOverflowScrolling: 'touch', flexWrap: 'nowrap', maxWidth: '100%',
+          display: 'flex', overflowX: 'auto', WebkitOverflowScrolling: 'touch', flexWrap: 'nowrap', width: '100%',
           gap: 2, padding: 4, background: '#cdd0c8', borderRadius: 12,
           boxShadow: 'inset 3px 3px 8px rgba(0,0,0,0.18), inset -2px -2px 6px rgba(255,255,255,0.75)',
+          boxSizing: 'border-box',
         }}>
           {TABS.map((t) => (
             <button

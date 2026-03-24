@@ -9,7 +9,11 @@ import StoreAnalysisPage from './pages/store/StoreAnalysisPage';
 import StoreIssuePage from './pages/store/StoreIssuePage';
 import StoreDashboardDeliveryWorkTab from './pages/store/StoreDashboardDeliveryWorkTab';
 import StoreMetricsInputPage from './pages/store/StoreMetricsInputPage';
-import HqDashboardPage from './pages/hq/HqDashboardPage';
+import HqPerformanceTab from './pages/hq/tabs/HqPerformanceTab';
+import HqStoreStatusTab from './pages/hq/tabs/HqStoreStatusTab';
+import HqWorkRecordsTab from './pages/hq/tabs/HqWorkRecordsTab';
+import HqGoalEventTab from './pages/hq/tabs/HqGoalEventTab';
+import HqAdminTab from './pages/hq/tabs/HqAdminTab';
 import BackgroundCanvas from './components/BackgroundCanvas';
 
 const queryClient = new QueryClient({
@@ -38,7 +42,12 @@ export default function App() {
           <Routes>
             <Route path="/" element={<LoginPage />} />
             <Route path="/hq" element={<HqGuard><HqLayout /></HqGuard>}>
-              <Route index element={<HqDashboardPage />} />
+              <Route index element={<Navigate to="performance" replace />} />
+              <Route path="performance" element={<HqPerformanceTab />} />
+              <Route path="store-status" element={<HqStoreStatusTab />} />
+              <Route path="work" element={<HqWorkRecordsTab />} />
+              <Route path="goal-event" element={<HqGoalEventTab />} />
+              <Route path="admin" element={<HqAdminTab />} />
             </Route>
             <Route path="/store/:storeId" element={<AuthGuard><StoreLayout /></AuthGuard>}>
               <Route index element={<Navigate to="dashboard" replace />} />
