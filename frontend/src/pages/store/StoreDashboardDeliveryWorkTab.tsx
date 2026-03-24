@@ -33,6 +33,54 @@ const WEEK_PATTERNS = [
   { label: '주6일 (월~토)', days: [1,2,3,4,5,6] },
 ];
 
+type DayGroupItem = { key: string; name: string; orderNumber?: string; status?: string; address?: string; notes?: string; isSheet: boolean; };
+function DayGroup({ day, calMonth, calYear, dow, dowColor, dday, items, preview }:
+  { day: number; calMonth: number; calYear: number; dow: string; dowColor: string;
+    dday: { label: string; color: string; bg: string }; items: DayGroupItem[]; preview: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? items : items.slice(0, preview);
+  const hasMore = items.length > preview;
+  return (
+    <div style={{ borderRadius: 10, border: '1px solid rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px',
+        background: 'rgba(0,0,0,0.025)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: dowColor }}>{calMonth}/{day} ({dow})</span>
+        <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: dday.bg, color: dday.color }}>{dday.label}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>{items.length}건</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        {visible.map((item, i) => {
+          const s = item.isSheet ? { bg: 'rgba(16,185,129,0.10)', color: '#059669', label: '확정납기' } : (STATUS_STYLE[item.status ?? ''] ?? STATUS_STYLE.SCHEDULED);
+          return (
+            <div key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px',
+              borderTop: i > 0 ? '1px solid rgba(0,0,0,0.04)' : undefined,
+              background: 'rgba(255,255,255,0.7)' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+                background: s.bg, color: s.color, whiteSpace: 'nowrap', flexShrink: 0 }}>{s.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                title={item.name}>{item.name}</span>
+              {item.isSheet && item.orderNumber && (
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{item.orderNumber}</span>
+              )}
+              {!item.isSheet && item.address && (
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.address}</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {hasMore && (
+        <button onClick={() => setExpanded(e => !e)}
+          style={{ width: '100%', padding: '6px 0', fontSize: 11, fontWeight: 600, color: 'var(--accent)',
+            background: 'rgba(139,124,248,0.04)', border: 'none', borderTop: '1px solid rgba(0,0,0,0.05)',
+            cursor: 'pointer', textAlign: 'center' }}>
+          {expanded ? '▲ 접기' : `▼ +${items.length - preview}건 더보기`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function StoreDashboardDeliveryWorkTab() {
   const { storeId } = useParams<{ storeId: string }>();
   const now = new Date();
@@ -175,7 +223,7 @@ export default function StoreDashboardDeliveryWorkTab() {
           {/* 날짜 셀 */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
             {calendarCells.map((day, idx) => {
-              if (!day) return <div key={idx} style={{ minHeight: 72 + staffList.length * 20 }} />;
+              if (!day) return <div key={idx} style={{ height: 90 + staffList.length * 22 }} />;
               const dow = new Date(calYear, calMonth - 1, day).getDay();
               const isToday = day === now.getDate() && calMonth === now.getMonth() + 1 && calYear === now.getFullYear();
               const isSun = dow === 0; const isSat = dow === 6;
@@ -189,8 +237,10 @@ export default function StoreDashboardDeliveryWorkTab() {
                     borderRadius: 8, cursor: 'pointer',
                     border: isSelected ? '2px solid var(--accent)' : isToday ? '2px solid rgba(139,124,248,0.35)' : '1px solid rgba(0,0,0,0.07)',
                     background: isSelected ? 'rgba(139,124,248,0.08)' : isToday ? 'rgba(139,124,248,0.04)' : isSun ? 'rgba(239,68,68,0.02)' : 'rgba(255,255,255,0.7)',
-                    padding: '5px 4px', minHeight: 72 + staffList.length * 20,
+                    padding: '5px 4px',
+                    height: 90 + staffList.length * 22,
                     display: 'flex', flexDirection: 'column', gap: 2, transition: 'all 0.12s',
+                    overflow: 'hidden',
                   }}>
                   {/* 날짜 숫자 */}
                   <div style={{ textAlign: 'center', fontSize: 11, fontWeight: isToday ? 800 : 600,
@@ -211,14 +261,18 @@ export default function StoreDashboardDeliveryWorkTab() {
                     <div style={{ fontSize: 9, color: 'var(--accent)', fontWeight: 700, textAlign: 'center' }}>+{delivItems.length - 2}</div>
                   )}
                   {/* 수주건명 배지 (구글 시트 납기일정) */}
-                  {(sheetDeliveryByDay[day] ?? []).slice(0, 2).map((item, i) => (
-                    <div key={`sheet-${i}`} style={{ fontSize: 9, fontWeight: 600, padding: '2px 4px', borderRadius: 4,
-                      background: 'rgba(16,185,129,0.12)', color: '#059669', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {(sheetDeliveryByDay[day] ?? []).slice(0, 3).map((item, i) => (
+                    <div key={`sheet-${i}`}
+                      title={item.itemName || item.orderNumber}
+                      style={{ fontSize: 9, fontWeight: 600, padding: '2px 4px', borderRadius: 4,
+                        background: 'rgba(16,185,129,0.12)', color: '#059669',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        cursor: 'default', maxWidth: '100%' }}>
                       🏭 {item.itemName || item.orderNumber}
                     </div>
                   ))}
-                  {(sheetDeliveryByDay[day] ?? []).length > 2 && (
-                    <div style={{ fontSize: 9, color: '#059669', fontWeight: 700, textAlign: 'center' }}>+{(sheetDeliveryByDay[day] ?? []).length - 2}</div>
+                  {(sheetDeliveryByDay[day] ?? []).length > 3 && (
+                    <div style={{ fontSize: 9, color: '#059669', fontWeight: 700, textAlign: 'center' }}>+{(sheetDeliveryByDay[day] ?? []).length - 3}</div>
                   )}
                   {/* 근무 배지 */}
                   {staffList.map(staff => {
@@ -368,17 +422,42 @@ export default function StoreDashboardDeliveryWorkTab() {
       {/* ══ 고객 납기 현황 ══ */}
       <div className="glass" style={{ padding: 20, marginBottom: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>📦 고객 납기 현황</div>
-
-        {/* 구글 시트 납기 목록 */}
         {(() => {
-          const sheetList = Object.entries(sheetDeliveryByDay)
-            .flatMap(([day, items]) => items.map(item => ({ ...item, day: Number(day) })))
-            .sort((a, b) => a.day - b.day);
-          const totalCount = deliveries.length + sheetList.length;
+          // 날짜별 그룹핑
+          const today = new Date(); today.setHours(0,0,0,0);
+          type GroupItem = { key: string; name: string; orderNumber?: string; status?: string; address?: string; notes?: string; isSheet: boolean; };
+          const grouped: Record<number, GroupItem[]> = {};
+
+          // 구글 시트 납기
+          Object.entries(sheetDeliveryByDay).forEach(([dayStr, items]) => {
+            const d = Number(dayStr);
+            if (!grouped[d]) grouped[d] = [];
+            items.forEach((item, i) => grouped[d].push({ key: `s${d}-${i}`, name: item.itemName || '(품명 없음)', orderNumber: item.orderNumber, isSheet: true }));
+          });
+          // 수동 납기
+          deliveries.forEach(item => {
+            const d = new Date(item.scheduledDate); d.setHours(0,0,0,0);
+            const day = d.getDate();
+            if (!grouped[day]) grouped[day] = [];
+            grouped[day].push({ key: item.id, name: item.customerName, status: item.status, address: item.address ?? undefined, notes: item.notes ?? undefined, isSheet: false });
+          });
+
+          const sortedDays = Object.keys(grouped).map(Number).sort((a, b) => a - b);
+          const totalCount = sortedDays.reduce((s, d) => s + grouped[d].length, 0);
+
+          function getDdayLabel(day: number) {
+            const target = new Date(calYear, calMonth - 1, day); target.setHours(0,0,0,0);
+            const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
+            if (diff === 0) return { label: 'D-day', color: '#dc2626', bg: 'rgba(239,68,68,0.12)' };
+            if (diff === 1) return { label: 'D-1', color: '#d97706', bg: 'rgba(245,158,11,0.12)' };
+            if (diff === 2) return { label: 'D-2', color: '#d97706', bg: 'rgba(245,158,11,0.08)' };
+            if (diff < 0) return { label: `D+${Math.abs(diff)}`, color: '#9ca3af', bg: 'rgba(0,0,0,0.05)' };
+            return { label: `D-${diff}`, color: '#6b7280', bg: 'rgba(0,0,0,0.04)' };
+          }
 
           return (
             <>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>
                 {calYear}년 {calMonth}월 납기 목록
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>총 {totalCount}건</span>
               </div>
@@ -387,49 +466,18 @@ export default function StoreDashboardDeliveryWorkTab() {
                   이 달 납기 일정이 없습니다
                 </div>
               ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table>
-                    <thead>
-                      <tr><th>건명 / 고객명</th><th>납기일</th><th>수주번호 / 주소</th><th>메모</th><th>상태</th></tr>
-                    </thead>
-                    <tbody>
-                      {/* 구글 시트 납기 */}
-                      {sheetList.map((item, i) => {
-                        const d = new Date(calYear, calMonth - 1, item.day);
-                        const dow = WEEKDAYS[d.getDay()];
-                        return (
-                          <tr key={`sheet-${i}`}>
-                            <td style={{ fontWeight: 600 }}>{item.itemName || '(품명 없음)'}</td>
-                            <td style={{ whiteSpace: 'nowrap' }}>
-                              {`${calMonth}/${item.day}`}
-                              <span style={{ fontSize: 10, color: d.getDay()===0?'#ef4444':d.getDay()===6?'#3b82f6':'var(--text-muted)', marginLeft: 4 }}>({dow})</span>
-                            </td>
-                            <td style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.orderNumber}</td>
-                            <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</td>
-                            <td><span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 99, fontWeight: 600, background: 'rgba(16,185,129,0.12)', color: '#059669', whiteSpace: 'nowrap' }}>확정납기</span></td>
-                          </tr>
-                        );
-                      })}
-                      {/* 수동 등록 납기 */}
-                      {deliveries.slice().sort((a,b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()).map(item => {
-                        const s = STATUS_STYLE[item.status] ?? STATUS_STYLE.SCHEDULED;
-                        const d = new Date(item.scheduledDate);
-                        const dow = WEEKDAYS[d.getDay()];
-                        return (
-                          <tr key={item.id}>
-                            <td style={{ fontWeight: 600 }}>{item.customerName}</td>
-                            <td style={{ whiteSpace: 'nowrap' }}>
-                              {`${d.getMonth()+1}/${d.getDate()}`}
-                              <span style={{ fontSize: 10, color: d.getDay()===0?'#ef4444':d.getDay()===6?'#3b82f6':'var(--text-muted)', marginLeft: 4 }}>({dow})</span>
-                            </td>
-                            <td style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.address ?? '—'}</td>
-                            <td style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.notes ?? '—'}</td>
-                            <td><span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 99, fontWeight: 600, background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span></td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {sortedDays.map(day => {
+                    const items = grouped[day];
+                    const dow = WEEKDAYS[new Date(calYear, calMonth - 1, day).getDay()];
+                    const dowColor = new Date(calYear, calMonth - 1, day).getDay() === 0 ? '#ef4444' : new Date(calYear, calMonth - 1, day).getDay() === 6 ? '#3b82f6' : 'var(--text-muted)';
+                    const dday = getDdayLabel(day);
+                    const PREVIEW = 2;
+                    return (
+                      <DayGroup key={day} day={day} calMonth={calMonth} calYear={calYear}
+                        dow={dow} dowColor={dowColor} dday={dday} items={items} preview={PREVIEW} />
+                    );
+                  })}
                 </div>
               )}
             </>
