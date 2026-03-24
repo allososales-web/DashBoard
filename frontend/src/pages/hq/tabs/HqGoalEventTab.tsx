@@ -422,6 +422,9 @@ export default function HqGoalEventTab() {
                 >
                   ✕ 취소
                 </button>
+              </div>
+            </div>
+          )}
           {selectedDay && selectedEvents.length > 0 && (
             <div style={{ marginTop: 12, padding: 12, background: "rgba(245,158,11,0.08)", borderRadius: 8, borderLeft: "3px solid #f59e0b" }}>
               <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: "var(--text)" }}>{selectedDay} 이슈</div>
