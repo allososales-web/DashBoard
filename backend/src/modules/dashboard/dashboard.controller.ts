@@ -137,4 +137,18 @@ export class DashboardController {
     const m = month ? parseInt(month, 10) : now.getMonth() + 1;
     return this.dashboardService.getWeeklyKpi(storeId, y, m);
   }
+
+  @Get('series-kpi')
+  @Roles(Role.READONLY)
+  getSeriesKpi(
+    @Param('storeId') storeId: string,
+    @Query('year') year: string,
+    @Query('month') month: string,
+    @Query('dataMode') dataMode?: string,
+  ) {
+    const now = new Date();
+    const y = year ? parseInt(year, 10) : now.getFullYear();
+    const m = month ? parseInt(month, 10) : now.getMonth() + 1;
+    return this.dashboardService.getStoreSeriesKpi(storeId, y, m, dataMode as any);
+  }
 }

@@ -198,6 +198,68 @@ export class SalesKpiService {
     }));
   }
 
+  /** 특정 매장의 시리즈별 KPI */
+  async calculateStoreSeriesKpi(storeId: string, year: number, month: number, dataMode: DataMode = 'ORDER') {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 1);
+
+    const aliasNames = await this.resolveAliases(storeId);
+    if (aliasNames !== null && aliasNames.length === 0) {
+      return { series: [], orderAmount: 0, salesAmount: 0, orderCount: 0, salesCount: 0 };
+    }
+
+    const aliasFilter = aliasNames ? { storeAlias: { in: aliasNames } } : {};
+    const baseFilter = { ...aliasFilter, itemCode: { not: { startsWith: 'DELIVERY_' } } };
+
+    const orderRows = await this.prisma.salesRawData.findMany({
+      where: {
+        ...baseFilter,
+        OR: [
+          { orderDate: { gte: startDate, lt: endDate } },
+          { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
+        ],
+      },
+      select: { orderAmount: true, quantity: true, seriesCode: true, itemName: true },
+    });
+
+    const salesRows = await this.prisma.salesRawData.findMany({
+      where: { ...baseFilter, confirmedDate: { gte: startDate, lt: endDate } },
+      select: { orderAmount: true, quantity: true, seriesCode: true, itemName: true },
+    });
+
+    const activeRows = dataMode === 'SALES' ? salesRows : orderRows;
+
+    const map: Record<string, { amount: number; itemNames: Set<string> }> = {};
+    for (const row of activeRows) {
+      const key = row.seriesCode?.trim() || '기타';
+      if (!map[key]) map[key] = { amount: 0, itemNames: new Set() };
+      map[key].amount += Number(row.orderAmount);
+      if (row.itemName) map[key].itemNames.add(row.itemName);
+    }
+
+    const series = Object.entries(map)
+      .map(([name, v]) => ({
+        series: name,
+        amount: v.amount,
+        count: v.itemNames.size,
+        avgPrice: v.itemNames.size > 0 ? Math.round(v.amount / v.itemNames.size) : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    const sumAmount = (rows: { orderAmount: any }[]) =>
+      rows.reduce((acc, r) => acc + Number(r.orderAmount), 0);
+    const distinctCount = (rows: { itemName: string | null }[]) =>
+      new Set(rows.map((r) => r.itemName).filter(Boolean)).size;
+
+    return {
+      series,
+      orderAmount: sumAmount(orderRows),
+      salesAmount: sumAmount(salesRows),
+      orderCount: distinctCount(orderRows),
+      salesCount: distinctCount(salesRows),
+    };
+  }
+
   /** 전체 매장별 KPI */
   async calculateAllStoresKpi(year: number, month: number): Promise<StoreKpiResult[]> {
     const startDate = new Date(year, month - 1, 1);
