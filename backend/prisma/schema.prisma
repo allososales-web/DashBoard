@@ -623,7 +623,7 @@ model SalesRawData {
   itemCode      String   @map("item_code")
   storeAlias    String   @map("store_alias")
   orderDate     DateTime @map("order_date") @db.Date
-  confirmedDate DateTime @map("confirmed_date") @db.Date
+  confirmedDate DateTime? @map("confirmed_date") @db.Date
   seriesCode    String?  @map("series_code")
   orderAmount   Decimal  @map("order_amount") @db.Decimal(15, 2)
   quantity      Int      @default(1)
