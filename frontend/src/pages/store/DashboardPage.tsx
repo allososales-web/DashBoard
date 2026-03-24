@@ -205,7 +205,7 @@ export default function DashboardPage() {
   const sortedByAmount = [...allStores].sort((a, b) => getStoreAmount(b) - getStoreAmount(a));
   const myRank = sortedByAmount.findIndex((s: any) => s.storeId === storeId) + 1;
   // 운영중 매장 수 (showOnLogin 기준 - allMetrics에 포함된 매장은 모두 운영중으로 간주)
-  const activeStoreCount = allStores.length;
+  const activeStoreCount = allStores.filter((s: any) => s.showOnLogin !== false).length || allStores.length;
 
   const amountRate = g && Number(g.targetAmount) > 0 ? Math.min((myAmount / Number(g.targetAmount)) * 100, 100) : 0;
   const contractRate = g && g.targetContracts > 0 ? Math.min(((m?.contractCount ?? 0) / g.targetContracts) * 100, 100) : 0;
@@ -280,7 +280,7 @@ export default function DashboardPage() {
           <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4, alignSelf: "flex-start" }}>매출 진척율</div>
           <ArcGauge pct={amountRate} size={84} stroke={9} color={amountColor}
             label={`${amountRate.toFixed(0)}%`} />
-          <div style={{ fontSize: 12, fontWeight: 700, color: amountColor, marginTop: 2 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: amountRate >= 100 ? "var(--success)" : amountRate >= 70 ? "var(--accent)" : "#f87171", marginTop: 2 }}>
             {amountRate >= 100 ? "달성 ✅" : amountRate >= 70 ? "순항 🔥" : "미달 ⚠️"}
           </div>
         </div>

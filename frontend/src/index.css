@@ -279,17 +279,17 @@ select option { background: var(--bg); color: var(--text); }
   display: flex;
   gap: 2px;
   padding: 4px;
-  background: var(--bg);
+  background: #dde0d8;
   border-radius: 12px;
   border: none;
-  box-shadow: var(--neu-inset);
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.13), inset -2px -2px 5px rgba(255,255,255,0.7);
 }
 .tab {
   padding: 7px 18px;
   border-radius: 9px;
   border: none;
   background: transparent;
-  color: var(--text-muted);
+  color: #6b7a6a;
   font-size: 12px;
   font-weight: 500;
   font-family: inherit;
@@ -301,9 +301,9 @@ select option { background: var(--bg); color: var(--text); }
   background: #f4f6f1;
   color: var(--accent);
   font-weight: 700;
-  box-shadow: var(--neu-shadow-sm);
+  box-shadow: 3px 3px 8px rgba(0,0,0,0.12), -2px -2px 6px rgba(255,255,255,0.85);
 }
-.tab:hover:not(.active) { color: var(--text); }
+.tab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.3); }
 
 /* ── Table ── */
 table { width: 100%; border-collapse: collapse; }

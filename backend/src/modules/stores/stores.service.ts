@@ -97,7 +97,38 @@ export class StoresService {
     });
   }
 
-  // 전체 매장 목록 (운영 현황용 - 페이지네이션 없이 전체)
+  // 소프트 삭제 (deletedAt 설정, showOnLogin false)
+  async softDelete(storeId: string) {
+    const store = await this.prisma.store.findUnique({ where: { id: storeId } });
+    if (!store) throw new NotFoundException(`Store '${storeId}' not found`);
+    return this.prisma.store.update({
+      where: { id: storeId },
+      data: { deletedAt: new Date(), showOnLogin: false, isActive: false },
+    });
+  }
+
+  // 복구 (deletedAt 초기화, 일주일 이내만 가능)
+  async restore(storeId: string) {
+    const store = await this.prisma.store.findUnique({ where: { id: storeId } });
+    if (!store) throw new NotFoundException(`Store '${storeId}' not found`);
+    if (!store.deletedAt) throw new ConflictException('삭제된 매장이 아닙니다');
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    if (store.deletedAt < weekAgo) throw new ConflictException('복구 유예기간(7일)이 지났습니다');
+    return this.prisma.store.update({
+      where: { id: storeId },
+      data: { deletedAt: null, isActive: true },
+    });
+  }
+
+  // 완전 삭제 (DB에서 영구 제거)
+  async hardDelete(storeId: string) {
+    const store = await this.prisma.store.findUnique({ where: { id: storeId } });
+    if (!store) throw new NotFoundException(`Store '${storeId}' not found`);
+    if (!store.deletedAt) throw new ConflictException('소프트 삭제 후 완전 삭제가 가능합니다');
+    return this.prisma.store.delete({ where: { id: storeId } });
+  }
+
+  // 전체 매장 목록 (운영 현황용 - 페이지네이션 없이 전체, 삭제된 매장 포함)
   async findAllForAdmin() {
     return this.prisma.store.findMany({
       select: {
@@ -109,6 +140,7 @@ export class StoresService {
         showOnLogin: true,
         displayName: true,
         defaultChannel: true,
+        deletedAt: true,
         storeAuth: {
           select: {
             plainPin: true,

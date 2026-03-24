@@ -493,9 +493,21 @@ function StoreOpsSection() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/stores/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-stores'] }); flash('매장이 삭제되었습니다'); },
+    mutationFn: (id: string) => api.delete(`/stores/${id}/soft`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-stores'] }); flash('매장이 삭제되었습니다 (7일 내 복구 가능)'); },
     onError: (e: any) => flash(`삭제 실패: ${e?.response?.data?.message ?? e?.message}`),
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/stores/${id}/restore`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-stores'] }); flash('매장이 복구되었습니다'); },
+    onError: (e: any) => flash(`복구 실패: ${e?.response?.data?.message ?? e?.message}`),
+  });
+
+  const hardDeleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/stores/${id}/hard`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-stores'] }); flash('매장이 완전 삭제되었습니다'); },
+    onError: (e: any) => flash(`완전 삭제 실패: ${e?.response?.data?.message ?? e?.message}`),
   });
 
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3000); };
@@ -509,8 +521,9 @@ function StoreOpsSection() {
     const list = (stores as any[]).filter((s: any) =>
       s.name.toLowerCase().includes(search.toLowerCase()) || s.code.toLowerCase().includes(search.toLowerCase())
     );
-    const active = list.filter((s: any) => s.showOnLogin);
-    const hidden = list.filter((s: any) => !s.showOnLogin);
+    const active = list.filter((s: any) => s.showOnLogin && !s.deletedAt);
+    const hidden = list.filter((s: any) => !s.showOnLogin && !s.deletedAt);
+    const deleted = list.filter((s: any) => !!s.deletedAt);
     const sortFn = (a: any, b: any) => {
       let av: any, bv: any;
       if (sortKey === 'name') { av = (a.displayName ?? a.name).toLowerCase(); bv = (b.displayName ?? b.name).toLowerCase(); }
@@ -521,10 +534,11 @@ function StoreOpsSection() {
       if (av > bv) return sortDir === 'asc' ? 1 : -1;
       return 0;
     };
-    return showHidden ? [...active.sort(sortFn), ...hidden.sort(sortFn)] : active.sort(sortFn);
+    const base = showHidden ? [...active.sort(sortFn), ...hidden.sort(sortFn)] : active.sort(sortFn);
+    return [...base, ...deleted.sort(sortFn)];
   }, [stores, search, sortKey, sortDir, showHidden]);
 
-  const hiddenCount = (stores as any[]).filter((s: any) => !s.showOnLogin).length;
+  const hiddenCount = (stores as any[]).filter((s: any) => !s.showOnLogin && !s.deletedAt).length;
 
   const SortTh = ({ label, k }: { label: string; k: SortKey }) => (
     <th onClick={() => handleSort(k)} style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
@@ -540,8 +554,9 @@ function StoreOpsSection() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontWeight: 600 }}>매장별 운영 현황</span>
             <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              운영 {(stores as any[]).filter((s: any) => s.showOnLogin).length}개
+              운영 {(stores as any[]).filter((s: any) => s.showOnLogin && !s.deletedAt).length}개
               {hiddenCount > 0 && ` / 숨김 ${hiddenCount}개`}
+              {(stores as any[]).filter((s: any) => !!s.deletedAt).length > 0 && ` / 삭제 ${(stores as any[]).filter((s: any) => !!s.deletedAt).length}개`}
             </span>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -591,8 +606,18 @@ function StoreOpsSection() {
                       setOverrideEndDate('');
                     }}
                     onDelete={() => {
-                      if (confirm(`"${s.displayName ?? s.name}" 매장을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+                      if (confirm(`"${s.displayName ?? s.name}" 매장을 삭제하시겠습니까? 7일 내 복구 가능합니다.`)) {
                         deleteMutation.mutate(s.id);
+                      }
+                    }}
+                    onRestore={() => {
+                      if (confirm(`"${s.displayName ?? s.name}" 매장을 복구하시겠습니까?`)) {
+                        restoreMutation.mutate(s.id);
+                      }
+                    }}
+                    onHardDelete={() => {
+                      if (confirm(`"${s.displayName ?? s.name}" 매장을 완전 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+                        hardDeleteMutation.mutate(s.id);
                       }
                     }}
                   />
@@ -731,7 +756,7 @@ function StoreOpsSection() {
   );
 }
 
-function StoreRow({ store, displayNameValue, onDisplayNameChange, onDisplayNameSave, onToggleShow, onChannelChange, onAddOverride, onDelete }: {
+function StoreRow({ store, displayNameValue, onDisplayNameChange, onDisplayNameSave, onToggleShow, onChannelChange, onAddOverride, onDelete, onRestore, onHardDelete }: {
   store: any;
   displayNameValue: string;
   onDisplayNameChange: (v: string) => void;
@@ -740,22 +765,33 @@ function StoreRow({ store, displayNameValue, onDisplayNameChange, onDisplayNameS
   onChannelChange: (ch: string) => void;
   onAddOverride: () => void;
   onDelete: () => void;
+  onRestore: () => void;
+  onHardDelete: () => void;
 }) {
   const [editingName, setEditingName] = useState(false);
+  const isDeleted = !!store.deletedAt;
+  const deletedAt = store.deletedAt ? new Date(store.deletedAt) : null;
+  const canRestore = deletedAt && (Date.now() - deletedAt.getTime()) < 7 * 24 * 60 * 60 * 1000;
+
   return (
-    <tr style={!store.showOnLogin ? { opacity: 0.55 } : undefined}>
-      <td style={{ fontWeight: 500 }}>{store.name}</td>
+    <tr style={isDeleted ? { opacity: 0.5, background: 'rgba(239,68,68,0.04)' } : !store.showOnLogin ? { opacity: 0.55 } : undefined}>
+      <td style={{ fontWeight: 500 }}>
+        {store.name}
+        {isDeleted && <span style={{ fontSize: 10, marginLeft: 6, padding: '1px 6px', borderRadius: 99, background: 'rgba(239,68,68,0.15)', color: '#ef4444', fontWeight: 600 }}>삭제됨</span>}
+      </td>
       <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{store.code}</td>
       <td>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-          <input type="checkbox" checked={store.showOnLogin} onChange={onToggleShow} style={{ accentColor: 'var(--accent)', width: 14, height: 14 }} />
-          <span style={{ fontSize: 12, color: store.showOnLogin ? '#059669' : 'var(--text-muted)' }}>
-            {store.showOnLogin ? '운영' : '비운영'}
-          </span>
-        </label>
+        {!isDeleted && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+            <input type="checkbox" checked={store.showOnLogin} onChange={onToggleShow} style={{ accentColor: 'var(--accent)', width: 14, height: 14 }} />
+            <span style={{ fontSize: 12, color: store.showOnLogin ? '#059669' : 'var(--text-muted)' }}>
+              {store.showOnLogin ? '운영' : '비운영'}
+            </span>
+          </label>
+        )}
       </td>
       <td>
-        {editingName ? (
+        {!isDeleted && (editingName ? (
           <div style={{ display: 'flex', gap: 4 }}>
             <input value={displayNameValue} onChange={(e) => onDisplayNameChange(e.target.value)} style={{ fontSize: 12, padding: '4px 8px', width: 110 }} autoFocus />
             <button className="btn btn-primary" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => { onDisplayNameSave(); setEditingName(false); }}>저장</button>
@@ -766,33 +802,58 @@ function StoreRow({ store, displayNameValue, onDisplayNameChange, onDisplayNameS
             <span style={{ fontSize: 13 }}>{store.displayName ?? '-'}</span>
             <button className="btn btn-ghost" style={{ fontSize: 10, padding: '2px 6px' }} onClick={() => setEditingName(true)}>변경</button>
           </div>
+        ))}
+      </td>
+      <td>
+        {!isDeleted && (
+          <select value={store.defaultChannel ?? 'ROAD'} onChange={(e) => onChannelChange(e.target.value)} style={{ fontSize: 12, padding: '4px 8px', background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 6, color: 'var(--text)' }}>
+            {CHANNEL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
         )}
       </td>
       <td>
-        <select value={store.defaultChannel ?? 'ROAD'} onChange={(e) => onChannelChange(e.target.value)} style={{ fontSize: 12, padding: '4px 8px', background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 6, color: 'var(--text)' }}>
-          {CHANNEL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+        {!isDeleted && (
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+            {store.channelOverrides?.slice(0, 2).map((o: any) => (
+              <span key={o.id} style={{ fontSize: 11, background: 'rgba(255,255,255,0.08)', borderRadius: 4, padding: '2px 6px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span>{o.year}/{String(o.month).padStart(2, '0')}</span>
+                {o.startDate && <span style={{ color: 'var(--text-muted)' }}>({new Date(o.startDate).getDate()}~{o.endDate ? new Date(o.endDate).getDate() : '?'}일)</span>}
+                <ChannelBadge channel={o.channel} />
+                {o.label && <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{o.label}</span>}
+              </span>
+            ))}
+            <button className="btn btn-ghost" style={{ fontSize: 10, padding: '2px 6px' }} onClick={onAddOverride}>+ 추가</button>
+          </div>
+        )}
       </td>
       <td>
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-          {store.channelOverrides?.slice(0, 2).map((o: any) => (
-            <span key={o.id} style={{ fontSize: 11, background: 'rgba(255,255,255,0.08)', borderRadius: 4, padding: '2px 6px', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span>{o.year}/{String(o.month).padStart(2, '0')}</span>
-              {o.startDate && <span style={{ color: 'var(--text-muted)' }}>({new Date(o.startDate).getDate()}~{o.endDate ? new Date(o.endDate).getDate() : '?'}일)</span>}
-              <ChannelBadge channel={o.channel} />
-              {o.label && <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{o.label}</span>}
-            </span>
-          ))}
-          <button className="btn btn-ghost" style={{ fontSize: 10, padding: '2px 6px' }} onClick={onAddOverride}>+ 추가</button>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {isDeleted ? (
+            <>
+              {canRestore && (
+                <button
+                  onClick={onRestore}
+                  style={{ fontSize: 11, color: '#059669', background: 'none', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 6, cursor: 'pointer', padding: '3px 8px', whiteSpace: 'nowrap' }}
+                >
+                  복구
+                </button>
+              )}
+              <button
+                onClick={onHardDelete}
+                style={{ fontSize: 11, color: '#dc2626', background: 'none', border: '1px solid rgba(220,38,38,0.4)', borderRadius: 6, cursor: 'pointer', padding: '3px 8px', whiteSpace: 'nowrap' }}
+              >
+                완전삭제
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onDelete}
+              style={{ fontSize: 11, color: '#ef4444', background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, cursor: 'pointer', padding: '3px 8px', whiteSpace: 'nowrap' }}
+            >
+              삭제
+            </button>
+          )}
         </div>
-      </td>
-      <td>
-        <button
-          onClick={onDelete}
-          style={{ fontSize: 11, color: '#ef4444', background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, cursor: 'pointer', padding: '3px 8px', whiteSpace: 'nowrap' }}
-        >
-          삭제
-        </button>
       </td>
     </tr>
   );

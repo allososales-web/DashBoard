@@ -15,12 +15,12 @@ const PERIOD_LABELS: { id: Period; label: string }[] = [
 ];
 
 const CHANNEL_FILTERS = [
-  { value: 'ROAD',       label: '로드',    color: '#6b8f71' },
-  { value: 'DEPARTMENT', label: '백화점',  color: '#8a7f6e' },
-  { value: 'MALL',       label: '몰',      color: '#7a8f8a' },
-  { value: 'STARFIELD',  label: '스타필드', color: '#6e7a8a' },
-  { value: 'POPUP',      label: '팝업',    color: '#8a7a6e' },
-  { value: 'OTHER',      label: '기타',    color: '#9a9a92' },
+  { value: 'ROAD',       label: '로드',    color: '#a8c5a0' },
+  { value: 'DEPARTMENT', label: '백화점',  color: '#b5a8d4' },
+  { value: 'MALL',       label: '몰',      color: '#a8c4d4' },
+  { value: 'STARFIELD',  label: '스타필드', color: '#d4c4a8' },
+  { value: 'POPUP',      label: '팝업',    color: '#d4a8b5' },
+  { value: 'OTHER',      label: '기타',    color: '#c4c4b8' },
 ];
 
 function getPrimaryMonth(period: Period, now: Date): number {

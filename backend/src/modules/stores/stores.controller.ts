@@ -54,6 +54,27 @@ export class StoresController {
     return this.storesService.deactivate(storeId);
   }
 
+  // 소프트 삭제
+  @Delete(':storeId/soft')
+  @Roles(Role.HQ_ADMIN)
+  softDelete(@Param('storeId') storeId: string) {
+    return this.storesService.softDelete(storeId);
+  }
+
+  // 복구 (7일 이내)
+  @Post(':storeId/restore')
+  @Roles(Role.HQ_ADMIN)
+  restore(@Param('storeId') storeId: string) {
+    return this.storesService.restore(storeId);
+  }
+
+  // 완전 삭제
+  @Delete(':storeId/hard')
+  @Roles(Role.HQ_ADMIN)
+  hardDelete(@Param('storeId') storeId: string) {
+    return this.storesService.hardDelete(storeId);
+  }
+
   // 전체 매장 운영 현황 (관리자용)
   @Get('admin/all')
   @Roles(Role.HQ_ADMIN)
