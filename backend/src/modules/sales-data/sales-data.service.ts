@@ -9,7 +9,7 @@ interface ParsedRow {
   orderNumber: string;
   itemCode: string;
   storeAlias: string;
-  orderDate: Date;
+  orderDate: Date | null;
   confirmedDate: Date | null;
   seriesCode: string | null;
   orderAmount: number;
@@ -73,13 +73,6 @@ export class SalesDataService {
     }
 
     for (const record of records) {
-      const orderDate = this.parseDate(record['수주일자'] || record['주문일자'] || record['발주일자'] || '');
-
-      if (!orderDate) {
-        skippedCount++;
-        continue;
-      }
-
       const orderNumber = (record['수주번호'] || record['주문번호'] || record['발주번호'] || '').trim();
       const itemCode = (record['단품코드'] || record['품목코드'] || record['코드'] || '').trim();
 
@@ -87,6 +80,8 @@ export class SalesDataService {
         skippedCount++;
         continue;
       }
+
+      const orderDate = this.parseDate(record['수주일자'] || record['주문일자'] || record['발주일자'] || '');
 
       const amountRaw = record['수주단가*수량'] || record['수주금액'] || record['금액'] || '';
       const amount = this.parseNumber(amountRaw);
