@@ -54,19 +54,17 @@ function ChannelDonutChart({
   channelMap: Record<string, string>;
   metricsFiltered: any[];
 }) {
-  const SIZE = 220;
-  const R = 80;
-  const STROKE = 32;
+  const SIZE = 240;
+  const R = 88;
+  const STROKE = 36;
   const cx = SIZE / 2;
   const cy = SIZE / 2;
   const circumference = 2 * Math.PI * R;
 
-  // 체크된 채널 기준 합계
   const activeTotal = CHANNEL_FILTERS
     .filter((ch) => activeChannels.has(ch.value))
     .reduce((sum, ch) => sum + (channelAmounts[ch.value] ?? 0), 0);
 
-  // arc 계산 (체크된 채널만)
   let offset = 0;
   const arcs = CHANNEL_FILTERS
     .filter((ch) => activeChannels.has(ch.value))
@@ -81,42 +79,30 @@ function ChannelDonutChart({
     })
     .filter((a) => a.pct > 0);
 
-  // 가장 큰 채널 (중앙 표시)
   const topArc = arcs.length > 0 ? arcs.reduce((a, b) => (a.pct > b.pct ? a : b)) : null;
 
   return (
-    <div className="glass" style={{ padding: 20 }}>
-      {/* 헤더: 제목 + 채널 체크박스 가로 나열 */}
+    <div className="glass" style={{ padding: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Channel Mix</div>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>채널별 매출 비중</div>
         </div>
-        {/* 채널 체크박스 태그 — 가로 나열 */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           {CHANNEL_FILTERS.map((ch) => {
             const active = activeChannels.has(ch.value);
             return (
-              <label
-                key={ch.value}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer',
-                  padding: '5px 12px', borderRadius: 20,
-                  fontSize: 12, fontWeight: active ? 700 : 400,
-                  background: active ? ch.color : 'rgba(0,0,0,0.04)',
-                  color: active ? '#fff' : 'var(--text-muted)',
-                  border: `1.5px solid ${active ? ch.color : 'var(--glass-border)'}`,
-                  userSelect: 'none',
-                  transition: 'all 0.18s cubic-bezier(0.4,0,0.2,1)',
-                  boxShadow: active ? `0 2px 8px ${ch.color}44` : 'none',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={active}
-                  onChange={() => toggleChannel(ch.value)}
-                  style={{ display: 'none' }}
-                />
+              <label key={ch.value} style={{
+                display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+                padding: '5px 12px', borderRadius: 20,
+                fontSize: 12, fontWeight: active ? 700 : 400,
+                background: active ? ch.color : 'rgba(0,0,0,0.04)',
+                color: active ? '#fff' : 'var(--text-muted)',
+                border: `1.5px solid ${active ? ch.color : 'var(--glass-border)'}`,
+                userSelect: 'none', transition: 'all 0.18s cubic-bezier(0.4,0,0.2,1)',
+                boxShadow: active ? `0 2px 12px ${ch.color}55, 0 0 0 1px ${ch.color}33` : 'none',
+              }}>
+                <input type="checkbox" checked={active} onChange={() => toggleChannel(ch.value)} style={{ display: 'none' }} />
                 {active && <span style={{ fontSize: 10 }}>✓</span>}
                 {ch.label}
               </label>
@@ -125,43 +111,47 @@ function ChannelDonutChart({
         </div>
       </div>
 
-      {/* 도넛 차트 중앙 배치 */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 40, flexWrap: 'wrap' }}>
-        {/* SVG 도넛 */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 48, flexWrap: 'wrap' }}>
+        {/* SVG 도넛 — 글로우 효과 */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
-          <svg width={SIZE} height={SIZE} style={{ transform: 'rotate(-90deg)', display: 'block' }}>
+          <svg width={SIZE} height={SIZE} style={{ transform: 'rotate(-90deg)', display: 'block', filter: 'drop-shadow(0 0 12px rgba(139,124,248,0.15))' }}>
+            <defs>
+              {CHANNEL_FILTERS.map((ch) => (
+                <filter key={ch.value} id={`glow-${ch.value}`}>
+                  <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                  <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+              ))}
+            </defs>
             {/* 배경 링 */}
-            <circle cx={cx} cy={cy} r={R} fill="none" stroke="rgba(0,0,0,0.07)" strokeWidth={STROKE} />
-            {arcs.length === 0 ? null : arcs.map((a, i) => (
-              <circle
-                key={a.ch.value}
-                cx={cx} cy={cy} r={R}
-                fill="none"
-                stroke={a.ch.color}
-                strokeWidth={STROKE}
-                strokeDasharray={`${a.dash} ${a.gap}`}
-                strokeDashoffset={-a.offset}
+            <circle cx={cx} cy={cy} r={R} fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth={STROKE} />
+            {/* 글로우 레이어 (블러) */}
+            {arcs.map((a) => (
+              <circle key={`glow-${a.ch.value}`} cx={cx} cy={cy} r={R} fill="none"
+                stroke={a.ch.color} strokeWidth={STROKE + 8} opacity={0.25}
+                strokeDasharray={`${a.dash} ${a.gap}`} strokeDashoffset={-a.offset}
                 strokeLinecap="butt"
-                style={{
-                  transition: `stroke-dasharray 0.55s cubic-bezier(0.4,0,0.2,1) ${i * 0.05}s, stroke-dashoffset 0.55s cubic-bezier(0.4,0,0.2,1) ${i * 0.05}s`,
-                }}
+                style={{ filter: `blur(6px)` }}
+              />
+            ))}
+            {/* 실제 아크 */}
+            {arcs.map((a, i) => (
+              <circle key={a.ch.value} cx={cx} cy={cy} r={R} fill="none"
+                stroke={a.ch.color} strokeWidth={STROKE}
+                strokeDasharray={`${a.dash} ${a.gap}`} strokeDashoffset={-a.offset}
+                strokeLinecap="butt"
+                style={{ transition: `stroke-dasharray 0.55s cubic-bezier(0.4,0,0.2,1) ${i * 0.05}s, stroke-dashoffset 0.55s cubic-bezier(0.4,0,0.2,1) ${i * 0.05}s` }}
               />
             ))}
           </svg>
           {/* 중앙 텍스트 */}
-          <div style={{
-            position: 'absolute', inset: 0,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            pointerEvents: 'none',
-          }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
             {topArc ? (
               <>
-                <div style={{ fontSize: 28, fontWeight: 900, color: topArc.ch.color, lineHeight: 1 }}>
+                <div style={{ fontSize: 32, fontWeight: 900, color: topArc.ch.color, lineHeight: 1, textShadow: `0 0 20px ${topArc.ch.color}88` }}>
                   {(topArc.pct * 100).toFixed(0)}%
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontWeight: 600 }}>
-                  {topArc.ch.label}
-                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, fontWeight: 600 }}>{topArc.ch.label}</div>
               </>
             ) : (
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>데이터 없음</div>
@@ -169,33 +159,39 @@ function ChannelDonutChart({
           </div>
         </div>
 
-        {/* 범례: 체크된 채널만 표시 */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 160 }}>
+        {/* 범례 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 180 }}>
           {CHANNEL_FILTERS.filter((ch) => activeChannels.has(ch.value)).map((ch) => {
             const amt = channelAmounts[ch.value] ?? 0;
             const pct = activeTotal > 0 ? (amt / activeTotal) * 100 : 0;
             const storeCount = metricsFiltered.filter((s: any) => (channelMap[s.storeId] ?? 'ROAD') === ch.value).length;
+            const barW = pct;
             return (
-              <div key={ch.value} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 12, height: 12, borderRadius: '50%', background: ch.color, flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{ch.label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    {storeCount > 0 ? `${storeCount}개 매장` : '—'}
+              <div key={ch.value}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: ch.color, flexShrink: 0, boxShadow: `0 0 8px ${ch.color}88` }} />
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{ch.label}</span>
+                    {storeCount > 0 && <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>{storeCount}개 매장</span>}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: ch.color, textShadow: `0 0 12px ${ch.color}66` }}>{pct.toFixed(1)}%</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{amt > 0 ? `${(amt / 10000).toFixed(0)}만` : '—'}</div>
                   </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: ch.color }}>{pct.toFixed(1)}%</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    {amt > 0 ? `${(amt / 10000).toFixed(0)}만` : '—'}
-                  </div>
+                {/* 글로우 바 */}
+                <div style={{ height: 4, background: 'rgba(0,0,0,0.06)', borderRadius: 2, overflow: 'visible', position: 'relative' }}>
+                  <div style={{
+                    height: '100%', width: `${barW}%`, borderRadius: 2,
+                    background: `linear-gradient(90deg, ${ch.color}99, ${ch.color})`,
+                    boxShadow: `0 0 8px ${ch.color}66`,
+                    transition: 'width 0.6s cubic-bezier(0.22,1,0.36,1)',
+                  }} />
                 </div>
               </div>
             );
           })}
-          {arcs.length === 0 && (
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>채널을 선택하세요</div>
-          )}
+          {arcs.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>채널을 선택하세요</div>}
         </div>
       </div>
     </div>
@@ -556,31 +552,86 @@ export default function HqPerformanceTab() {
         </div>
       </div>
 
-      {/* KPI 카드 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+      {/* KPI 카드 — 글로우 링 게이지 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
         {[
-          { label: 'REVENUE', title: `${dataMode === 'SALES' ? '매출' : '수주'} 달성률`, value: `${Math.round(totalAmount / 10000).toLocaleString()}만원`, rate: amountRate, goal: goalAmount > 0 ? `목표 ${Math.round(goalAmount / 10000).toLocaleString()}만원` : '목표 미설정' },
-          { label: 'ORDERS', title: `${dataMode === 'SALES' ? '매출' : '수주'} 판매 달성률`, value: `${totalContracts}건`, rate: contractRate, goal: goalContracts > 0 ? `목표 ${goalContracts}건` : '목표 미설정' },
-        ].map((c) => (
-          <div key={c.label} className="glass" style={{ padding: 20, borderLeft: `3px solid ${c.rate >= 100 ? 'var(--success)' : c.rate > 0 ? 'var(--accent)' : 'var(--glass-border)'}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-              <div>
-                <div style={{ fontSize: 10, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{c.label}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{c.title}</div>
+          {
+            label: 'REVENUE', title: `${dataMode === 'SALES' ? '매출' : '수주'} 달성률`,
+            value: `${Math.round(totalAmount / 10000).toLocaleString()}만원`,
+            rate: amountRate, goal: goalAmount > 0 ? `목표 ${Math.round(goalAmount / 10000).toLocaleString()}만원` : '목표 미설정',
+            color: amountRate >= 100 ? 'var(--success)' : amountRate > 0 ? 'var(--accent)' : '#b0b8a8',
+          },
+          {
+            label: 'ORDERS', title: `${dataMode === 'SALES' ? '매출' : '수주'} 판매 달성률`,
+            value: `${totalContracts}건`,
+            rate: contractRate, goal: goalContracts > 0 ? `목표 ${goalContracts}건` : '목표 미설정',
+            color: contractRate >= 100 ? 'var(--success)' : contractRate > 0 ? '#b5a8d4' : '#b0b8a8',
+          },
+        ].map((c) => {
+          const SIZE = 120; const STROKE = 13; const R = (SIZE - STROKE) / 2;
+          const circ = 2 * Math.PI * R; const cx = SIZE / 2; const cy = SIZE / 2;
+          const capped = Math.min(Math.max(c.rate, 0), 100);
+          const dashOffset = circ - (capped / 100) * circ;
+          // 끝점 도트 좌표
+          const endAngle = -Math.PI / 2 + (capped / 100) * 2 * Math.PI;
+          const dotX = cx + R * Math.cos(endAngle);
+          const dotY = cy + R * Math.sin(endAngle);
+          return (
+            <div key={c.label} className="glass" style={{ padding: 24, display: 'flex', gap: 20, alignItems: 'center' }}>
+              {/* 링 게이지 */}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <svg width={SIZE} height={SIZE} style={{ transform: 'rotate(-90deg)', display: 'block', filter: `drop-shadow(0 0 10px ${c.color}44)` }}>
+                  <defs>
+                    <filter id={`kpi-glow-${c.label}`}>
+                      <feGaussianBlur stdDeviation="3.5" result="coloredBlur" />
+                      <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                    </filter>
+                  </defs>
+                  {/* 배경 링 */}
+                  <circle cx={cx} cy={cy} r={R} fill="none" stroke="rgba(0,0,0,0.07)" strokeWidth={STROKE} />
+                  {/* 글로우 레이어 */}
+                  {capped > 0 && (
+                    <circle cx={cx} cy={cy} r={R} fill="none" stroke={c.color} strokeWidth={STROKE + 6}
+                      strokeDasharray={circ} strokeDashoffset={dashOffset} strokeLinecap="round"
+                      opacity={0.22} style={{ filter: 'blur(5px)' }} />
+                  )}
+                  {/* 진척 링 */}
+                  <circle cx={cx} cy={cy} r={R} fill="none" stroke={c.color} strokeWidth={STROKE}
+                    strokeDasharray={circ} strokeDashoffset={dashOffset} strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 1.0s cubic-bezier(0.22,1,0.36,1)' }} />
+                  {/* 끝점 도트 */}
+                  {capped > 2 && (
+                    <circle cx={dotX} cy={dotY} r={STROKE / 2 - 1} fill={c.color}
+                      style={{ filter: `drop-shadow(0 0 4px ${c.color})` }} />
+                  )}
+                </svg>
+                {/* 중앙 텍스트 */}
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: c.color, lineHeight: 1, textShadow: `0 0 16px ${c.color}66` }}>
+                    {c.rate > 0 ? `${c.rate.toFixed(0)}%` : '—'}
+                  </div>
+                  {c.rate >= 100 && <div style={{ fontSize: 14, marginTop: 2 }}>🔥</div>}
+                </div>
               </div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: c.rate >= 100 ? 'var(--success)' : c.rate > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>
-                {c.rate > 0 ? `${c.rate.toFixed(1)}%` : '-'}
+              {/* 텍스트 정보 */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>{c.label}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>{c.title}</div>
+                <div style={{ fontSize: 26, fontWeight: 900, color: 'var(--text)', lineHeight: 1, marginBottom: 10 }}>{c.value}</div>
+                {/* 글로우 바 */}
+                <div style={{ height: 4, background: 'rgba(0,0,0,0.07)', borderRadius: 2, overflow: 'visible', position: 'relative', marginBottom: 6 }}>
+                  <div style={{
+                    height: '100%', width: `${Math.min(capped, 100)}%`, borderRadius: 2,
+                    background: `linear-gradient(90deg, ${c.color}88, ${c.color})`,
+                    boxShadow: `0 0 8px ${c.color}66`,
+                    transition: 'width 0.8s cubic-bezier(0.22,1,0.36,1)',
+                  }} />
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{c.goal}</div>
               </div>
             </div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{c.value}</div>
-            <div style={{ height: 3, background: 'rgba(0,0,0,0.08)', borderRadius: 2, overflow: 'hidden', marginBottom: 6 }}>
-              <div style={{ height: '100%', width: `${Math.min(c.rate, 100)}%`, background: c.rate >= 100 ? 'var(--success)' : 'var(--accent)', borderRadius: 2, transition: 'width 0.5s' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)' }}>
-              <span>{c.goal}</span><span>▽ 이달</span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── 목표 진척율 그래프 (기간 설정 무관) ── */}

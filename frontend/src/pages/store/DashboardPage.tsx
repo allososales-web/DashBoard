@@ -64,16 +64,31 @@ function ArcGauge({ pct, size = 80, stroke = 8, color = "var(--accent)", label, 
   const circ = 2 * Math.PI * r;
   const dash = (pct / 100) * circ;
   const cx = size / 2, cy = size / 2;
+  // 끝점 도트 좌표
+  const endAngle = -Math.PI / 2 + (pct / 100) * 2 * Math.PI;
+  const dotX = cx + r * Math.cos(endAngle);
+  const dotY = cy + r * Math.sin(endAngle);
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)", filter: `drop-shadow(0 0 6px ${color}44)` }}>
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth={stroke} />
+        {/* 글로우 레이어 */}
+        {pct > 0 && (
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke + 4}
+            strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+            opacity={0.20} style={{ filter: "blur(4px)" }} />
+        )}
         <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke}
           strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
           style={{ transition: "stroke-dasharray 1s ease" }} />
+        {/* 끝점 도트 */}
+        {pct > 2 && (
+          <circle cx={dotX} cy={dotY} r={stroke / 2 - 0.5} fill={color}
+            style={{ filter: `drop-shadow(0 0 3px ${color})` }} />
+        )}
       </svg>
       <div style={{ marginTop: -size * 0.55, textAlign: "center", pointerEvents: "none" }}>
-        <div style={{ fontSize: size * 0.22, fontWeight: 900, color, lineHeight: 1 }}>{label}</div>
+        <div style={{ fontSize: size * 0.22, fontWeight: 900, color, lineHeight: 1, textShadow: `0 0 12px ${color}55` }}>{label}</div>
         {sublabel && <div style={{ fontSize: size * 0.14, color: "var(--text-muted)", marginTop: 2 }}>{sublabel}</div>}
       </div>
     </div>
@@ -87,17 +102,24 @@ function Speedometer({ pct, size = 90, color = "var(--accent)" }: { pct: number;
   const cx = size / 2, cy = size / 2;
   const halfCirc = Math.PI * r;
   const dash = (pct / 100) * halfCirc;
-  // needle angle: -180deg(0%) to 0deg(100%)
   const angle = -180 + (pct / 100) * 180;
   const needleLen = r * 0.7;
   const rad = (angle * Math.PI) / 180;
   const nx = cx + needleLen * Math.cos(rad);
   const ny = cy + needleLen * Math.sin(rad);
   return (
-    <svg width={size} height={size / 2 + stroke} viewBox={`0 0 ${size} ${size / 2 + stroke}`}>
+    <svg width={size} height={size / 2 + stroke} viewBox={`0 0 ${size} ${size / 2 + stroke}`}
+      style={{ filter: `drop-shadow(0 0 6px ${color}44)` }}>
       {/* track */}
       <path d={`M ${stroke/2} ${cy} A ${r} ${r} 0 0 1 ${size - stroke/2} ${cy}`}
         fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth={stroke} strokeLinecap="round" />
+      {/* 글로우 레이어 */}
+      {pct > 0 && (
+        <path d={`M ${stroke/2} ${cy} A ${r} ${r} 0 0 1 ${size - stroke/2} ${cy}`}
+          fill="none" stroke={color} strokeWidth={stroke + 4} strokeLinecap="round"
+          strokeDasharray={`${dash} ${halfCirc}`}
+          opacity={0.20} style={{ filter: "blur(4px)" }} />
+      )}
       {/* fill */}
       <path d={`M ${stroke/2} ${cy} A ${r} ${r} 0 0 1 ${size - stroke/2} ${cy}`}
         fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
@@ -105,8 +127,8 @@ function Speedometer({ pct, size = 90, color = "var(--accent)" }: { pct: number;
         style={{ transition: "stroke-dasharray 1s ease" }} />
       {/* needle */}
       <line x1={cx} y1={cy} x2={nx} y2={ny} stroke={color} strokeWidth={2} strokeLinecap="round"
-        style={{ transition: "all 1s ease" }} />
-      <circle cx={cx} cy={cy} r={4} fill={color} />
+        style={{ transition: "all 1s ease", filter: `drop-shadow(0 0 3px ${color})` }} />
+      <circle cx={cx} cy={cy} r={4} fill={color} style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
     </svg>
   );
 }
@@ -119,8 +141,14 @@ function MiniDonut({ pct, size = 56, color = "var(--accent)" }: { pct: number; s
   const dash = (pct / 100) * circ;
   const cx = size / 2, cy = size / 2;
   return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)", filter: `drop-shadow(0 0 6px ${color}44)` }}>
       <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth={stroke} />
+      {/* 글로우 레이어 */}
+      {pct > 0 && (
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke + 4}
+          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+          opacity={0.20} style={{ filter: "blur(4px)" }} />
+      )}
       <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke}
         strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
         style={{ transition: "stroke-dasharray 1s ease" }} />

@@ -205,6 +205,27 @@ export default function StoreAnalysisPage() {
         ))}
       </div>
 
+      {/* 인사이트 — KPI 카드 바로 아래 */}
+      {collectionInsights.length > 0 && (
+        <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>💡 분석 인사이트</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {collectionInsights.map((ins, i) => (
+              <div key={i} style={{
+                padding: '10px 14px',
+                background: ins.type === 'good' ? 'rgba(16,185,129,0.08)' : ins.type === 'warn' ? 'rgba(239,68,68,0.08)' : 'rgba(200,149,108,0.08)',
+                borderRadius: 8,
+                borderLeft: `3px solid ${ins.type === 'good' ? '#10b981' : ins.type === 'warn' ? '#ef4444' : 'var(--accent)'}`,
+              }}>
+                <div style={{ fontSize: 13, color: 'var(--text)' }}>
+                  {ins.type === 'good' ? '✅' : ins.type === 'warn' ? '⚠️' : '💡'} {ins.text}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>불러오는 중...</div>
       ) : (
@@ -327,27 +348,6 @@ export default function StoreAnalysisPage() {
               </div>
             </div>
           </div>
-
-          {/* 인사이트 */}
-          {collectionInsights.length > 0 && (
-            <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>💡 분석 인사이트</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {collectionInsights.map((ins, i) => (
-                  <div key={i} style={{
-                    padding: '10px 14px',
-                    background: ins.type === 'good' ? 'rgba(16,185,129,0.08)' : ins.type === 'warn' ? 'rgba(239,68,68,0.08)' : 'rgba(200,149,108,0.08)',
-                    borderRadius: 8,
-                    borderLeft: `3px solid ${ins.type === 'good' ? '#10b981' : ins.type === 'warn' ? '#ef4444' : 'var(--accent)'}`,
-                  }}>
-                    <div style={{ fontSize: 13, color: 'var(--text)' }}>
-                      {ins.type === 'good' ? '✅' : ins.type === 'warn' ? '⚠️' : '💡'} {ins.text}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </>
       )}
     </div>
