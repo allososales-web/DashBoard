@@ -237,8 +237,8 @@ function AnimatedBar({ rate, color, delay }: { rate: number; color: string; dela
 }
 
 function GoalProgressChart({
-  chartYear, includedIds, channelMap,
-}: { chartYear: number; includedIds: Set<string>; channelMap: Record<string, string> }) {
+  chartYear, includedIds, channelMap, dataMode,
+}: { chartYear: number; includedIds: Set<string>; channelMap: Record<string, string>; dataMode: DataMode }) {
   const now = new Date();
   const [view, setView] = useState<ChartView>('annual');
   const [animated, setAnimated] = useState(false);
@@ -280,14 +280,17 @@ function GoalProgressChart({
   })();
 
   const metricsQueries = useQuery({
-    queryKey: ['hq-chart-metrics', chartYear, view],
+    queryKey: ['hq-chart-metrics', chartYear, view, dataMode],
     queryFn: async () => {
       const results: Record<number, number> = {};
       await Promise.all(monthsNeeded.map(async (m) => {
         const yr = (view === 'recent3' && m > (now.getMonth() + 1)) ? chartYear - 1 : chartYear;
-        const data = await api.get(`/dashboard/all?year=${yr}&month=${m}`).then((r) => r.data).catch(() => []);
+        const data = await api.get(`/dashboard/all?year=${yr}&month=${m}&dataMode=${dataMode}`).then((r) => r.data).catch(() => []);
         const filtered = (data as any[]).filter((s: any) => includedIds.has(s.storeId));
-        results[m] = filtered.reduce((sum: number, s: any) => sum + Number(s.contractAmount ?? 0), 0);
+        results[m] = filtered.reduce((sum: number, s: any) => {
+          if (dataMode === 'SALES') return sum + Number(s.salesAmount ?? 0);
+          return sum + Number(s.orderAmount ?? s.contractAmount ?? 0);
+        }, 0);
       }));
       return results;
     },
@@ -356,9 +359,8 @@ function GoalProgressChart({
       <div className="goal-chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Goal Progress</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>목표 매출 진척율</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>기간 설정과 무관 — {chartYear}년 기준</div>
-        </div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>목표 {dataMode === 'SALES' ? '매출' : '수주'} 진척율</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>기간 설정과 무관 — {chartYear}년 기준 · {dataMode === 'SALES' ? '확정납기 기준' : '수주일자 기준'}</div>        </div>
         <div className="goal-chart-btns" style={{ display: 'flex', gap: 4 }}>
           {([['annual','연도별'],['quarterly','분기별'],['recent3','직전 3개월']] as [ChartView, string][]).map(([v, l]) => (
             <button key={v} onClick={() => setView(v)} style={{
@@ -617,8 +619,8 @@ export default function HqPerformanceTab() {
       {/* KPI 카드 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
         {[
-          { label: 'REVENUE', title: '매출 달성률', value: `${Math.round(totalAmount / 10000).toLocaleString()}만원`, rate: amountRate, goal: goalAmount > 0 ? `목표 ${Math.round(goalAmount / 10000).toLocaleString()}만원` : '목표 미설정' },
-          { label: 'ORDERS', title: '판매 달성률', value: `${totalContracts}건`, rate: contractRate, goal: goalContracts > 0 ? `목표 ${goalContracts}건` : '목표 미설정' },
+          { label: 'REVENUE', title: `${dataMode === 'SALES' ? '매출' : '수주'} 달성률`, value: `${Math.round(totalAmount / 10000).toLocaleString()}만원`, rate: amountRate, goal: goalAmount > 0 ? `목표 ${Math.round(goalAmount / 10000).toLocaleString()}만원` : '목표 미설정' },
+          { label: 'ORDERS', title: `${dataMode === 'SALES' ? '매출' : '수주'} 판매 달성률`, value: `${totalContracts}건`, rate: contractRate, goal: goalContracts > 0 ? `목표 ${goalContracts}건` : '목표 미설정' },
         ].map((c) => (
           <div key={c.label} className="glass" style={{ padding: 20, borderLeft: `3px solid ${c.rate >= 100 ? 'var(--success)' : c.rate > 0 ? 'var(--accent)' : 'var(--glass-border)'}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
@@ -642,7 +644,7 @@ export default function HqPerformanceTab() {
       </div>
 
       {/* ── 목표 진척율 그래프 (기간 설정 무관) ── */}
-      <GoalProgressChart chartYear={now.getFullYear()} includedIds={includedIds} channelMap={channelMap} />
+      <GoalProgressChart chartYear={now.getFullYear()} includedIds={includedIds} channelMap={channelMap} dataMode={dataMode} />
 
       {/* 채널별 매출 비중 — 도넛 차트 */}
       <ChannelDonutChart

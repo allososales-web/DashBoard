@@ -165,19 +165,19 @@ export default function HqStoreStatusTab() {
               {
                 title: '품목별 매출 TOP',
                 data: sortedBySeriesAmount,
-                format: (d: typeof seriesData[0]) => `${d.amount.toLocaleString()}원`,
+                format: (d: typeof seriesData[0]) => `${Math.round(d.amount / 10000).toLocaleString()}만원`,
                 sub: (d: typeof seriesData[0]) => `${d.count}건`,
               },
               {
                 title: '품목별 판매건수 TOP',
                 data: sortedBySeriesCount,
                 format: (d: typeof seriesData[0]) => `${d.count}건`,
-                sub: (d: typeof seriesData[0]) => `${d.amount.toLocaleString()}원`,
+                sub: (d: typeof seriesData[0]) => `${Math.round(d.amount / 10000).toLocaleString()}만원`,
               },
               {
                 title: '품목별 평균단가 TOP',
                 data: sortedBySeriesAvg,
-                format: (d: typeof seriesData[0]) => d.count > 0 ? `${d.avgPrice.toLocaleString()}원` : '-',
+                format: (d: typeof seriesData[0]) => d.count > 0 ? `${Math.round(d.avgPrice / 10000).toLocaleString()}만원` : '-',
                 sub: (d: typeof seriesData[0]) => `${d.count}건`,
               },
             ].map(ranking => (
@@ -236,7 +236,7 @@ export default function HqStoreStatusTab() {
                   return (
                     <tr key={s.storeId}>
                       <td style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{s.storeName ?? '-'}</td>
-                      <td style={{ textAlign: 'right' }}>{getAmt(s).toLocaleString()}원</td>
+                      <td style={{ textAlign: 'right' }}>{Math.round(getAmt(s) / 10000).toLocaleString()}만원</td>
                       <td style={{ textAlign: 'right' }}>{getCnt(s)}건</td>
                       <td style={{ textAlign: 'right' }}>{s.quoteCount ?? 0}건</td>
                       <td style={{ textAlign: 'right', color: Number(conv) >= 50 ? 'var(--success)' : 'var(--warning)' }}>{conv}%</td>

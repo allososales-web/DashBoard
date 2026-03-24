@@ -58,7 +58,7 @@ export class HqDashboardController {
 
   // 시리즈별 TOP (품목별 매출/건수/평균단가)
   @Get('series-top')
-  @Roles(Role.HQ_ADMIN)
+  @Roles(Role.READONLY)
   getSeriesTop(
     @Query('year') year: string,
     @Query('month') month: string,
