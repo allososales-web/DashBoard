@@ -63,4 +63,9 @@ export class SalesDataController {
   getUnmappedAliases() {
     return this.salesDataService.getUnmappedAliases();
   }
+
+  @Get('debug-sample')
+  debugSample() {
+    return this.salesDataService.getDebugSample();
+  }
 }

@@ -345,4 +345,18 @@ export class SalesDataService {
     const mappedSet = new Set(mappings.map((m) => m.aliasName));
     return allAliases.map((r) => r.storeAlias).filter((a) => a && !mappedSet.has(a)).sort();
   }
+
+  async getDebugSample() {
+    const [rows, mappings] = await Promise.all([
+      this.prisma.salesRawData.findMany({
+        take: 5,
+        orderBy: { id: 'desc' },
+        select: { orderNumber: true, storeAlias: true, orderDate: true, confirmedDate: true, orderAmount: true },
+      }),
+      this.prisma.storeAliasMapping.findMany({
+        select: { aliasName: true, storeId: true },
+      }),
+    ]);
+    return { recentRows: rows, mappings };
+  }
 }
