@@ -442,7 +442,15 @@ export default function StoreDashboardDeliveryWorkTab() {
             grouped[day].push({ key: item.id, name: item.customerName, status: item.status, address: item.address ?? undefined, notes: item.notes ?? undefined, isSheet: false });
           });
 
-          const sortedDays = Object.keys(grouped).map(Number).sort((a, b) => a - b);
+          const sortedDays = Object.keys(grouped).map(Number).sort((a, b) => {
+            const diffA = Math.round((new Date(calYear, calMonth - 1, a).setHours(0,0,0,0) - today.getTime()) / 86400000);
+            const diffB = Math.round((new Date(calYear, calMonth - 1, b).setHours(0,0,0,0) - today.getTime()) / 86400000);
+            // 미래(diff >= 0): 가까운 순 (D-day → D-1 → D-2 ...)
+            // 과거(diff < 0): 미래 뒤에, 최근 과거 먼저
+            if (diffA >= 0 && diffB >= 0) return diffA - diffB;
+            if (diffA < 0 && diffB < 0) return diffB - diffA;
+            return diffA >= 0 ? -1 : 1;
+          });
           const totalCount = sortedDays.reduce((s, d) => s + grouped[d].length, 0);
 
           function getDdayLabel(day: number) {
