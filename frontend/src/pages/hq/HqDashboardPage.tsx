@@ -20,9 +20,24 @@ export default function HqDashboardPage() {
     <div>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>본사 대시보드</h1>
-        <div className="tabs" style={{ display: 'inline-flex', overflowX: 'auto', WebkitOverflowScrolling: 'touch', flexWrap: 'nowrap', maxWidth: '100%' }}>
+        <div style={{
+          display: 'inline-flex', overflowX: 'auto', WebkitOverflowScrolling: 'touch', flexWrap: 'nowrap', maxWidth: '100%',
+          gap: 2, padding: 4, background: '#cdd0c8', borderRadius: 12,
+          boxShadow: 'inset 3px 3px 8px rgba(0,0,0,0.18), inset -2px -2px 6px rgba(255,255,255,0.75)',
+        }}>
           {TABS.map((t) => (
-            <button key={t.id} className={`tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              style={{
+                padding: '7px 18px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 13, fontWeight: tab === t.id ? 700 : 500,
+                whiteSpace: 'nowrap', transition: 'all 0.15s',
+                background: tab === t.id ? '#f4f6f1' : 'transparent',
+                color: tab === t.id ? '#8b7cf8' : '#5a6358',
+                boxShadow: tab === t.id ? '3px 3px 8px rgba(0,0,0,0.14), -2px -2px 6px rgba(255,255,255,0.85)' : 'none',
+              }}
+            >
               {t.label}
             </button>
           ))}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '../../../services/api';
 import { useMetricsStores } from '../../../hooks/useMetricsStores';
@@ -202,75 +202,101 @@ function ChannelDonutChart({
   );
 }
 
-// ── 진척율 그래프 컴포넌트 ──────────────────────────────────────────────────
-interface BarItem { label: string; rate: number; actual: number; goal: number; color: string; }
 
-function AnimatedBar({ rate, color, delay }: { rate: number; color: string; delay: number }) {
-  const [width, setWidth] = useState(0);
-  const capped = Math.min(rate, 100);
-  const over = rate > 100;
+// ── 링 게이지 단일 아이템 ────────────────────────────────────────────────────
+interface GaugeItem { label: string; rate: number; actual: number; goal: number; color: string; }
+
+function RingGauge({ item, size = 120, stroke = 14, delay = 0 }: { item: GaugeItem; size?: number; stroke?: number; delay?: number }) {
+  const [progress, setProgress] = useState(0);
+  const R = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * R;
+  const cx = size / 2;
+  const cy = size / 2;
+  const capped = Math.min(Math.max(item.rate, 0), 100);
+  const over = item.rate > 100;
+  const noGoal = item.rate === -1;
 
   useEffect(() => {
-    const t = setTimeout(() => setWidth(capped), 80 + delay);
+    const t = setTimeout(() => setProgress(noGoal ? 60 : capped), 80 + delay);
     return () => clearTimeout(t);
-  }, [capped, delay]);
+  }, [capped, noGoal, delay]);
+
+  const dashOffset = circumference - (progress / 100) * circumference;
+  const ringColor = over ? 'var(--success)' : noGoal ? '#b0b8a8' : item.rate > 0 ? item.color : 'rgba(0,0,0,0.12)';
 
   return (
-    <div style={{ position: 'relative', height: 10, background: 'rgba(0,0,0,0.06)', borderRadius: 5, overflow: 'hidden' }}>
-      <div style={{
-        position: 'absolute', left: 0, top: 0, height: '100%',
-        width: `${width}%`,
-        background: over ? 'var(--success)' : rate > 0 ? color : 'rgba(0,0,0,0.1)',
-        borderRadius: 5,
-        transition: `width 0.8s cubic-bezier(0.22,1,0.36,1) ${delay * 0.001}s`,
-        boxShadow: over ? `0 0 8px ${color}60` : 'none',
-      }} />
-      {over && (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+      <div style={{ position: 'relative', width: size, height: size }}>
+        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', display: 'block' }}>
+          {/* 배경 링 */}
+          <circle cx={cx} cy={cy} r={R} fill="none" stroke="rgba(0,0,0,0.07)" strokeWidth={stroke} />
+          {/* 진척 링 */}
+          <circle
+            cx={cx} cy={cy} r={R}
+            fill="none"
+            stroke={ringColor}
+            strokeWidth={stroke}
+            strokeDasharray={circumference}
+            strokeDashoffset={dashOffset}
+            strokeLinecap="round"
+            style={{ transition: `stroke-dashoffset 1.0s cubic-bezier(0.22,1,0.36,1) ${delay * 0.001}s` }}
+          />
+        </svg>
+        {/* 중앙 텍스트 */}
         <div style={{
-          position: 'absolute', right: 0, top: 0, height: '100%', width: 3,
-          background: 'var(--success)', borderRadius: 2,
-          boxShadow: '0 0 6px rgba(90,122,90,0.6)',
-        }} />
-      )}
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          pointerEvents: 'none',
+        }}>
+          {noGoal ? (
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>실적</div>
+          ) : item.rate === 0 ? (
+            <div style={{ fontSize: 11, color: 'var(--text-light)' }}>—</div>
+          ) : (
+            <>
+              <div style={{ fontSize: size >= 120 ? 22 : 16, fontWeight: 900, color: over ? 'var(--success)' : item.color, lineHeight: 1 }}>
+                {item.rate.toFixed(0)}%
+              </div>
+              {over && <div style={{ fontSize: 14 }}>🔥</div>}
+            </>
+          )}
+        </div>
+      </div>
+      {/* 레이블 */}
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{item.label}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+          {item.goal > 0
+            ? `목표 ${(item.goal / 10000).toFixed(0)}만`
+            : item.actual > 0
+              ? `${(item.actual / 10000).toFixed(0)}만`
+              : '목표 미설정'}
+        </div>
+      </div>
     </div>
   );
 }
 
+// ── 목표 진척율 링 게이지 차트 ───────────────────────────────────────────────
 function GoalProgressChart({
   chartYear, includedIds, channelMap, dataMode,
 }: { chartYear: number; includedIds: Set<string>; channelMap: Record<string, string>; dataMode: DataMode }) {
   const now = new Date();
   const [view, setView] = useState<ChartView>('annual');
-  const [animated, setAnimated] = useState(false);
-  const mountRef = useRef(false);
+  const [animKey, setAnimKey] = useState(0);
 
-  // 탭 진입 시 애니메이션 트리거
   useEffect(() => {
-    if (!mountRef.current) {
-      mountRef.current = true;
-      const t = setTimeout(() => setAnimated(true), 100);
-      return () => clearTimeout(t);
-    }
-  }, []);
-
-  // view 변경 시 재애니메이션
-  useEffect(() => {
-    setAnimated(false);
-    const t = setTimeout(() => setAnimated(true), 60);
-    return () => clearTimeout(t);
+    setAnimKey((k) => k + 1);
   }, [view]);
 
-  // 연간 목표 (12개월)
   const { data: annualGoals = {} } = useQuery({
     queryKey: ['hq-annual-goals', chartYear],
     queryFn: () => api.get(`/hq/goals/annual?year=${chartYear}`).then((r) => r.data).catch(() => ({})),
   });
 
-  // 월별 실적 — 필요한 달만 fetch
   const monthsNeeded: number[] = (() => {
     if (view === 'annual') return [1,2,3,4,5,6,7,8,9,10,11,12];
-    if (view === 'quarterly') return [3,6,9,12];
-    // recent3: 직전 3개월
+    if (view === 'quarterly') return [1,2,3,4,5,6,7,8,9,10,11,12];
     const m = now.getMonth() + 1;
     return [
       m - 2 <= 0 ? m - 2 + 12 : m - 2,
@@ -299,24 +325,24 @@ function GoalProgressChart({
 
   const actualByMonth: Record<number, number> = metricsQueries.data ?? {};
 
-  // 뷰별 바 데이터 생성
-  const bars: BarItem[] = (() => {
+  const getGoal = (m: number) => {
+    const key = `${chartYear}-${String(m).padStart(2,'0')}`;
+    return Number((annualGoals as any)[key]?.targetAmount ?? 0);
+  };
+  const getActual = (m: number) => actualByMonth[m] ?? 0;
+
+  const gauges: GaugeItem[] = (() => {
     const MONTH_LABELS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-    const getGoal = (m: number) => {
-      const key = `${chartYear}-${String(m).padStart(2,'0')}`;
-      return Number((annualGoals as any)[key]?.targetAmount ?? 0);
-    };
-    const getActual = (m: number) => actualByMonth[m] ?? 0;
+    const GAUGE_COLORS = ['#8b7cf8','#a8c5a0','#b5a8d4','#a8c4d4','#d4c4a8','#d4a8b5','#c4c4b8','#7a8f8a','#6b8f71','#8a7f6e','#6e7a8a','#9a8fb5'];
 
     if (view === 'annual') {
       return Array.from({ length: 12 }, (_, i) => {
         const m = i + 1;
         const goal = getGoal(m);
         const actual = getActual(m);
-        // 목표가 있으면 달성률, 없으면 실적 금액 기준으로 상대 높이 계산용 rate 사용
-        const rate = goal > 0 ? (actual / goal) * 100 : actual > 0 ? -1 : 0; // -1 = 목표없음+실적있음
         const isFuture = m > now.getMonth() + 1 && chartYear === now.getFullYear();
-        return { label: MONTH_LABELS[i], rate: isFuture ? 0 : rate, actual, goal, color: 'var(--accent)' };
+        const rate = isFuture ? 0 : goal > 0 ? (actual / goal) * 100 : actual > 0 ? -1 : 0;
+        return { label: MONTH_LABELS[i], rate, actual, goal, color: GAUGE_COLORS[i] };
       });
     }
 
@@ -324,12 +350,11 @@ function GoalProgressChart({
       return [
         { label: 'Q1', months: [1,2,3] }, { label: 'Q2', months: [4,5,6] },
         { label: 'Q3', months: [7,8,9] }, { label: 'Q4', months: [10,11,12] },
-      ].map(({ label, months }) => {
+      ].map(({ label, months }, i) => {
         const goal = months.reduce((s, m) => s + getGoal(m), 0);
         const actual = months.reduce((s, m) => s + getActual(m), 0);
         const rate = goal > 0 ? (actual / goal) * 100 : actual > 0 ? -1 : 0;
-        const colors = ['#6b8f71','#7a8f8a','#8a7f6e','#6e7a8a'];
-        return { label, rate, actual, goal, color: colors[['Q1','Q2','Q3','Q4'].indexOf(label)] };
+        return { label, rate, actual, goal, color: GAUGE_COLORS[i * 3] };
       });
     }
 
@@ -340,30 +365,25 @@ function GoalProgressChart({
       const goal = getGoal(mo);
       const actual = getActual(mo);
       const rate = goal > 0 ? (actual / goal) * 100 : actual > 0 ? -1 : 0;
-      return { label: MONTH_LABELS[mo - 1], rate, actual, goal, color: ['#8a7f6e','#7a8f8a','#6b8f71'][i] };
+      return { label: MONTH_LABELS[mo - 1], rate, actual, goal, color: GAUGE_COLORS[i + 2] };
     });
   })();
 
-  const maxRate = Math.max(...bars.map(b => b.rate), 100);
-  // 목표없음(-1) 케이스: 실적 금액 기준 상대 높이 계산
-  const maxActual = Math.max(...bars.map(b => b.actual), 1);
-  const getBarHeight = (bar: BarItem) => {
-    if (bar.rate === -1) return (bar.actual / maxActual) * 100; // 목표없음: 실적 상대 높이
-    if (bar.rate === 0) return 0;
-    return (bar.rate / maxRate) * 100;
-  };
+  const gaugeSize = view === 'annual' ? 90 : view === 'quarterly' ? 140 : 130;
+  const gaugeStroke = view === 'annual' ? 10 : 16;
 
   return (
     <div className="glass" style={{ padding: 24 }}>
       {/* 헤더 */}
-      <div className="goal-chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+      <div className="goal-chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Goal Progress</div>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>목표 {dataMode === 'SALES' ? '매출' : '수주'} 진척율</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>기간 설정과 무관 — {chartYear}년 기준 · {dataMode === 'SALES' ? '확정납기 기준' : '수주일자 기준'}</div>        </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>기간 설정과 무관 — {chartYear}년 기준 · {dataMode === 'SALES' ? '확정납기 기준' : '수주일자 기준'}</div>
+        </div>
         <div className="goal-chart-btns" style={{ display: 'flex', gap: 4 }}>
           {([['annual','연도별'],['quarterly','분기별'],['recent3','직전 3개월']] as [ChartView, string][]).map(([v, l]) => (
-            <button key={v} onClick={() => setView(v)} style={{
+            <button key={v} onClick={() => setView(v as ChartView)} style={{
               padding: '6px 12px', borderRadius: 8, border: '1px solid var(--glass-border)',
               background: view === v ? 'var(--accent)' : 'var(--surface)',
               color: view === v ? '#fff' : 'var(--text-muted)',
@@ -374,110 +394,30 @@ function GoalProgressChart({
         </div>
       </div>
 
-      {/* 그래프 영역 */}
+      {/* 게이지 영역 */}
       {metricsQueries.isLoading ? (
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0', fontSize: 13 }}>불러오는 중...</div>
       ) : includedIds.size === 0 ? (
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0', fontSize: 13 }}>⚠ 실적 반영 매장을 먼저 설정하세요</div>
       ) : (
-        <>
-          {/* 막대 그래프 */}
-          <div style={{ display: 'flex', gap: view === 'annual' ? 6 : 16, alignItems: 'flex-end', height: 140, marginBottom: 8 }}>
-            {bars.map((bar, i) => {
-              const heightPct = getBarHeight(bar);
-              const animH = animated ? heightPct : 0;
-              const over = bar.rate > 100;
-              const noGoal = bar.rate === -1; // 목표없음+실적있음
-              return (
-                <div key={bar.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
-                  {/* 달성률 레이블 */}
-                  <div style={{
-                    fontSize: view === 'annual' ? 9 : 11, fontWeight: 700,
-                    color: over ? 'var(--success)' : noGoal ? 'var(--text-muted)' : bar.rate > 0 ? 'var(--accent)' : 'var(--text-light)',
-                    opacity: animated ? 1 : 0,
-                    transition: `opacity 0.4s ease ${0.3 + i * 0.05}s`,
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {over ? `${bar.rate.toFixed(0)}%` : noGoal ? '실적' : bar.rate > 0 ? `${bar.rate.toFixed(0)}%` : '—'}
-                  </div>
-                  {/* 막대 */}
-                  <div style={{ width: '100%', position: 'relative', display: 'flex', alignItems: 'flex-end', height: 110 }}>
-                    {/* 목표선 (100% 위치) — 목표있을 때만 */}
-                    {!noGoal && bar.goal > 0 && (
-                      <div style={{
-                        position: 'absolute', left: 0, right: 0,
-                        bottom: `${Math.min((100 / maxRate) * 100, 100)}%`,
-                        height: 1, background: 'rgba(0,0,0,0.12)',
-                        borderTop: '1px dashed rgba(0,0,0,0.15)',
-                      }} />
-                    )}
-                    <div style={{
-                      width: '100%',
-                      height: `${animH}%`,
-                      minHeight: (bar.rate > 0 || noGoal) ? 3 : 0,
-                      background: over
-                        ? `linear-gradient(180deg, var(--success) 0%, ${bar.color} 100%)`
-                        : noGoal
-                          ? `linear-gradient(180deg, ${bar.color}88 0%, ${bar.color}cc 100%)`
-                          : bar.rate > 0
-                            ? `linear-gradient(180deg, ${bar.color}cc 0%, ${bar.color} 100%)`
-                            : 'rgba(0,0,0,0.06)',
-                      borderRadius: '4px 4px 2px 2px',
-                      transition: `height 0.9s cubic-bezier(0.22,1,0.36,1) ${i * 0.04}s`,
-                      boxShadow: over ? `0 -2px 8px ${bar.color}50` : 'none',
-                      position: 'relative',
-                    }}>
-                      {over && (
-                        <div style={{
-                          position: 'absolute', top: -2, left: '50%', transform: 'translateX(-50%)',
-                          width: 6, height: 6, borderRadius: '50%',
-                          background: 'var(--success)',
-                          boxShadow: '0 0 6px rgba(90,122,90,0.8)',
-                        }} />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div key={animKey} style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: view === 'annual' ? 16 : 24,
+          justifyContent: view === 'annual' ? 'space-between' : 'center',
+          alignItems: 'flex-start',
+        }}>
+          {gauges.map((g, i) => (
+            <RingGauge key={g.label} item={g} size={gaugeSize} stroke={gaugeStroke} delay={i * 60} />
+          ))}
+        </div>
+      )}
 
-          {/* X축 레이블 */}
-          <div style={{ display: 'flex', gap: view === 'annual' ? 6 : 16 }}>
-            {bars.map((bar) => (
-              <div key={bar.label} style={{ flex: 1, textAlign: 'center', fontSize: view === 'annual' ? 9 : 11, color: 'var(--text-muted)', fontWeight: 500 }}>
-                {bar.label}
-              </div>
-            ))}
-          </div>
-
-          {/* 범례 + 요약 */}
-          <div style={{ display: 'flex', gap: 16, marginTop: 16, flexWrap: 'wrap', borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)' }}>
-              <div style={{ width: 20, height: 3, background: 'rgba(0,0,0,0.15)', borderTop: '1px dashed rgba(0,0,0,0.3)' }} />
-              목표 100%
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)' }}>
-              <div style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--accent)' }} />
-              진행 중
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)' }}>
-              <div style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--success)' }} />
-              목표 초과 달성
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)' }}>
-              <div style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--accent)', opacity: 0.4 }} />
-              목표 미설정 (실적만)
-            </div>
-            <div style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>
-              {bars.filter(b => b.rate >= 100).length > 0 && (
-                <span style={{ color: 'var(--success)', fontWeight: 600 }}>
-                  {bars.filter(b => b.rate >= 100).length}개 기간 목표 달성 ✓
-                </span>
-              )}
-            </div>
-          </div>
-        </>
+      {/* 달성 요약 */}
+      {gauges.filter(g => g.rate >= 100).length > 0 && (
+        <div style={{ marginTop: 20, paddingTop: 14, borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--success)', fontWeight: 600, textAlign: 'right' }}>
+          {gauges.filter(g => g.rate >= 100).length}개 기간 목표 달성 🔥
+        </div>
       )}
     </div>
   );
