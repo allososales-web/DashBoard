@@ -196,7 +196,8 @@ export class HqService {
       where: { ruleName: 'hq_goals', isActive: true },
     });
     if (existing) {
-      const cond = (existing.conditions as any) ?? {};
+      const fresh = await this.prisma.hqDeliveryRule.findUnique({ where: { id: existing.id } });
+      const cond: Record<string, any> = { ...((fresh?.conditions as Record<string, any>) ?? {}) };
       cond[key] = goal;
       return this.prisma.hqDeliveryRule.update({ where: { id: existing.id }, data: { conditions: cond } });
     } else {
@@ -225,7 +226,9 @@ export class HqService {
       where: { ruleName: 'hq_goals', isActive: true },
     });
     if (existing) {
-      const cond = (existing.conditions as any) ?? {};
+      // 최신 데이터를 다시 읽어서 spread 후 merge (stale reference 방지)
+      const fresh = await this.prisma.hqDeliveryRule.findUnique({ where: { id: existing.id } });
+      const cond: Record<string, any> = { ...((fresh?.conditions as Record<string, any>) ?? {}) };
       Object.assign(cond, goals);
       return this.prisma.hqDeliveryRule.update({ where: { id: existing.id }, data: { conditions: cond } });
     } else {

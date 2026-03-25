@@ -61,11 +61,9 @@ export class WorkRecordsService {
     });
   }
 
-  // Bulk 저장: staffName 기반으로 staff upsert 후 workRecord 저장
+  // Bulk 저장: staffName 기반으로 staff upsert 후 workRecord upsert (삭제 없이 덮어쓰기)
   async bulkSave(dto: BulkWorkRecordsDto) {
     const { storeId, year, month, records } = dto;
-    // 기존 해당 월 레코드 삭제 후 재삽입
-    await (this.prisma as any).workRecord.deleteMany({ where: { storeId, year, month } });
 
     for (const rec of records) {
       if (!rec.staffName || rec.staffName.trim() === '') continue;
@@ -77,13 +75,19 @@ export class WorkRecordsService {
       // YYYY-MM-DD 형식을 로컬 날짜로 파싱 (UTC 오프셋 문제 방지)
       const [wy, wm, wd] = rec.workDate.split('-').map(Number);
       const workDate = new Date(wy, wm - 1, wd);
-      // 중복 방지: 같은 staffId + workDate 조합 skip
-      const existing = await (this.prisma as any).workRecord.findFirst({
-        where: { storeId, staffId: staff.id, workDate },
-      });
-      if (existing) continue;
-      await (this.prisma as any).workRecord.create({
-        data: {
+
+      // upsert: 기존 레코드가 있으면 업데이트, 없으면 생성
+      await (this.prisma as any).workRecord.upsert({
+        where: {
+          storeId_staffId_workDate: { storeId, staffId: staff.id, workDate },
+        },
+        update: {
+          isOff: rec.isOff ?? false,
+          startTime: rec.startTime ?? null,
+          endTime: rec.endTime ?? null,
+          notes: rec.workTypeName ?? null,
+        },
+        create: {
           storeId,
           staffId: staff.id,
           workDate,
