@@ -56,7 +56,7 @@ function useCountUp(target: number, duration = 1200) {
   return val;
 }
 
-// ── SVG 원형 게이지 — 뉴모피즘 스타일 ──────────────────────────────────────
+// ── SVG 원형 게이지 — 라이트 뉴모피즘 스타일 ────────────────────────────────
 function ArcGauge({ pct, size = 80, stroke = 8, color = "var(--accent)", label, sublabel }: {
   pct: number; size?: number; stroke?: number; color?: string; label: string; sublabel?: string;
 }) {
@@ -72,21 +72,21 @@ function ArcGauge({ pct, size = 80, stroke = 8, color = "var(--accent)", label, 
       <div style={{
         position: "relative", width: size, height: size,
         borderRadius: "50%",
-        background: `radial-gradient(circle at 35% 35%, #d8dbd4, #c8cbc4)`,
-        boxShadow: `${size * 0.07}px ${size * 0.07}px ${size * 0.2}px rgba(150,158,145,0.65), -${size * 0.04}px -${size * 0.04}px ${size * 0.12}px rgba(255,255,255,0.90)`,
+        background: `radial-gradient(circle at 35% 35%, #f4f6f1, #eaede7)`,
+        boxShadow: `${size * 0.07}px ${size * 0.07}px ${size * 0.2}px rgba(150,158,145,0.55), -${size * 0.04}px -${size * 0.04}px ${size * 0.12}px rgba(255,255,255,0.95)`,
       }}>
         {/* 내부 오목 */}
         <div style={{
           position: "absolute", inset: stroke * 0.55, borderRadius: "50%",
-          background: `radial-gradient(circle at 40% 40%, #cdd0c8, #bfc2bb)`,
-          boxShadow: `inset 2px 2px 6px rgba(140,148,135,0.55), inset -1px -1px 4px rgba(255,255,255,0.75)`,
+          background: `radial-gradient(circle at 40% 40%, #eef0eb, #e4e7e0)`,
+          boxShadow: `inset 2px 2px 5px rgba(140,148,135,0.40), inset -1px -1px 4px rgba(255,255,255,0.90)`,
         }} />
         <svg width={size} height={size} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.10)" strokeWidth={stroke} />
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth={stroke} />
           {pct > 0 && (
             <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke + 4}
               strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-              opacity={0.22} style={{ filter: "blur(4px)" }} />
+              opacity={0.20} style={{ filter: "blur(4px)" }} />
           )}
           <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke}
             strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
@@ -97,7 +97,7 @@ function ArcGauge({ pct, size = 80, stroke = 8, color = "var(--accent)", label, 
           )}
         </svg>
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-          <div style={{ fontSize: size * 0.22, fontWeight: 900, color, lineHeight: 1, textShadow: `0 0 12px ${color}55` }}>{label}</div>
+          <div style={{ fontSize: size * 0.22, fontWeight: 900, color, lineHeight: 1, textShadow: `0 0 10px ${color}44` }}>{label}</div>
           {sublabel && <div style={{ fontSize: size * 0.14, color: "var(--text-muted)", marginTop: 2 }}>{sublabel}</div>}
         </div>
       </div>
@@ -143,7 +143,7 @@ function Speedometer({ pct, size = 90, color = "var(--accent)" }: { pct: number;
   );
 }
 
-// ── 미니 도넛 — 뉴모피즘 스타일 ────────────────────────────────────────────
+// ── 미니 도넛 — 라이트 뉴모피즘 스타일 ─────────────────────────────────────
 function MiniDonut({ pct, size = 56, color = "var(--accent)" }: { pct: number; size?: number; color?: string }) {
   const stroke = size * 0.18;
   const r = (size - stroke) / 2;
@@ -156,20 +156,20 @@ function MiniDonut({ pct, size = 56, color = "var(--accent)" }: { pct: number; s
   return (
     <div style={{
       position: "relative", width: size, height: size, borderRadius: "50%",
-      background: `radial-gradient(circle at 35% 35%, #d8dbd4, #c8cbc4)`,
-      boxShadow: `${size * 0.07}px ${size * 0.07}px ${size * 0.2}px rgba(150,158,145,0.65), -${size * 0.04}px -${size * 0.04}px ${size * 0.12}px rgba(255,255,255,0.90)`,
+      background: `radial-gradient(circle at 35% 35%, #f4f6f1, #eaede7)`,
+      boxShadow: `${size * 0.07}px ${size * 0.07}px ${size * 0.2}px rgba(150,158,145,0.55), -${size * 0.04}px -${size * 0.04}px ${size * 0.12}px rgba(255,255,255,0.95)`,
     }}>
       <div style={{
         position: "absolute", inset: stroke * 0.55, borderRadius: "50%",
-        background: `radial-gradient(circle at 40% 40%, #cdd0c8, #bfc2bb)`,
-        boxShadow: `inset 2px 2px 6px rgba(140,148,135,0.55), inset -1px -1px 4px rgba(255,255,255,0.75)`,
+        background: `radial-gradient(circle at 40% 40%, #eef0eb, #e4e7e0)`,
+        boxShadow: `inset 2px 2px 5px rgba(140,148,135,0.40), inset -1px -1px 4px rgba(255,255,255,0.90)`,
       }} />
       <svg width={size} height={size} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.10)" strokeWidth={stroke} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth={stroke} />
         {pct > 0 && (
           <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke + 4}
             strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-            opacity={0.22} style={{ filter: "blur(4px)" }} />
+            opacity={0.20} style={{ filter: "blur(4px)" }} />
         )}
         <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke}
           strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
@@ -489,9 +489,9 @@ export default function DashboardPage() {
                     const status = deliveryMap[day] ?? getDefaultDeliveryStatus(y, mo, day);
                     const dStyle = DELIVERY_COLORS[status] ?? DELIVERY_COLORS.available;
                     return (
-                      <div key={idx} style={{ borderRadius: 4, padding: "4px 1px", textAlign: "center", background: dStyle.bg, border: `1px solid ${dStyle.color}20`, userSelect: "none" }}>
-                        <div style={{ fontSize: 9, fontWeight: 600, color: dow===0?"#ef4444":dow===6?"#3b82f6":"var(--text)" }}>{day}</div>
-                        <div style={{ fontSize: 8, color: dStyle.color }}>{dStyle.label}</div>
+                      <div key={idx} className="del-cal-cell" style={{ borderRadius: 4, padding: "4px 1px", textAlign: "center", background: dStyle.bg, border: `1px solid ${dStyle.color}20`, userSelect: "none" }}>
+                        <div className="del-day" style={{ fontSize: 9, fontWeight: 600, color: dow===0?"#ef4444":dow===6?"#3b82f6":"var(--text)" }}>{day}</div>
+                        <div className="del-label" style={{ fontSize: 8, color: dStyle.color }}>{dStyle.label}</div>
                       </div>
                     );
                   })}

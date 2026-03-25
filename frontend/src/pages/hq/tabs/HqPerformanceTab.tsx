@@ -44,7 +44,7 @@ function getWeeksInMonth(year: number, month: number) {
   return weeks;
 }
 
-// ── 채널별 매출 비중 — 동심원 버블 차트 (라이트 뉴모피즘) ──────────────────
+// ── 채널별 매출 비중 — 도넛 + 바 리스트 (가시성 개선) ──────────────────────
 function ChannelDonutChart({
   channelAmounts, activeChannels, toggleChannel, channelMap, metricsFiltered,
 }: {
@@ -69,20 +69,24 @@ function ChannelDonutChart({
 
   const maxAmt = Math.max(...activeData.map((d) => d.amt), 1);
 
-  // 동심원 버블 차트 — 이미지 2 스타일 (라이트 뉴모피즘)
-  const BUBBLE_COLORS = [
-    { bg: 'rgba(139,124,248,0.18)', border: 'rgba(139,124,248,0.45)', text: '#6c5ce7' },
-    { bg: 'rgba(168,196,212,0.22)', border: 'rgba(100,160,200,0.45)', text: '#4a90b8' },
-    { bg: 'rgba(168,197,160,0.22)', border: 'rgba(100,170,120,0.45)', text: '#3a8a5a' },
-    { bg: 'rgba(212,196,168,0.22)', border: 'rgba(180,150,100,0.45)', text: '#8a6a30' },
-    { bg: 'rgba(212,168,181,0.22)', border: 'rgba(190,120,140,0.45)', text: '#a04060' },
-    { bg: 'rgba(196,196,184,0.22)', border: 'rgba(150,150,130,0.45)', text: '#606050' },
-  ];
+  // 도넛 SVG
+  const SIZE = 200; const R = 72; const STROKE = 28;
+  const cx = SIZE / 2; const cy = SIZE / 2;
+  const circumference = 2 * Math.PI * R;
+  let offset = 0;
+  const arcs = activeData.filter(d => d.pct > 0).map((d) => {
+    const dash = d.pct * circumference;
+    const gap = circumference - dash;
+    const arc = { ...d, dash, gap, offset };
+    offset += dash + 1.5; // 1.5px 간격
+    return arc;
+  });
+  const topArc = arcs.length > 0 ? arcs[0] : null;
 
   return (
     <div className="glass" style={{ padding: 24 }}>
       {/* 헤더 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
         <div>
           <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Channel Mix</div>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>채널별 매출 비중</div>
@@ -97,8 +101,8 @@ function ChannelDonutChart({
                 background: active ? ch.color : 'rgba(0,0,0,0.04)',
                 color: active ? '#fff' : 'var(--text-muted)',
                 border: `1.5px solid ${active ? ch.color : 'var(--glass-border)'}`,
-                userSelect: 'none', transition: 'all 0.18s cubic-bezier(0.4,0,0.2,1)',
-                boxShadow: active ? `0 2px 12px ${ch.color}55` : 'none',
+                userSelect: 'none', transition: 'all 0.18s',
+                boxShadow: active ? `0 2px 10px ${ch.color}44` : 'none',
               }}>
                 <input type="checkbox" checked={active} onChange={() => toggleChannel(ch.value)} style={{ display: 'none' }} />
                 {active && <span style={{ fontSize: 10 }}>✓</span>}
@@ -109,95 +113,68 @@ function ChannelDonutChart({
         </div>
       </div>
 
-      {/* 동심원 버블 차트 영역 */}
-      <div style={{ display: 'flex', gap: 32, alignItems: 'center', flexWrap: 'wrap' }}>
-        {/* 버블 차트 */}
-        <div style={{
-          position: 'relative', flexShrink: 0,
-          width: 280, height: 200,
-          display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start',
-        }}>
-          {activeData.slice(0, 6).map((d, i) => {
-            const radius = 40 + (d.amt / maxAmt) * 100;
-            const bColor = BUBBLE_COLORS[i % BUBBLE_COLORS.length];
-            const leftOffset = i * 28;
-            return (
-              <div key={d.ch.value} style={{
-                position: 'absolute',
-                bottom: 0,
-                left: leftOffset,
-                width: radius * 2,
-                height: radius * 2,
-                borderRadius: '50%',
-                background: `radial-gradient(circle at 38% 35%, ${bColor.bg.replace('0.18', '0.32')}, ${bColor.bg})`,
-                border: `1.5px solid ${bColor.border}`,
-                boxShadow: `4px 4px 14px rgba(160,168,155,0.35), -2px -2px 8px rgba(255,255,255,0.80), inset 0 0 20px ${bColor.bg}`,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.5s cubic-bezier(0.22,1,0.36,1)',
-                zIndex: 6 - i,
-              }}>
-                <div style={{ fontSize: Math.max(10, radius * 0.18), fontWeight: 800, color: bColor.text, lineHeight: 1 }}>
-                  {(d.pct * 100).toFixed(0)}%
+      <div className="channel-mix-wrap" style={{ display: 'flex', gap: 32, alignItems: 'center', flexWrap: 'wrap' }}>
+        {/* 도넛 차트 */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <svg width={SIZE} height={SIZE} style={{ transform: 'rotate(-90deg)', display: 'block',
+            filter: 'drop-shadow(0 4px 12px rgba(139,124,248,0.12))' }}>
+            {/* 배경 링 */}
+            <circle cx={cx} cy={cy} r={R} fill="none"
+              stroke="rgba(0,0,0,0.06)" strokeWidth={STROKE} />
+            {/* 아크 세그먼트 */}
+            {arcs.map((a, i) => (
+              <circle key={a.ch.value} cx={cx} cy={cy} r={R} fill="none"
+                stroke={a.ch.color} strokeWidth={STROKE}
+                strokeDasharray={`${a.dash} ${circumference}`}
+                strokeDashoffset={-a.offset}
+                strokeLinecap="butt"
+                style={{ transition: `stroke-dasharray 0.6s cubic-bezier(0.4,0,0.2,1) ${i * 0.05}s` }}
+              />
+            ))}
+          </svg>
+          {/* 중앙 텍스트 */}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            {topArc ? (
+              <>
+                <div style={{ fontSize: 28, fontWeight: 900, color: topArc.ch.color, lineHeight: 1 }}>
+                  {(topArc.pct * 100).toFixed(0)}%
                 </div>
-                <div style={{ fontSize: Math.max(9, radius * 0.13), color: bColor.text, opacity: 0.8, marginTop: 2, fontWeight: 600 }}>
-                  {d.ch.label}
-                </div>
-                {radius > 60 && (
-                  <div style={{ fontSize: 9, color: bColor.text, opacity: 0.65, marginTop: 1 }}>
-                    {d.amt > 0 ? `${(d.amt / 10000).toFixed(0)}만` : '—'}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {activeData.length === 0 && (
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', width: '100%' }}>채널을 선택하세요</div>
-          )}
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontWeight: 600 }}>{topArc.ch.label}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-light)', marginTop: 2 }}>최대 비중</div>
+              </>
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>데이터 없음</div>
+            )}
+          </div>
         </div>
 
-        {/* 범례 + 바 목록 */}
-        <div style={{ flex: 1, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {activeData.map((d, i) => {
+        {/* 채널별 바 리스트 */}
+        <div style={{ flex: 1, minWidth: 200, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {activeData.map((d) => {
             const pct = d.pct * 100;
-            const bColor = BUBBLE_COLORS[i % BUBBLE_COLORS.length];
             const storeCount = metricsFiltered.filter((s: any) => (channelMap[s.storeId] ?? 'ROAD') === d.ch.value).length;
             return (
               <div key={d.ch.value}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <div style={{
-                    width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
-                    background: d.ch.color,
-                    boxShadow: `0 0 6px ${d.ch.color}88`,
-                  }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                  <div style={{ width: 12, height: 12, borderRadius: 3, background: d.ch.color, flexShrink: 0,
+                    boxShadow: `0 0 6px ${d.ch.color}66` }} />
                   <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', flex: 1 }}>{d.ch.label}</span>
                   {storeCount > 0 && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{storeCount}개</span>}
-                  <span style={{ fontSize: 14, fontWeight: 800, color: bColor.text, minWidth: 44, textAlign: 'right' }}>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: d.ch.color, minWidth: 44, textAlign: 'right' }}>
                     {pct.toFixed(1)}%
                   </span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 48, textAlign: 'right' }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 52, textAlign: 'right' }}>
                     {d.amt > 0 ? `${(d.amt / 10000).toFixed(0)}만` : '—'}
                   </span>
                 </div>
-                {/* 뉴모피즘 바 */}
-                <div style={{
-                  height: 6, borderRadius: 3,
-                  background: 'var(--bg)',
+                <div style={{ height: 8, borderRadius: 4, background: 'var(--bg)',
                   boxShadow: 'inset 2px 2px 4px rgba(150,158,145,0.40), inset -1px -1px 3px rgba(255,255,255,0.75)',
-                  overflow: 'visible', position: 'relative',
-                }}>
+                  overflow: 'hidden' }}>
                   <div style={{
-                    height: '100%', width: `${(d.amt / maxAmt) * 100}%`, borderRadius: 3,
-                    background: `linear-gradient(90deg, ${d.ch.color}88, ${d.ch.color})`,
-                    boxShadow: `0 0 8px ${d.ch.color}55`,
+                    height: '100%', width: `${(d.amt / maxAmt) * 100}%`, borderRadius: 4,
+                    background: `linear-gradient(90deg, ${d.ch.color}99, ${d.ch.color})`,
                     transition: 'width 0.7s cubic-bezier(0.22,1,0.36,1)',
-                    position: 'relative',
-                  }}>
-                    <div style={{
-                      position: 'absolute', right: -3, top: '50%', transform: 'translateY(-50%)',
-                      width: 8, height: 8, borderRadius: '50%',
-                      background: d.ch.color, boxShadow: `0 0 6px ${d.ch.color}`,
-                    }} />
-                  </div>
+                  }} />
                 </div>
               </div>
             );
@@ -577,19 +554,26 @@ function GoalProgressChart({
             </div>
           </div>
 
-          {/* ── 뉴모피즘 게이지 그리드 ── */}
-          <div style={{
-            display: 'flex', flexWrap: 'wrap',
-            gap: view === 'annual' ? 12 : 20,
-            justifyContent: view === 'annual' ? 'space-between' : 'center',
-            alignItems: 'flex-start',
-          }}>
-            {gauges.map((g, i) => (
-              <RingGauge key={g.label} item={g}
-                size={view === 'annual' ? 90 : view === 'quarterly' ? 140 : 130}
-                stroke={view === 'annual' ? 10 : 16}
-                delay={i * 60} />
-            ))}
+          {/* ── 뉴모피즘 게이지 그리드 제거 — 선형 차트만 유지 ── */}
+          {/* 달성률 요약 텍스트 */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+            {gauges.map((g) => {
+              const color = g.rate >= 100 ? 'var(--success)' : g.rate >= 70 ? 'var(--accent)' : g.rate > 0 ? '#f87171' : 'var(--text-light)';
+              return (
+                <div key={g.label} style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                  padding: '6px 10px', borderRadius: 10,
+                  background: 'var(--bg)',
+                  boxShadow: 'inset 2px 2px 5px rgba(150,158,145,0.35), inset -1px -1px 3px rgba(255,255,255,0.75)',
+                  minWidth: 48,
+                }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color, lineHeight: 1 }}>
+                    {g.rate > 0 ? `${g.rate.toFixed(0)}%` : '—'}
+                  </span>
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600 }}>{g.label}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

@@ -356,7 +356,7 @@ tr:hover td { background: rgba(139,124,248,0.03); }
   body { padding-bottom: env(safe-area-inset-bottom); }
 
   .store-sidebar { display: none !important; }
-  .store-main { padding: 16px 14px 80px 14px !important; }
+  .store-main { padding: 12px 12px 80px 12px !important; }
   .store-main > div { max-width: 100% !important; }
 
   .mobile-bottom-nav {
@@ -392,31 +392,37 @@ tr:hover td { background: rgba(139,124,248,0.03); }
   .mobile-nav-icon { font-size: 20px; line-height: 1; }
   .mobile-nav-label { font-size: 10px; font-weight: 500; white-space: nowrap; }
 
-  header { padding: 0 14px !important; }
-  .hq-main { padding: 16px 14px 80px 14px !important; }
+  header { padding: 0 12px !important; }
+  .hq-main { padding: 12px 12px 80px 12px !important; }
   .hq-main > div { max-width: 100% !important; }
 
-  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  table { min-width: 480px; }
+  /* 테이블 스크롤 */
+  .table-scroll, .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-wrap table { min-width: 480px; }
   th, td { padding: 8px 10px; font-size: 12px; }
 
   .btn { min-height: 44px; padding: 10px 16px; }
   input, select, textarea { font-size: 16px !important; }
   .glass { border-radius: 14px; }
 
+  /* 탭 스크롤 */
   .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
   .tab { white-space: nowrap; flex-shrink: 0; padding: 7px 12px; font-size: 12px; }
 
-  .dashboard-header { flex-direction: column; align-items: flex-start !important; gap: 10px; }
-  .dashboard-header-controls { flex-wrap: wrap; gap: 6px !important; }
+  /* 헤더 컨트롤 */
+  .dashboard-header { flex-direction: column; align-items: flex-start !important; gap: 8px; }
+  .dashboard-header-controls { flex-wrap: wrap; gap: 6px !important; width: 100%; }
 
+  /* HQ 그리드 */
   .hq-top3-grid { grid-template-columns: 1fr !important; }
   .hq-work-grid { grid-template-columns: 1fr !important; }
   .hq-event-grid { grid-template-columns: 1fr !important; }
 
+  /* Goal chart */
   .goal-chart-header { flex-direction: column !important; align-items: flex-start !important; }
   .goal-chart-btns { flex-wrap: wrap; gap: 4px; }
 
+  /* 로그인 */
   .login-wrapper { padding: 12px !important; align-items: flex-start !important; }
   .login-card {
     flex-direction: column !important;
@@ -430,17 +436,33 @@ tr:hover td { background: rgba(139,124,248,0.03); }
     overflow-y: auto;
     padding: 28px 20px 20px !important;
   }
-  .login-store-col-hidden-mobile {
-    display: none !important;
-  }
+  .login-store-col-hidden-mobile { display: none !important; }
   .login-pin-col {
     width: 100% !important;
     padding: 28px 24px 36px !important;
     justify-content: flex-start !important;
   }
-  .login-pin-col-hidden-mobile {
-    display: none !important;
-  }
+  .login-pin-col-hidden-mobile { display: none !important; }
+
+  /* 캘린더 — 모바일 최적화 */
+  .delivery-calendar-grid { grid-template-columns: 1fr !important; }
+  .del-cal-grid { grid-template-columns: 1fr !important; }
+
+  /* Channel mix 도넛 */
+  .channel-mix-wrap { flex-direction: column !important; align-items: center !important; }
+  .channel-mix-wrap > div:first-child { margin-bottom: 16px; }
+
+  /* KPI 카드 */
+  .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* 목표 달성 그리드 */
+  .goal-grid { grid-template-columns: repeat(3, 1fr) !important; }
+
+  /* 납기 캘린더 범례 */
+  .delivery-legend { flex-wrap: wrap; gap: 6px !important; }
+
+  /* 사업부 목표 입력 그리드 */
+  .goal-input-grid { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width: 640px) {
@@ -450,13 +472,47 @@ tr:hover td { background: rgba(139,124,248,0.03); }
   .full-width-mobile { width: 100% !important; }
 
   .delivery-calendar-grid { grid-template-columns: 1fr !important; }
-  .goal-grid { grid-template-columns: 1fr !important; }
+  .goal-grid { grid-template-columns: repeat(3, 1fr) !important; }
   .donut-grid { grid-template-columns: 1fr !important; }
-  .issue-cal-cell { min-height: 52px !important; padding: 4px 3px !important; }
-  .issue-cal-cell .issue-cal-day { font-size: 11px !important; }
   .store-top3-grid { grid-template-columns: 1fr !important; }
   .del-cal-grid { grid-template-columns: 1fr !important; }
   .event-cal-grid { grid-template-columns: 1fr !important; }
+
+  /* 캘린더 셀 최소 크기 */
+  .cal-cell { min-height: 36px !important; padding: 2px 1px !important; }
+  .cal-day-num { font-size: 10px !important; }
+
+  /* 납기 캘린더 셀 */
+  .del-cal-cell { padding: 2px 1px !important; }
+  .del-cal-cell .del-day { font-size: 8px !important; }
+  .del-cal-cell .del-label { font-size: 7px !important; }
+
+  /* 이슈 캘린더 */
+  .issue-cal-cell { min-height: 40px !important; padding: 3px 2px !important; }
+  .issue-cal-cell .issue-cal-day { font-size: 10px !important; }
+
+  /* KPI 카드 2열 */
+  .kpi-grid { grid-template-columns: 1fr 1fr !important; }
+
+  /* 채널 필터 버튼 */
+  .channel-filters { flex-wrap: wrap !important; gap: 4px !important; }
+  .channel-filter-btn { padding: 4px 8px !important; font-size: 11px !important; }
+}
+
+@media (max-width: 480px) {
+  .store-main { padding: 10px 10px 76px 10px !important; }
+  .hq-main { padding: 10px 10px 76px 10px !important; }
+
+  /* 캘린더 더 작게 */
+  .del-cal-cell { padding: 1px !important; }
+  .del-cal-cell .del-day { font-size: 7px !important; }
+  .del-cal-cell .del-label { display: none !important; }
+
+  /* 헤더 버튼 작게 */
+  .dashboard-header-controls .btn { padding: 7px 10px !important; font-size: 11px !important; }
+
+  /* 목표 달성 그리드 — 3열 유지 */
+  .goal-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
 }
 
 /* ── News / long text wrap ── */

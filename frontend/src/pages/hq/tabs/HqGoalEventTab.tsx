@@ -527,13 +527,13 @@ export default function HqGoalEventTab() {
                         const cur = statuses[day];
                         const next: DeliveryStatus = cur === "available" ? "unavailable" : cur === "unavailable" ? "partial" : "available";
                         setDelStatuses(prev => ({ ...prev, [k]: { ...(prev[k] ?? {}), [day]: next } }));
-                      }} style={{
+                      }} className="del-cal-cell" style={{
                         borderRadius: 4, padding: "4px 1px", textAlign: "center", cursor: "pointer",
                         background: dStyle.bg, border: `1px solid ${dStyle.border}30`,
                         transition: "all 0.1s",
                       }}>
-                        <div style={{ fontSize: 9, fontWeight: 600, color: dow===0?"#ef4444":dow===6?"#3b82f6":"var(--text)" }}>{day}</div>
-                        <div style={{ fontSize: 8, color: dStyle.text }}>{dStyle.label}</div>
+                        <div className="del-day" style={{ fontSize: 9, fontWeight: 600, color: dow===0?"#ef4444":dow===6?"#3b82f6":"var(--text)" }}>{day}</div>
+                        <div className="del-label" style={{ fontSize: 8, color: dStyle.text }}>{dStyle.label}</div>
                       </div>
                     );
                   })}
