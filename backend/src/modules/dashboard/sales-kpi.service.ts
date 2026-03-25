@@ -4,9 +4,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 export type DataMode = 'ORDER' | 'SALES';
 
 export interface SalesKpiResult {
-  orderAmount: number;       // 수주일자 기준 수주단가*수량 합계
-  salesAmount: number;       // 확정납기 기준 수주단가*수량 합계
-  orderCount: number;        // 수주 건수 (distinct itemName)
+  orderAmount: number;       // ?�주?�자 기�? ?�주?��?*?�량 ?�계
+  salesAmount: number;       // ?�정?�기 기�? ?�주?��?*?�량 ?�계
+  orderCount: number;        // ?�주 건수 (distinct itemName)
   salesCount: number;        // 매출 건수 (distinct itemName)
   seriesBreakdown: Record<string, { amount: number; count: number }>;
 }
@@ -26,8 +26,8 @@ export interface StoreKpiResult {
   aliasName: string;
   orderAmount: number;
   salesAmount: number;
-  orderCount: number;        // distinct itemName 기준 (수주일자)
-  salesCount: number;        // distinct itemName 기준 (확정납기)
+  orderCount: number;        // distinct itemName 기�? (?�주?�자)
+  salesCount: number;        // distinct itemName 기�? (?�정?�기)
   channel: string;
 }
 
@@ -60,45 +60,56 @@ export class SalesKpiService {
 
     const aliasFilter = aliasNames ? { storeAlias: { in: aliasNames } } : {};
 
-    // 수주: orderDate 기준 (null이면 confirmedDate fallback)
+    // ?�주: orderDate 기�? (null?�면 confirmedDate fallback)
     const orderRows = await this.prisma.salesRawData.findMany({
       where: {
         ...aliasFilter,
         itemCode: { not: { startsWith: 'DELIVERY_' } },
+        orderAmount: { gt: 0 },
         OR: [
           { orderDate: { gte: startDate, lt: endDate } },
-          { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment`n          // @ts-ignore`n          { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
         ],
       },
-      select: { orderAmount: true, quantity: true, seriesCode: true, itemName: true },
+      select: { orderAmount: true, quantity: true, seriesCode: true, itemName: true, orderNumber: true },
     });
 
-    // 매출: confirmedDate 기준
+    // 매출: confirmedDate 기�?
     const salesRows = await this.prisma.salesRawData.findMany({
       where: {
         ...aliasFilter,
         itemCode: { not: { startsWith: 'DELIVERY_' } },
+        orderAmount: { gt: 0 },
         confirmedDate: { gte: startDate, lt: endDate },
       },
-      select: { orderAmount: true, quantity: true, seriesCode: true, itemName: true },
+      select: { orderAmount: true, quantity: true, seriesCode: true, itemName: true, orderNumber: true },
     });
 
-    const sumAmount = (rows: { orderAmount: any }[]) =>
-      rows.reduce((acc, r) => acc + Number(r.orderAmount), 0);
+    const sumAmount = (rows: { orderAmount: any; orderNumber: string }[]) => {
+      // distinct orderNumber 기�??�로 금액 ?�산 (같�? ?�주번호????번만)
+      const seen = new Map<string, number>();
+      for (const r of rows) {
+        if (!seen.has(r.orderNumber)) {
+          seen.set(r.orderNumber, Number(r.orderAmount));
+        }
+      }
+      return [...seen.values()].reduce((acc, v) => acc + v, 0);
+    };
 
-    const distinctCount = (rows: { itemName: string | null }[]) =>
-      new Set(rows.map((r) => r.itemName).filter(Boolean)).size;
+    // ?�주건수: distinct orderNumber (0???�외)
+    const distinctOrderCount = (rows: { orderNumber: string }[]) =>
+      new Set(rows.map((r) => r.orderNumber).filter(Boolean)).size;
 
     const orderAmount = sumAmount(orderRows);
     const salesAmount = sumAmount(salesRows);
-    const orderCount = distinctCount(orderRows);
-    const salesCount = distinctCount(salesRows);
+    const orderCount = distinctOrderCount(orderRows);
+    const salesCount = distinctOrderCount(salesRows);
 
     // Series breakdown
     const activeRows = dataMode === 'ORDER' ? orderRows : salesRows;
     const seriesBreakdown: Record<string, { amount: number; count: number }> = {};
     for (const row of activeRows) {
-      const key = row.seriesCode || '기타';
+      const key = row.seriesCode || '기�?';
       if (!seriesBreakdown[key]) seriesBreakdown[key] = { amount: 0, count: 0 };
       seriesBreakdown[key].amount += Number(row.orderAmount);
       seriesBreakdown[key].count += 1;
@@ -107,7 +118,7 @@ export class SalesKpiService {
     return { orderAmount, salesAmount, orderCount, salesCount, seriesBreakdown };
   }
 
-  /** 주차별 KPI (해당 월의 주차별 수주/매출 합계) */
+  /** 주차�?KPI (?�당 ?�의 주차�??�주/매출 ?�계) */
   async calculateWeeklyKpi(
     storeId: string | null,
     year: number,
@@ -139,7 +150,7 @@ export class SalesKpiService {
           ...baseFilter,
           OR: [
             { orderDate: { gte: wStart, lt: wEnd } },
-            { orderDate: null, confirmedDate: { gte: wStart, lt: wEnd } },
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment`n          // @ts-ignore`n          { orderDate: null, confirmedDate: { gte: wStart, lt: wEnd } },
           ],
         },
         select: { orderAmount: true },
@@ -161,7 +172,7 @@ export class SalesKpiService {
     return results;
   }
 
-  /** 시리즈별 TOP (품목별 매출/건수/평균단가) */
+  /** ?�리즈별 TOP (?�목�?매출/건수/?�균?��?) */
   async calculateSeriesTop(year: number, month: number, dataMode: DataMode = 'ORDER') {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 1);
@@ -175,16 +186,16 @@ export class SalesKpiService {
             ...baseFilter,
             OR: [
               { orderDate: { gte: startDate, lt: endDate } },
-              { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment`n          // @ts-ignore`n          { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
             ],
           },
       select: { seriesCode: true, orderAmount: true, itemName: true },
     });
 
-    // 시리즈별 집계: amount 합계, distinct itemName 수
+    // ?�리즈별 집계: amount ?�계, distinct itemName ??
     const map: Record<string, { amount: number; itemNames: Set<string> }> = {};
     for (const row of rows) {
-      const key = row.seriesCode?.trim() || '기타';
+      const key = row.seriesCode?.trim() || '기�?';
       if (!map[key]) map[key] = { amount: 0, itemNames: new Set() };
       map[key].amount += Number(row.orderAmount);
       if (row.itemName) map[key].itemNames.add(row.itemName);
@@ -198,7 +209,7 @@ export class SalesKpiService {
     }));
   }
 
-  /** 품목별 매장 breakdown (시리즈별 매장 순위) */
+  /** ?�목�?매장 breakdown (?�리즈별 매장 ?�위) */
   async calculateSeriesStoreBreakdown(year: number, month: number, dataMode: DataMode = 'ORDER') {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 1);
@@ -211,30 +222,25 @@ export class SalesKpiService {
             ...baseFilter,
             OR: [
               { orderDate: { gte: startDate, lt: endDate } },
-              { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment`n          // @ts-ignore`n          { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
             ],
           },
       select: { seriesCode: true, orderAmount: true, storeAlias: true },
     });
 
-    // storeAlias → storeId 매핑
-    const allStores = await this.prisma.store.findMany({
-      where: { deletedAt: null },
-      select: { id: true, name: true, aliases: true },
+    // storeAlias ??storeId 매핑 (storeAliasMapping ?�이�??�용)
+    const allMappings = await this.prisma.storeAliasMapping.findMany({
+      select: { aliasName: true, storeId: true, store: { select: { name: true } } },
     });
     const aliasToStore: Record<string, { id: string; name: string }> = {};
-    for (const store of allStores) {
-      const aliases: string[] = store.aliases ?? [];
-      for (const alias of aliases) {
-        aliasToStore[alias.trim()] = { id: store.id, name: store.name };
-      }
-      aliasToStore[store.name.trim()] = { id: store.id, name: store.name };
+    for (const m of allMappings) {
+      aliasToStore[m.aliasName.trim()] = { id: m.storeId, name: (m.store as any)?.name ?? m.storeId };
     }
 
-    // series → store → amount 집계
+    // series ??store ??amount 집계
     const map: Record<string, Record<string, { storeName: string; amount: number; count: number }>> = {};
     for (const row of rows) {
-      const series = row.seriesCode?.trim() || '기타';
+      const series = row.seriesCode?.trim() || '기�?';
       const storeInfo = row.storeAlias ? aliasToStore[row.storeAlias.trim()] : null;
       if (!storeInfo) continue;
       if (!map[series]) map[series] = {};
@@ -251,7 +257,7 @@ export class SalesKpiService {
     }));
   }
 
-  /** 특정 매장의 시리즈별 KPI */
+  /** ?�정 매장???�리즈별 KPI */
   async calculateStoreSeriesKpi(storeId: string, year: number, month: number, dataMode: DataMode = 'ORDER') {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 1);
@@ -269,7 +275,7 @@ export class SalesKpiService {
         ...baseFilter,
         OR: [
           { orderDate: { gte: startDate, lt: endDate } },
-          { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment`n          // @ts-ignore`n          { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
         ],
       },
       select: { orderAmount: true, quantity: true, seriesCode: true, itemName: true },
@@ -284,7 +290,7 @@ export class SalesKpiService {
 
     const map: Record<string, { amount: number; itemNames: Set<string> }> = {};
     for (const row of activeRows) {
-      const key = row.seriesCode?.trim() || '기타';
+      const key = row.seriesCode?.trim() || '기�?';
       if (!map[key]) map[key] = { amount: 0, itemNames: new Set() };
       map[key].amount += Number(row.orderAmount);
       if (row.itemName) map[key].itemNames.add(row.itemName);
@@ -313,7 +319,7 @@ export class SalesKpiService {
     };
   }
 
-  /** 전체 매장별 KPI */
+  /** ?�체 매장�?KPI */
   async calculateAllStoresKpi(year: number, month: number): Promise<StoreKpiResult[]> {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 1);
@@ -343,6 +349,7 @@ export class SalesKpiService {
       const baseFilter = {
         storeAlias: { in: aliases },
         itemCode: { not: { startsWith: 'DELIVERY_' } },
+        orderAmount: { gt: 0 },
       };
 
       const orderRows = await this.prisma.salesRawData.findMany({
@@ -350,26 +357,35 @@ export class SalesKpiService {
           ...baseFilter,
           OR: [
             { orderDate: { gte: startDate, lt: endDate } },
-            { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment`n          // @ts-ignore`n          { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
           ],
         },
-        select: { orderAmount: true, itemName: true },
+        select: { orderAmount: true, orderNumber: true },
       });
 
       const salesRows = await this.prisma.salesRawData.findMany({
         where: { ...baseFilter, confirmedDate: { gte: startDate, lt: endDate } },
-        select: { orderAmount: true, itemName: true },
+        select: { orderAmount: true, orderNumber: true },
       });
+
+      // distinct orderNumber 기�? 금액 ?�산 (같�? ?�주번호????번만)
+      const sumDistinct = (rows: { orderAmount: any; orderNumber: string }[]) => {
+        const seen = new Map<string, number>();
+        for (const r of rows) {
+          if (!seen.has(r.orderNumber)) seen.set(r.orderNumber, Number(r.orderAmount));
+        }
+        return [...seen.values()].reduce((s, v) => s + v, 0);
+      };
 
       results.push({
         storeId: store.id,
         storeName: store.name,
         storeCode: store.code,
         aliasName: aliases[0],
-        orderAmount: orderRows.reduce((s, r) => s + Number(r.orderAmount), 0),
-        salesAmount: salesRows.reduce((s, r) => s + Number(r.orderAmount), 0),
-        orderCount: new Set(orderRows.map((r) => r.itemName).filter(Boolean)).size,
-        salesCount: new Set(salesRows.map((r) => r.itemName).filter(Boolean)).size,
+        orderAmount: sumDistinct(orderRows),
+        salesAmount: sumDistinct(salesRows),
+        orderCount: new Set(orderRows.map((r) => r.orderNumber).filter(Boolean)).size,
+        salesCount: new Set(salesRows.map((r) => r.orderNumber).filter(Boolean)).size,
         channel: store.defaultChannel ?? 'ROAD',
       });
     }

@@ -688,7 +688,13 @@ export default function HqPerformanceTab() {
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {PERIOD_LABELS.map((p) => (
               <button key={p.id} onClick={() => setPeriod(p.id)}
-                style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--glass-border)', background: period === p.id ? 'var(--accent)' : 'var(--glass)', color: period === p.id ? '#fff' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', fontWeight: period === p.id ? 600 : 400 }}>
+                style={{
+                  padding: '6px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  background: period === p.id ? 'var(--accent)' : '#f4f6f1',
+                  color: period === p.id ? '#fff' : '#3a3d36',
+                  fontSize: 12, fontWeight: period === p.id ? 700 : 500,
+                  boxShadow: period === p.id ? '0 2px 8px rgba(139,124,248,0.35)' : '3px 3px 7px rgba(160,168,155,0.45), -2px -2px 5px rgba(255,255,255,0.85)',
+                }}>
                 {p.label}
               </button>
             ))}
