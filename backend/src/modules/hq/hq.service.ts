@@ -157,13 +157,20 @@ export class HqService {
 
   async upsertDeliveryCalendar(year: number, month: number, dayStatuses: Record<number, string>) {
     const key = `${year}-${String(month).padStart(2, '0')}`;
+
     const existing = await this.prisma.hqDeliveryRule.findFirst({
       where: { ruleName: 'delivery_calendar', isActive: true },
     });
+
     if (existing) {
-      const cond = (existing.conditions as any) ?? {};
+      // findUnique로 최신 데이터를 다시 읽어서 해당 월만 업데이트 (다른 월 보존)
+      const fresh = await this.prisma.hqDeliveryRule.findUnique({ where: { id: existing.id } });
+      const cond: Record<string, any> = { ...((fresh?.conditions as Record<string, any>) ?? {}) };
       cond[key] = dayStatuses;
-      return this.prisma.hqDeliveryRule.update({ where: { id: existing.id }, data: { conditions: cond } });
+      return this.prisma.hqDeliveryRule.update({
+        where: { id: existing.id },
+        data: { conditions: cond },
+      });
     } else {
       return this.prisma.hqDeliveryRule.create({
         data: { ruleName: 'delivery_calendar', conditions: { [key]: dayStatuses }, isActive: true },

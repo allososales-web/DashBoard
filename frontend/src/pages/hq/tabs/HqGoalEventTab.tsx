@@ -212,9 +212,27 @@ export default function HqGoalEventTab() {
       for (const { year, month } of delMonths) {
         const k = `${year}-${pad2(month)}`;
         const daysInMonth = new Date(year, month, 0).getDate();
+
+        // 서버에서 기존 저장값 먼저 fetch (덮어쓰기 방지)
+        let serverStatuses: Record<number, string> = {};
+        try {
+          const res = await api.get(`/hq/delivery-calendar?year=${year}&month=${month}`);
+          serverStatuses = res.data ?? {};
+        } catch { /* 없으면 빈 객체 */ }
+
+        // 로컬에서 변경한 날짜만 덮어쓰고, 나머지는 서버값 유지
         const statuses: Record<number, string> = {};
         for (let d = 1; d <= daysInMonth; d++) {
-          statuses[d] = (delStatuses[k]?.[d] ?? getDefaultStatus(year, month, d));
+          if (delStatuses[k]?.[d] !== undefined) {
+            // 로컬에서 명시적으로 변경한 값
+            statuses[d] = delStatuses[k][d];
+          } else if (serverStatuses[d] !== undefined) {
+            // 서버에 저장된 값 유지
+            statuses[d] = serverStatuses[d];
+          } else {
+            // 기본값
+            statuses[d] = getDefaultStatus(year, month, d);
+          }
         }
         await api.post("/hq/delivery-calendar", { year, month, dayStatuses: statuses });
       }
