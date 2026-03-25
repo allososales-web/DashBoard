@@ -471,7 +471,7 @@ tr:hover td { background: rgba(139,124,248,0.03); }
   .kpi-grid { grid-template-columns: 1fr 1fr !important; }
 }
 
-/* ── Channel mix wave chart mobile ── */
+/* ── Channel mix bubble chart mobile ── */
 @media (max-width: 640px) {
   .channel-mix-header { flex-direction: column !important; align-items: flex-start !important; }
   .channel-mix-filters { flex-wrap: wrap; gap: 4px !important; }

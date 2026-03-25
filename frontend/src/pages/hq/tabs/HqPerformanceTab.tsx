@@ -44,7 +44,7 @@ function getWeeksInMonth(year: number, month: number) {
   return weeks;
 }
 
-// ── 채널별 매출 비중 — 다크 파동형 에리어 차트 ──────────────────────────────
+// ── 채널별 매출 비중 — 동심원 버블 차트 (라이트 뉴모피즘) ──────────────────
 function ChannelDonutChart({
   channelAmounts, activeChannels, toggleChannel, channelMap, metricsFiltered,
 }: {
@@ -69,26 +69,20 @@ function ChannelDonutChart({
 
   const maxAmt = Math.max(...activeData.map((d) => d.amt), 1);
 
-  // 파동형 SVG path 생성
-  function makeWavePath(pct: number, W: number, H: number, phase: number): string {
-    const points: [number, number][] = [];
-    const steps = 60;
-    for (let i = 0; i <= steps; i++) {
-      const x = (i / steps) * W;
-      const wave = Math.sin((i / steps) * Math.PI * 3 + phase) * (H * 0.08);
-      const y = H - pct * H * 0.85 - H * 0.05 + wave;
-      points.push([x, Math.max(0, Math.min(H, y))]);
-    }
-    const d = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
-    return `${d} L ${W} ${H} L 0 ${H} Z`;
-  }
-
-  const W = 340; const H = 120;
+  // 동심원 버블 차트 — 이미지 2 스타일 (라이트 뉴모피즘)
+  const BUBBLE_COLORS = [
+    { bg: 'rgba(139,124,248,0.18)', border: 'rgba(139,124,248,0.45)', text: '#6c5ce7' },
+    { bg: 'rgba(168,196,212,0.22)', border: 'rgba(100,160,200,0.45)', text: '#4a90b8' },
+    { bg: 'rgba(168,197,160,0.22)', border: 'rgba(100,170,120,0.45)', text: '#3a8a5a' },
+    { bg: 'rgba(212,196,168,0.22)', border: 'rgba(180,150,100,0.45)', text: '#8a6a30' },
+    { bg: 'rgba(212,168,181,0.22)', border: 'rgba(190,120,140,0.45)', text: '#a04060' },
+    { bg: 'rgba(196,196,184,0.22)', border: 'rgba(150,150,130,0.45)', text: '#606050' },
+  ];
 
   return (
     <div className="glass" style={{ padding: 24 }}>
       {/* 헤더 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Channel Mix</div>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>채널별 매출 비중</div>
@@ -115,124 +109,101 @@ function ChannelDonutChart({
         </div>
       </div>
 
-      {/* 파동형 에리어 차트 영역 */}
-      <div style={{
-        borderRadius: 16, overflow: 'hidden', marginBottom: 20,
-        background: 'linear-gradient(160deg, #1a0a2e 0%, #0d0520 40%, #120830 100%)',
-        boxShadow: 'inset 0 0 40px rgba(139,100,248,0.12)',
-        position: 'relative',
-      }}>
-        {/* 파티클 효과 (CSS dots) */}
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-          {[...Array(18)].map((_, i) => (
-            <div key={i} style={{
-              position: 'absolute',
-              width: i % 3 === 0 ? 3 : 2,
-              height: i % 3 === 0 ? 3 : 2,
-              borderRadius: '50%',
-              background: `rgba(${180 + (i * 13) % 75}, ${100 + (i * 17) % 80}, 255, ${0.3 + (i % 4) * 0.15})`,
-              left: `${(i * 5.5 + 3) % 100}%`,
-              top: `${(i * 7 + 10) % 80}%`,
-              boxShadow: `0 0 ${4 + (i % 3) * 2}px rgba(180,120,255,0.6)`,
-            }} />
-          ))}
-        </div>
-
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" style={{ display: 'block', minHeight: 80 }} preserveAspectRatio="none">
-          <defs>
-            {activeData.map((d, i) => (
-              <linearGradient key={d.ch.value} id={`wave-grad-${d.ch.value}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={d.ch.color} stopOpacity={0.55 - i * 0.06} />
-                <stop offset="100%" stopColor={d.ch.color} stopOpacity={0.05} />
-              </linearGradient>
-            ))}
-            <filter id="wave-glow">
-              <feGaussianBlur stdDeviation="2.5" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-          </defs>
-
-          {/* 파동 에리어 레이어 (뒤에서 앞으로) */}
-          {[...activeData].reverse().map((d, i) => {
-            const phase = i * 1.1;
-            const path = makeWavePath(d.pct, W, H, phase);
+      {/* 동심원 버블 차트 영역 */}
+      <div style={{ display: 'flex', gap: 32, alignItems: 'center', flexWrap: 'wrap' }}>
+        {/* 버블 차트 */}
+        <div style={{
+          position: 'relative', flexShrink: 0,
+          width: 280, height: 200,
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start',
+        }}>
+          {activeData.slice(0, 6).map((d, i) => {
+            const radius = 40 + (d.amt / maxAmt) * 100;
+            const bColor = BUBBLE_COLORS[i % BUBBLE_COLORS.length];
+            const leftOffset = i * 28;
             return (
-              <g key={d.ch.value}>
-                <path d={path} fill={`url(#wave-grad-${d.ch.value})`} opacity={0.85} />
-                {/* 파동 라인 글로우 */}
-                <path
-                  d={(() => {
-                    const steps = 60;
-                    const pts: string[] = [];
-                    for (let j = 0; j <= steps; j++) {
-                      const x = (j / steps) * W;
-                      const wave = Math.sin((j / steps) * Math.PI * 3 + phase) * (H * 0.08);
-                      const y = H - d.pct * H * 0.85 - H * 0.05 + wave;
-                      pts.push(`${j === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${Math.max(0, Math.min(H, y)).toFixed(1)}`);
-                    }
-                    return pts.join(' ');
-                  })()}
-                  fill="none"
-                  stroke={d.ch.color}
-                  strokeWidth={1.5}
-                  opacity={0.9}
-                  filter="url(#wave-glow)"
-                />
-              </g>
+              <div key={d.ch.value} style={{
+                position: 'absolute',
+                bottom: 0,
+                left: leftOffset,
+                width: radius * 2,
+                height: radius * 2,
+                borderRadius: '50%',
+                background: `radial-gradient(circle at 38% 35%, ${bColor.bg.replace('0.18', '0.32')}, ${bColor.bg})`,
+                border: `1.5px solid ${bColor.border}`,
+                boxShadow: `4px 4px 14px rgba(160,168,155,0.35), -2px -2px 8px rgba(255,255,255,0.80), inset 0 0 20px ${bColor.bg}`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.5s cubic-bezier(0.22,1,0.36,1)',
+                zIndex: 6 - i,
+              }}>
+                <div style={{ fontSize: Math.max(10, radius * 0.18), fontWeight: 800, color: bColor.text, lineHeight: 1 }}>
+                  {(d.pct * 100).toFixed(0)}%
+                </div>
+                <div style={{ fontSize: Math.max(9, radius * 0.13), color: bColor.text, opacity: 0.8, marginTop: 2, fontWeight: 600 }}>
+                  {d.ch.label}
+                </div>
+                {radius > 60 && (
+                  <div style={{ fontSize: 9, color: bColor.text, opacity: 0.65, marginTop: 1 }}>
+                    {d.amt > 0 ? `${(d.amt / 10000).toFixed(0)}만` : '—'}
+                  </div>
+                )}
+              </div>
             );
           })}
+          {activeData.length === 0 && (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', width: '100%' }}>채널을 선택하세요</div>
+          )}
+        </div>
 
-          {/* 수직 그리드 라인 */}
-          {[0.2, 0.4, 0.6, 0.8].map((x) => (
-            <line key={x} x1={x * W} y1={0} x2={x * W} y2={H}
-              stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
-          ))}
-        </svg>
-      </div>
-
-      {/* 채널별 글로우 바 목록 */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {activeData.map((d) => {
-          const pct = d.pct * 100;
-          const storeCount = metricsFiltered.filter((s: any) => (channelMap[s.storeId] ?? 'ROAD') === d.ch.value).length;
-          return (
-            <div key={d.ch.value}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                {/* 컬러 도트 */}
-                <div style={{
-                  width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
-                  background: d.ch.color, boxShadow: `0 0 8px ${d.ch.color}99`,
-                }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', flex: 1 }}>{d.ch.label}</span>
-                {storeCount > 0 && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{storeCount}개 매장</span>}
-                <span style={{ fontSize: 15, fontWeight: 800, color: d.ch.color, textShadow: `0 0 10px ${d.ch.color}66`, minWidth: 48, textAlign: 'right' }}>
-                  {pct.toFixed(1)}%
-                </span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 52, textAlign: 'right' }}>
-                  {d.amt > 0 ? `${(d.amt / 10000).toFixed(0)}만` : '—'}
-                </span>
-              </div>
-              {/* 글로우 바 */}
-              <div style={{ height: 6, background: 'rgba(0,0,0,0.07)', borderRadius: 3, overflow: 'visible', position: 'relative' }}>
-                <div style={{
-                  height: '100%', width: `${(d.amt / maxAmt) * 100}%`, borderRadius: 3,
-                  background: `linear-gradient(90deg, ${d.ch.color}66, ${d.ch.color})`,
-                  boxShadow: `0 0 10px ${d.ch.color}77, 0 0 20px ${d.ch.color}33`,
-                  transition: 'width 0.7s cubic-bezier(0.22,1,0.36,1)',
-                  position: 'relative',
-                }}>
-                  {/* 끝점 글로우 도트 */}
+        {/* 범례 + 바 목록 */}
+        <div style={{ flex: 1, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {activeData.map((d, i) => {
+            const pct = d.pct * 100;
+            const bColor = BUBBLE_COLORS[i % BUBBLE_COLORS.length];
+            const storeCount = metricsFiltered.filter((s: any) => (channelMap[s.storeId] ?? 'ROAD') === d.ch.value).length;
+            return (
+              <div key={d.ch.value}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                   <div style={{
-                    position: 'absolute', right: -3, top: '50%', transform: 'translateY(-50%)',
-                    width: 8, height: 8, borderRadius: '50%',
-                    background: d.ch.color, boxShadow: `0 0 8px ${d.ch.color}`,
+                    width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
+                    background: d.ch.color,
+                    boxShadow: `0 0 6px ${d.ch.color}88`,
                   }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', flex: 1 }}>{d.ch.label}</span>
+                  {storeCount > 0 && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{storeCount}개</span>}
+                  <span style={{ fontSize: 14, fontWeight: 800, color: bColor.text, minWidth: 44, textAlign: 'right' }}>
+                    {pct.toFixed(1)}%
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 48, textAlign: 'right' }}>
+                    {d.amt > 0 ? `${(d.amt / 10000).toFixed(0)}만` : '—'}
+                  </span>
+                </div>
+                {/* 뉴모피즘 바 */}
+                <div style={{
+                  height: 6, borderRadius: 3,
+                  background: 'var(--bg)',
+                  boxShadow: 'inset 2px 2px 4px rgba(150,158,145,0.40), inset -1px -1px 3px rgba(255,255,255,0.75)',
+                  overflow: 'visible', position: 'relative',
+                }}>
+                  <div style={{
+                    height: '100%', width: `${(d.amt / maxAmt) * 100}%`, borderRadius: 3,
+                    background: `linear-gradient(90deg, ${d.ch.color}88, ${d.ch.color})`,
+                    boxShadow: `0 0 8px ${d.ch.color}55`,
+                    transition: 'width 0.7s cubic-bezier(0.22,1,0.36,1)',
+                    position: 'relative',
+                  }}>
+                    <div style={{
+                      position: 'absolute', right: -3, top: '50%', transform: 'translateY(-50%)',
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: d.ch.color, boxShadow: `0 0 6px ${d.ch.color}`,
+                    }} />
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-        {activeData.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>채널을 선택하세요</div>}
+            );
+          })}
+          {activeData.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>채널을 선택하세요</div>}
+        </div>
       </div>
     </div>
   );
@@ -346,7 +317,7 @@ function RingGauge({ item, size = 120, stroke = 14, delay = 0 }: { item: GaugeIt
   );
 }
 
-// ── 목표 진척율 링 게이지 차트 ───────────────────────────────────────────────
+// ── 목표 진척율 — 파동형 에리어 + 바 차트 (이미지 1 스타일, 라이트 뉴모피즘) ──
 function GoalProgressChart({
   chartYear, includedIds, channelMap, dataMode,
 }: { chartYear: number; includedIds: Set<string>; channelMap: Record<string, string>; dataMode: DataMode }) {
@@ -354,9 +325,7 @@ function GoalProgressChart({
   const [view, setView] = useState<ChartView>('annual');
   const [animKey, setAnimKey] = useState(0);
 
-  useEffect(() => {
-    setAnimKey((k) => k + 1);
-  }, [view]);
+  useEffect(() => { setAnimKey((k) => k + 1); }, [view]);
 
   const { data: annualGoals = {} } = useQuery({
     queryKey: ['hq-annual-goals', chartYear],
@@ -367,11 +336,7 @@ function GoalProgressChart({
     if (view === 'annual') return [1,2,3,4,5,6,7,8,9,10,11,12];
     if (view === 'quarterly') return [1,2,3,4,5,6,7,8,9,10,11,12];
     const m = now.getMonth() + 1;
-    return [
-      m - 2 <= 0 ? m - 2 + 12 : m - 2,
-      m - 1 <= 0 ? m - 1 + 12 : m - 1,
-      m,
-    ];
+    return [m-2<=0?m-2+12:m-2, m-1<=0?m-1+12:m-1, m];
   })();
 
   const metricsQueries = useQuery({
@@ -393,28 +358,21 @@ function GoalProgressChart({
   });
 
   const actualByMonth: Record<number, number> = metricsQueries.data ?? {};
-
-  const getGoal = (m: number) => {
-    const key = `${chartYear}-${String(m).padStart(2,'0')}`;
-    return Number((annualGoals as any)[key]?.targetAmount ?? 0);
-  };
+  const getGoal = (m: number) => Number((annualGoals as any)[`${chartYear}-${String(m).padStart(2,'0')}`]?.targetAmount ?? 0);
   const getActual = (m: number) => actualByMonth[m] ?? 0;
 
   const gauges: GaugeItem[] = (() => {
     const MONTH_LABELS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
     const GAUGE_COLORS = ['#8b7cf8','#a8c5a0','#b5a8d4','#a8c4d4','#d4c4a8','#d4a8b5','#c4c4b8','#7a8f8a','#6b8f71','#8a7f6e','#6e7a8a','#9a8fb5'];
-
     if (view === 'annual') {
       return Array.from({ length: 12 }, (_, i) => {
         const m = i + 1;
-        const goal = getGoal(m);
-        const actual = getActual(m);
+        const goal = getGoal(m); const actual = getActual(m);
         const isFuture = m > now.getMonth() + 1 && chartYear === now.getFullYear();
         const rate = isFuture ? 0 : goal > 0 ? (actual / goal) * 100 : actual > 0 ? -1 : 0;
         return { label: MONTH_LABELS[i], rate, actual, goal, color: GAUGE_COLORS[i] };
       });
     }
-
     if (view === 'quarterly') {
       return [
         { label: 'Q1', months: [1,2,3] }, { label: 'Q2', months: [4,5,6] },
@@ -426,29 +384,60 @@ function GoalProgressChart({
         return { label, rate, actual, goal, color: GAUGE_COLORS[i * 3] };
       });
     }
-
-    // recent3
     const m = now.getMonth() + 1;
     return [-2,-1,0].map((offset, i) => {
       const mo = m + offset <= 0 ? m + offset + 12 : m + offset;
-      const goal = getGoal(mo);
-      const actual = getActual(mo);
+      const goal = getGoal(mo); const actual = getActual(mo);
       const rate = goal > 0 ? (actual / goal) * 100 : actual > 0 ? -1 : 0;
-      return { label: MONTH_LABELS[mo - 1], rate, actual, goal, color: GAUGE_COLORS[i + 2] };
+      return { label: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'][mo-1], rate, actual, goal, color: ['#8b7cf8','#a8c5a0','#b5a8d4','#a8c4d4','#d4c4a8','#d4a8b5'][i+2] };
     });
   })();
 
-  const gaugeSize = view === 'annual' ? 90 : view === 'quarterly' ? 140 : 130;
-  const gaugeStroke = view === 'annual' ? 10 : 16;
+  // 파동형 에리어 차트 SVG 생성 (라이트 배경)
+  const W = 600; const H = 140;
+  const maxActual = Math.max(...gauges.map(g => g.actual), 1);
+  const maxGoal = Math.max(...gauges.map(g => g.goal), 1);
+  const maxVal = Math.max(maxActual, maxGoal, 1);
+
+  function makeAreaPath(values: number[], W: number, H: number, padding = 20): string {
+    if (values.length === 0) return '';
+    const step = (W - padding * 2) / Math.max(values.length - 1, 1);
+    const pts = values.map((v, i) => {
+      const x = padding + i * step;
+      const y = H - padding - (v / maxVal) * (H - padding * 2);
+      return [x, Math.max(padding, y)] as [number, number];
+    });
+    // 스무딩 (cubic bezier)
+    let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+    for (let i = 1; i < pts.length; i++) {
+      const cp1x = pts[i-1][0] + step * 0.4;
+      const cp1y = pts[i-1][1];
+      const cp2x = pts[i][0] - step * 0.4;
+      const cp2y = pts[i][1];
+      d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
+    }
+    return d;
+  }
+
+  const actualLinePath = makeAreaPath(gauges.map(g => g.actual), W, H);
+  const goalLinePath = makeAreaPath(gauges.map(g => g.goal), W, H);
+
+  // 에리어 패스 (라인 + 닫기)
+  function makeFilledPath(linePath: string, W: number, H: number, padding = 20): string {
+    if (!linePath) return '';
+    return `${linePath} L ${W - padding} ${H - padding} L ${padding} ${H - padding} Z`;
+  }
+
+  const step = (W - 40) / Math.max(gauges.length - 1, 1);
 
   return (
     <div className="glass" style={{ padding: 24 }}>
       {/* 헤더 */}
-      <div className="goal-chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+      <div className="goal-chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Goal Progress</div>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>목표 {dataMode === 'SALES' ? '매출' : '수주'} 진척율</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>기간 설정과 무관 — {chartYear}년 기준 · {dataMode === 'SALES' ? '확정납기 기준' : '수주일자 기준'}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>기간 설정과 무관 — {chartYear}년 기준</div>
         </div>
         <div className="goal-chart-btns" style={{ display: 'flex', gap: 4 }}>
           {([['annual','연도별'],['quarterly','분기별'],['recent3','직전 3개월']] as [ChartView, string][]).map(([v, l]) => (
@@ -456,33 +445,155 @@ function GoalProgressChart({
               padding: '6px 12px', borderRadius: 8, border: '1px solid var(--glass-border)',
               background: view === v ? 'var(--accent)' : 'var(--surface)',
               color: view === v ? '#fff' : 'var(--text-muted)',
-              fontSize: 12, cursor: 'pointer', fontWeight: view === v ? 600 : 400,
-              transition: 'all 0.15s',
+              fontSize: 12, cursor: 'pointer', fontWeight: view === v ? 600 : 400, transition: 'all 0.15s',
             }}>{l}</button>
           ))}
         </div>
       </div>
 
-      {/* 게이지 영역 */}
       {metricsQueries.isLoading ? (
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0', fontSize: 13 }}>불러오는 중...</div>
       ) : includedIds.size === 0 ? (
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0', fontSize: 13 }}>⚠ 실적 반영 매장을 먼저 설정하세요</div>
       ) : (
-        <div key={animKey} style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: view === 'annual' ? 16 : 24,
-          justifyContent: view === 'annual' ? 'space-between' : 'center',
-          alignItems: 'flex-start',
-        }}>
-          {gauges.map((g, i) => (
-            <RingGauge key={g.label} item={g} size={gaugeSize} stroke={gaugeStroke} delay={i * 60} />
-          ))}
+        <div key={animKey}>
+          {/* ── 파동형 에리어 차트 (라이트 뉴모피즘) ── */}
+          <div style={{
+            borderRadius: 16, overflow: 'hidden', marginBottom: 20,
+            background: 'linear-gradient(160deg, #eef0eb 0%, #e8ebe4 60%, #eef0eb 100%)',
+            boxShadow: 'inset 3px 3px 8px rgba(150,158,145,0.35), inset -2px -2px 6px rgba(255,255,255,0.80)',
+            position: 'relative',
+          }}>
+            {/* 미세 파티클 (라이트 톤) */}
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+              {[...Array(14)].map((_, i) => (
+                <div key={i} style={{
+                  position: 'absolute',
+                  width: i % 3 === 0 ? 3 : 2, height: i % 3 === 0 ? 3 : 2,
+                  borderRadius: '50%',
+                  background: `rgba(139,124,248,${0.12 + (i % 4) * 0.06})`,
+                  left: `${(i * 7 + 3) % 100}%`,
+                  top: `${(i * 9 + 8) % 80}%`,
+                  boxShadow: `0 0 ${3 + (i % 3) * 2}px rgba(139,124,248,0.3)`,
+                }} />
+              ))}
+            </div>
+
+            <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" style={{ display: 'block', minHeight: 100 }} preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="goal-area-actual" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#8b7cf8" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#8b7cf8" stopOpacity={0.04} />
+                </linearGradient>
+                <linearGradient id="goal-area-goal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#a8c5a0" stopOpacity={0.28} />
+                  <stop offset="100%" stopColor="#a8c5a0" stopOpacity={0.03} />
+                </linearGradient>
+                <filter id="line-glow-actual">
+                  <feGaussianBlur stdDeviation="2" result="blur" />
+                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+                <filter id="line-glow-goal">
+                  <feGaussianBlur stdDeviation="1.5" result="blur" />
+                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+              </defs>
+
+              {/* 수평 그리드 라인 */}
+              {[0.25, 0.5, 0.75].map((y) => (
+                <line key={y} x1={20} y1={20 + y * (H - 40)} x2={W - 20} y2={20 + y * (H - 40)}
+                  stroke="rgba(139,124,248,0.08)" strokeWidth={1} strokeDasharray="4 4" />
+              ))}
+
+              {/* 목표 에리어 (연한 민트) */}
+              {goalLinePath && (
+                <>
+                  <path d={makeFilledPath(goalLinePath, W, H)} fill="url(#goal-area-goal)" />
+                  <path d={goalLinePath} fill="none" stroke="#a8c5a0" strokeWidth={1.5}
+                    opacity={0.7} filter="url(#line-glow-goal)" strokeDasharray="5 3" />
+                </>
+              )}
+
+              {/* 실적 에리어 (퍼플) */}
+              {actualLinePath && (
+                <>
+                  <path d={makeFilledPath(actualLinePath, W, H)} fill="url(#goal-area-actual)" />
+                  {/* 글로우 레이어 */}
+                  <path d={actualLinePath} fill="none" stroke="#8b7cf8" strokeWidth={4}
+                    opacity={0.18} filter="url(#line-glow-actual)" />
+                  {/* 메인 라인 */}
+                  <path d={actualLinePath} fill="none" stroke="#8b7cf8" strokeWidth={2}
+                    opacity={0.9} filter="url(#line-glow-actual)" />
+                </>
+              )}
+
+              {/* 데이터 포인트 + 바 */}
+              {gauges.map((g, i) => {
+                const x = 20 + i * step;
+                const barH = maxVal > 0 ? ((g.actual / maxVal) * (H - 40)) : 0;
+                const barY = H - 20 - barH;
+                const dotY = maxVal > 0 ? (20 + (1 - g.actual / maxVal) * (H - 40)) : H - 20;
+                const capped = Math.min(Math.max(g.rate, 0), 100);
+                const barColor = g.rate >= 100 ? '#5ec4a0' : g.rate >= 70 ? '#8b7cf8' : '#f87171';
+                return (
+                  <g key={g.label}>
+                    {/* 바 */}
+                    <rect x={x - 6} y={barY} width={12} height={barH}
+                      fill={barColor} opacity={0.22} rx={3} />
+                    {/* 데이터 포인트 */}
+                    {g.actual > 0 && (
+                      <>
+                        <circle cx={x} cy={dotY} r={4} fill="#8b7cf8"
+                          style={{ filter: 'drop-shadow(0 0 4px rgba(139,124,248,0.7))' }} />
+                        <circle cx={x} cy={dotY} r={2} fill="#fff" />
+                      </>
+                    )}
+                  </g>
+                );
+              })}
+
+              {/* X축 레이블 */}
+              {gauges.map((g, i) => {
+                const x = 20 + i * step;
+                return (
+                  <text key={g.label} x={x} y={H - 4} textAnchor="middle"
+                    fontSize={view === 'annual' ? 8 : 10} fill="rgba(90,100,88,0.7)" fontWeight={600}>
+                    {g.label}
+                  </text>
+                );
+              })}
+            </svg>
+
+            {/* 범례 */}
+            <div style={{ position: 'absolute', top: 10, right: 14, display: 'flex', gap: 12, fontSize: 10 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ width: 16, height: 2, background: '#8b7cf8', display: 'inline-block', borderRadius: 1 }} />
+                <span style={{ color: 'var(--text-muted)' }}>실적</span>
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ width: 16, height: 2, background: '#a8c5a0', display: 'inline-block', borderRadius: 1, borderTop: '1px dashed #a8c5a0' }} />
+                <span style={{ color: 'var(--text-muted)' }}>목표</span>
+              </span>
+            </div>
+          </div>
+
+          {/* ── 뉴모피즘 게이지 그리드 ── */}
+          <div style={{
+            display: 'flex', flexWrap: 'wrap',
+            gap: view === 'annual' ? 12 : 20,
+            justifyContent: view === 'annual' ? 'space-between' : 'center',
+            alignItems: 'flex-start',
+          }}>
+            {gauges.map((g, i) => (
+              <RingGauge key={g.label} item={g}
+                size={view === 'annual' ? 90 : view === 'quarterly' ? 140 : 130}
+                stroke={view === 'annual' ? 10 : 16}
+                delay={i * 60} />
+            ))}
+          </div>
         </div>
       )}
 
-      {/* 달성 요약 */}
       {gauges.filter(g => g.rate >= 100).length > 0 && (
         <div style={{ marginTop: 20, paddingTop: 14, borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--success)', fontWeight: 600, textAlign: 'right' }}>
           {gauges.filter(g => g.rate >= 100).length}개 기간 목표 달성 🔥
