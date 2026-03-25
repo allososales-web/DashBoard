@@ -198,6 +198,59 @@ export class SalesKpiService {
     }));
   }
 
+  /** 품목별 매장 breakdown (시리즈별 매장 순위) */
+  async calculateSeriesStoreBreakdown(year: number, month: number, dataMode: DataMode = 'ORDER') {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 1);
+    const baseFilter = { itemCode: { not: { startsWith: 'DELIVERY_' } } };
+
+    const rows = await this.prisma.salesRawData.findMany({
+      where: dataMode === 'SALES'
+        ? { ...baseFilter, confirmedDate: { gte: startDate, lt: endDate } }
+        : {
+            ...baseFilter,
+            OR: [
+              { orderDate: { gte: startDate, lt: endDate } },
+              { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
+            ],
+          },
+      select: { seriesCode: true, orderAmount: true, storeAlias: true },
+    });
+
+    // storeAlias → storeId 매핑
+    const allStores = await this.prisma.store.findMany({
+      where: { deletedAt: null },
+      select: { id: true, name: true, aliases: true },
+    });
+    const aliasToStore: Record<string, { id: string; name: string }> = {};
+    for (const store of allStores) {
+      const aliases: string[] = store.aliases ?? [];
+      for (const alias of aliases) {
+        aliasToStore[alias.trim()] = { id: store.id, name: store.name };
+      }
+      aliasToStore[store.name.trim()] = { id: store.id, name: store.name };
+    }
+
+    // series → store → amount 집계
+    const map: Record<string, Record<string, { storeName: string; amount: number; count: number }>> = {};
+    for (const row of rows) {
+      const series = row.seriesCode?.trim() || '기타';
+      const storeInfo = row.storeAlias ? aliasToStore[row.storeAlias.trim()] : null;
+      if (!storeInfo) continue;
+      if (!map[series]) map[series] = {};
+      if (!map[series][storeInfo.id]) map[series][storeInfo.id] = { storeName: storeInfo.name, amount: 0, count: 0 };
+      map[series][storeInfo.id].amount += Number(row.orderAmount);
+      map[series][storeInfo.id].count += 1;
+    }
+
+    return Object.entries(map).map(([series, storeMap]) => ({
+      series,
+      stores: Object.entries(storeMap)
+        .map(([storeId, v]) => ({ storeId, storeName: v.storeName, amount: v.amount, count: v.count }))
+        .sort((a, b) => b.amount - a.amount),
+    }));
+  }
+
   /** 특정 매장의 시리즈별 KPI */
   async calculateStoreSeriesKpi(storeId: string, year: number, month: number, dataMode: DataMode = 'ORDER') {
     const startDate = new Date(year, month - 1, 1);

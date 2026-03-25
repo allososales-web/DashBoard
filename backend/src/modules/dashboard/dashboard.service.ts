@@ -173,6 +173,10 @@ export class DashboardService {
     return this.salesKpi.calculateSeriesTop(year, month, dataMode ?? 'ORDER');
   }
 
+  async getSeriesStoreBreakdown(year: number, month: number, dataMode?: DataMode) {
+    return this.salesKpi.calculateSeriesStoreBreakdown(year, month, dataMode ?? 'ORDER');
+  }
+
   async getStoreSeriesKpi(storeId: string, year: number, month: number, dataMode?: DataMode) {
     return this.salesKpi.calculateStoreSeriesKpi(storeId, year, month, dataMode ?? 'ORDER');
   }
