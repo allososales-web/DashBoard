@@ -5,6 +5,7 @@ import { dashboardApi } from "../../services/dashboard";
 import api from "../../services/api";
 import DataModeSelector from "../../components/DataModeSelector";
 import { DataMode } from "../../types/dashboard.types";
+import { useMetricsStores } from "../../hooks/useMetricsStores";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -215,6 +216,7 @@ export default function DashboardPage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [dataMode, setDataMode] = useState<DataMode>('ORDER');
   const queryClient = useQueryClient();
+  const { includedIds: metricsStoreIds, count: metricsCount } = useMetricsStores();
 
   const { data, isLoading } = useQuery({
     queryKey: ["metrics", storeId, year, month, dataMode],
@@ -251,7 +253,12 @@ export default function DashboardPage() {
     : (m?.orderAmount ?? Number(m?.contractAmount ?? 0));
   const amountLabel = dataMode === 'ORDER' ? '수주금액' : '매출금액';
 
-  const allStores: any[] = allMetrics ?? [];
+  const allStores: any[] = useMemo(() => {
+    const all: any[] = allMetrics ?? [];
+    // 실적 반영 매장이 설정된 경우 해당 매장만, 없으면 빈 배열
+    if (metricsCount > 0) return all.filter((s: any) => metricsStoreIds.has(s.storeId));
+    return [];
+  }, [allMetrics, metricsStoreIds, metricsCount]);
   const getStoreAmount = (s: any) =>
     dataMode === 'SALES' ? Number(s.salesAmount ?? 0) : Number(s.orderAmount ?? s.contractAmount ?? 0);
   const totalAmount = allStores.reduce((sum: number, s: any) => sum + getStoreAmount(s), 0);
@@ -259,8 +266,8 @@ export default function DashboardPage() {
   const myShare = totalAmount > 0 ? ((myAmount / totalAmount) * 100) : 0;
   const sortedByAmount = [...allStores].sort((a, b) => getStoreAmount(b) - getStoreAmount(a));
   const myRank = sortedByAmount.findIndex((s: any) => s.storeId === storeId) + 1;
-  // 운영중 매장 수 (showOnLogin 기준 - allMetrics에 포함된 매장은 모두 운영중으로 간주)
-  const activeStoreCount = allStores.filter((s: any) => s.showOnLogin !== false).length || allStores.length;
+  // 실적 반영 매장 수 기준
+  const activeStoreCount = allStores.length;
 
   const amountRate = g && Number(g.targetAmount) > 0 ? Math.min((myAmount / Number(g.targetAmount)) * 100, 100) : 0;
   const contractRate = g && g.targetContracts > 0 ? Math.min(((m?.contractCount ?? 0) / g.targetContracts) * 100, 100) : 0;

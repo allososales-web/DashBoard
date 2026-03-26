@@ -638,7 +638,7 @@ export default function HqPerformanceTab() {
   };
 
   const metricsFiltered = includedIds.size === 0
-    ? (allStores as any[]).filter((s: any) => (adminStores as any[]).some((a: any) => a.id === s.storeId && a.showOnLogin))
+    ? [] // 실적 반영 매장 미설정 시 빈 배열 (운영 매장 전체 fallback 제거)
     : (allStores as any[]).filter((s: any) => includedIds.has(s.storeId));
   const filteredList = metricsFiltered.filter((s: any) => activeChannels.has(channelMap[s.storeId] ?? 'ROAD'));
 
