@@ -165,16 +165,16 @@ export class DashboardService {
     return results;
   }
 
-  async getWeeklyKpi(storeId: string | null, year: number, month: number) {
-    return this.salesKpi.calculateWeeklyKpi(storeId, year, month);
+  async getWeeklyKpi(storeId: string | null, year: number, month: number, storeIds?: string[] | null) {
+    return this.salesKpi.calculateWeeklyKpi(storeId, year, month, storeIds);
   }
 
-  async getSeriesTop(year: number, month: number, dataMode?: DataMode, endMonth?: number) {
-    return this.salesKpi.calculateSeriesTop(year, month, dataMode ?? 'ORDER', endMonth);
+  async getSeriesTop(year: number, month: number, dataMode?: DataMode, endMonth?: number, storeIds?: string[] | null) {
+    return this.salesKpi.calculateSeriesTop(year, month, dataMode ?? 'ORDER', endMonth, storeIds);
   }
 
-  async getSeriesStoreBreakdown(year: number, month: number, dataMode?: DataMode, endMonth?: number) {
-    return this.salesKpi.calculateSeriesStoreBreakdown(year, month, dataMode ?? 'ORDER', endMonth);
+  async getSeriesStoreBreakdown(year: number, month: number, dataMode?: DataMode, endMonth?: number, storeIds?: string[] | null) {
+    return this.salesKpi.calculateSeriesStoreBreakdown(year, month, dataMode ?? 'ORDER', endMonth, storeIds);
   }
 
   async getStoreSeriesKpi(storeId: string, year: number, month: number, dataMode?: DataMode) {

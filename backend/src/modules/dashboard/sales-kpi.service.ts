@@ -118,17 +118,31 @@ export class SalesKpiService {
     return { orderAmount, salesAmount, orderCount, salesCount, seriesBreakdown };
   }
 
-  /** 주차�?KPI (?�당 ?�의 주차�??�주/매출 ?�계) */
+  /** 주차별 KPI (해당 월의 주차별 수주/매출 합계) */
   async calculateWeeklyKpi(
     storeId: string | null,
     year: number,
     month: number,
+    storeIds?: string[] | null,
   ): Promise<WeeklyKpiResult[]> {
     const daysInMonth = new Date(year, month, 0).getDate();
-    const aliasNames = await this.resolveAliases(storeId);
-    if (aliasNames !== null && aliasNames.length === 0) return [];
 
-    const aliasFilter = aliasNames ? { storeAlias: { in: aliasNames } } : {};
+    // storeIds가 주어지면 해당 매장들의 alias를 모두 수집
+    let aliasFilter: any = {};
+    if (storeIds && storeIds.length > 0) {
+      const mappings = await this.prisma.storeAliasMapping.findMany({
+        where: { storeId: { in: storeIds } },
+        select: { aliasName: true },
+      });
+      const aliases = mappings.map((m) => m.aliasName);
+      if (aliases.length === 0) return [];
+      aliasFilter = { storeAlias: { in: aliases } };
+    } else if (storeId) {
+      const aliasNames = await this.resolveAliases(storeId);
+      if (aliasNames !== null && aliasNames.length === 0) return [];
+      if (aliasNames) aliasFilter = { storeAlias: { in: aliasNames } };
+    }
+
     const baseFilter = { ...aliasFilter, itemCode: { not: { startsWith: 'DELIVERY_' } } };
 
     // 주차 구분: 1~7, 8~14, 15~21, 22~28, 29~말일
@@ -173,11 +187,23 @@ export class SalesKpiService {
   }
 
   /** 시리즈별 TOP (품목별 매출/건수/평균단가) - 기간 범위 지원 */
-  async calculateSeriesTop(year: number, month: number, dataMode: DataMode = 'ORDER', endMonth?: number) {
+  async calculateSeriesTop(year: number, month: number, dataMode: DataMode = 'ORDER', endMonth?: number, storeIds?: string[] | null) {
     const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, (endMonth ?? month), 1); // endMonth 포함
+    const endDate = new Date(year, (endMonth ?? month), 1);
 
-    const baseFilter = { itemCode: { not: { startsWith: 'DELIVERY_' } } };
+    // storeIds 필터: 해당 매장들의 alias만 포함
+    let aliasFilter: any = {};
+    if (storeIds && storeIds.length > 0) {
+      const mappings = await this.prisma.storeAliasMapping.findMany({
+        where: { storeId: { in: storeIds } },
+        select: { aliasName: true },
+      });
+      const aliases = mappings.map((m) => m.aliasName);
+      if (aliases.length === 0) return [];
+      aliasFilter = { storeAlias: { in: aliases } };
+    }
+
+    const baseFilter = { ...aliasFilter, itemCode: { not: { startsWith: 'DELIVERY_' } } };
 
     const rows = await this.prisma.salesRawData.findMany({
       where: dataMode === 'SALES'
@@ -210,10 +236,23 @@ export class SalesKpiService {
   }
 
   /** 품목별 매장 breakdown (시리즈별 매장 순위) - 기간 범위 지원 */
-  async calculateSeriesStoreBreakdown(year: number, month: number, dataMode: DataMode = 'ORDER', endMonth?: number) {
+  async calculateSeriesStoreBreakdown(year: number, month: number, dataMode: DataMode = 'ORDER', endMonth?: number, storeIds?: string[] | null) {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, (endMonth ?? month), 1);
-    const baseFilter = { itemCode: { not: { startsWith: 'DELIVERY_' } } };
+
+    // storeIds 필터
+    let aliasFilter: any = {};
+    if (storeIds && storeIds.length > 0) {
+      const mappings = await this.prisma.storeAliasMapping.findMany({
+        where: { storeId: { in: storeIds } },
+        select: { aliasName: true },
+      });
+      const aliases = mappings.map((m) => m.aliasName);
+      if (aliases.length === 0) return [];
+      aliasFilter = { storeAlias: { in: aliases } };
+    }
+
+    const baseFilter = { ...aliasFilter, itemCode: { not: { startsWith: 'DELIVERY_' } } };
 
     const rows = await this.prisma.salesRawData.findMany({
       where: dataMode === 'SALES'

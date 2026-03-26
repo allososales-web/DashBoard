@@ -35,11 +35,13 @@ export class HqDashboardController {
   getWeeklyKpi(
     @Query('year') year: string,
     @Query('month') month: string,
+    @Query('storeIds') storeIds?: string,
   ) {
     const now = new Date();
     const y = year ? parseInt(year, 10) : now.getFullYear();
     const m = month ? parseInt(month, 10) : now.getMonth() + 1;
-    return this.dashboardService.getWeeklyKpi(null, y, m);
+    const ids = storeIds ? storeIds.split(',').filter(Boolean) : null;
+    return this.dashboardService.getWeeklyKpi(null, y, m, ids);
   }
 
   // 매장 사용자도 접근 가능한 전체 순위 엔드포인트 (금액 노출 없이 순위만)
@@ -64,12 +66,14 @@ export class HqDashboardController {
     @Query('month') month: string,
     @Query('dataMode') dataMode?: string,
     @Query('endMonth') endMonth?: string,
+    @Query('storeIds') storeIds?: string,
   ) {
     const now = new Date();
     const y = year ? parseInt(year, 10) : now.getFullYear();
     const m = month ? parseInt(month, 10) : now.getMonth() + 1;
     const em = endMonth ? parseInt(endMonth, 10) : undefined;
-    return this.dashboardService.getSeriesTop(y, m, dataMode as any, em);
+    const ids = storeIds ? storeIds.split(',').filter(Boolean) : null;
+    return this.dashboardService.getSeriesTop(y, m, dataMode as any, em, ids);
   }
 
   // 품목별 매장 breakdown (시리즈별 매장 순위)
@@ -80,12 +84,14 @@ export class HqDashboardController {
     @Query('month') month: string,
     @Query('dataMode') dataMode?: string,
     @Query('endMonth') endMonth?: string,
+    @Query('storeIds') storeIds?: string,
   ) {
     const now = new Date();
     const y = year ? parseInt(year, 10) : now.getFullYear();
     const m = month ? parseInt(month, 10) : now.getMonth() + 1;
     const em = endMonth ? parseInt(endMonth, 10) : undefined;
-    return this.dashboardService.getSeriesStoreBreakdown(y, m, dataMode as any, em);
+    const ids = storeIds ? storeIds.split(',').filter(Boolean) : null;
+    return this.dashboardService.getSeriesStoreBreakdown(y, m, dataMode as any, em, ids);
   }
 }
 

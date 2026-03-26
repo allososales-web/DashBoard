@@ -669,8 +669,12 @@ export default function HqPerformanceTab() {
   const contractRate = goalContracts > 0 ? Math.min((totalContracts / goalContracts) * 100, 999) : 0;
 
   const { data: weeklyKpi = [] } = useQuery({
-    queryKey: ['hq-weekly-kpi', now.getFullYear(), now.getMonth() + 1],
-    queryFn: () => api.get(`/dashboard/weekly?year=${now.getFullYear()}&month=${now.getMonth() + 1}`).then((r) => r.data).catch(() => []),
+    queryKey: ['hq-weekly-kpi', now.getFullYear(), now.getMonth() + 1, Array.from(includedIds).sort().join(',')],
+    queryFn: () => {
+      const storeIdsParam = includedIds.size > 0 ? `&storeIds=${Array.from(includedIds).join(',')}` : '';
+      return api.get(`/dashboard/weekly?year=${now.getFullYear()}&month=${now.getMonth() + 1}${storeIdsParam}`).then((r) => r.data).catch(() => []);
+    },
+    enabled: includedIds.size > 0,
   });
 
   const weeks = getWeeksInMonth(now.getFullYear(), now.getMonth() + 1);
