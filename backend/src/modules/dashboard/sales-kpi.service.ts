@@ -4,9 +4,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 export type DataMode = 'ORDER' | 'SALES';
 
 export interface SalesKpiResult {
-  orderAmount: number;       // ?�주?�자 기�? ?�주?��?*?�량 ?�계
-  salesAmount: number;       // ?�정?�기 기�? ?�주?��?*?�량 ?�계
-  orderCount: number;        // ?�주 건수 (distinct itemName)
+  orderAmount: number;       // ?�주?�자 기�? ?�주?��?*?�량 ?�계
+  salesAmount: number;       // ?�정?�기 기�? ?�주?��?*?�량 ?�계
+  orderCount: number;        // ?�주 건수 (distinct itemName)
   salesCount: number;        // 매출 건수 (distinct itemName)
   seriesBreakdown: Record<string, { amount: number; count: number }>;
 }
@@ -26,8 +26,8 @@ export interface StoreKpiResult {
   aliasName: string;
   orderAmount: number;
   salesAmount: number;
-  orderCount: number;        // distinct itemName 기�? (?�주?�자)
-  salesCount: number;        // distinct itemName 기�? (?�정?�기)
+  orderCount: number;        // distinct itemName 기�? (?�주?�자)
+  salesCount: number;        // distinct itemName 기�? (?�정?�기)
   channel: string;
 }
 
@@ -60,7 +60,7 @@ export class SalesKpiService {
 
     const aliasFilter = aliasNames ? { storeAlias: { in: aliasNames } } : {};
 
-    // ?�주: orderDate 기�? (null?�면 confirmedDate fallback)
+    // ?�주: orderDate 기�? (null?�면 confirmedDate fallback)
     const orderRows = await this.prisma.salesRawData.findMany({
       where: {
         ...aliasFilter,
@@ -74,7 +74,7 @@ export class SalesKpiService {
       select: { orderAmount: true, quantity: true, seriesCode: true, itemName: true, orderNumber: true },
     });
 
-    // 매출: confirmedDate 기�?
+    // 매출: confirmedDate 기�?
     const salesRows = await this.prisma.salesRawData.findMany({
       where: {
         ...aliasFilter,
@@ -86,7 +86,7 @@ export class SalesKpiService {
     });
 
     const sumAmount = (rows: { orderAmount: any; orderNumber: string }[]) => {
-      // distinct orderNumber 기�??�로 금액 ?�산 (같�? ?�주번호????번만)
+      // distinct orderNumber 기�??�로 금액 ?�산 (같�? ?�주번호????번만)
       const seen = new Map<string, number>();
       for (const r of rows) {
         if (!seen.has(r.orderNumber)) {
@@ -96,7 +96,7 @@ export class SalesKpiService {
       return [...seen.values()].reduce((acc, v) => acc + v, 0);
     };
 
-    // ?�주건수: distinct orderNumber (0???�외)
+    // ?�주건수: distinct orderNumber (0???�외)
     const distinctOrderCount = (rows: { orderNumber: string }[]) =>
       new Set(rows.map((r) => r.orderNumber).filter(Boolean)).size;
 
@@ -109,7 +109,7 @@ export class SalesKpiService {
     const activeRows = dataMode === 'ORDER' ? orderRows : salesRows;
     const seriesBreakdown: Record<string, { amount: number; count: number }> = {};
     for (const row of activeRows) {
-      const key = row.seriesCode || '기�?';
+      const key = row.seriesCode || '기�?';
       if (!seriesBreakdown[key]) seriesBreakdown[key] = { amount: 0, count: 0 };
       seriesBreakdown[key].amount += Number(row.orderAmount);
       seriesBreakdown[key].count += 1;
@@ -118,7 +118,7 @@ export class SalesKpiService {
     return { orderAmount, salesAmount, orderCount, salesCount, seriesBreakdown };
   }
 
-  /** 주차�?KPI (?�당 ?�의 주차�??�주/매출 ?�계) */
+  /** 주차�?KPI (?�당 ?�의 주차�??�주/매출 ?�계) */
   async calculateWeeklyKpi(
     storeId: string | null,
     year: number,
@@ -172,10 +172,10 @@ export class SalesKpiService {
     return results;
   }
 
-  /** ?�리즈별 TOP (?�목�?매출/건수/?�균?��?) */
-  async calculateSeriesTop(year: number, month: number, dataMode: DataMode = 'ORDER') {
+  /** 시리즈별 TOP (품목별 매출/건수/평균단가) - 기간 범위 지원 */
+  async calculateSeriesTop(year: number, month: number, dataMode: DataMode = 'ORDER', endMonth?: number) {
     const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 1);
+    const endDate = new Date(year, (endMonth ?? month), 1); // endMonth 포함
 
     const baseFilter = { itemCode: { not: { startsWith: 'DELIVERY_' } } };
 
@@ -192,10 +192,10 @@ export class SalesKpiService {
       select: { seriesCode: true, orderAmount: true, itemName: true },
     });
 
-    // ?�리즈별 집계: amount ?�계, distinct itemName ??
+    // ?�리즈별 집계: amount ?�계, distinct itemName ??
     const map: Record<string, { amount: number; itemNames: Set<string> }> = {};
     for (const row of rows) {
-      const key = row.seriesCode?.trim() || '기�?';
+      const key = row.seriesCode?.trim() || '기�?';
       if (!map[key]) map[key] = { amount: 0, itemNames: new Set() };
       map[key].amount += Number(row.orderAmount);
       if (row.itemName) map[key].itemNames.add(row.itemName);
@@ -209,10 +209,10 @@ export class SalesKpiService {
     }));
   }
 
-  /** ?�목�?매장 breakdown (?�리즈별 매장 ?�위) */
-  async calculateSeriesStoreBreakdown(year: number, month: number, dataMode: DataMode = 'ORDER') {
+  /** 품목별 매장 breakdown (시리즈별 매장 순위) - 기간 범위 지원 */
+  async calculateSeriesStoreBreakdown(year: number, month: number, dataMode: DataMode = 'ORDER', endMonth?: number) {
     const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 1);
+    const endDate = new Date(year, (endMonth ?? month), 1);
     const baseFilter = { itemCode: { not: { startsWith: 'DELIVERY_' } } };
 
     const rows = await this.prisma.salesRawData.findMany({
@@ -228,7 +228,7 @@ export class SalesKpiService {
       select: { seriesCode: true, orderAmount: true, storeAlias: true },
     });
 
-    // storeAlias ??storeId 매핑 (storeAliasMapping ?�이�??�용)
+    // storeAlias ??storeId 매핑 (storeAliasMapping ?�이�??�용)
     const allMappings = await this.prisma.storeAliasMapping.findMany({
       select: { aliasName: true, storeId: true, store: { select: { name: true } } },
     });
@@ -240,7 +240,7 @@ export class SalesKpiService {
     // series ??store ??amount 집계
     const map: Record<string, Record<string, { storeName: string; amount: number; count: number }>> = {};
     for (const row of rows) {
-      const series = row.seriesCode?.trim() || '기�?';
+      const series = row.seriesCode?.trim() || '기�?';
       const storeInfo = row.storeAlias ? aliasToStore[row.storeAlias.trim()] : null;
       if (!storeInfo) continue;
       if (!map[series]) map[series] = {};
@@ -257,7 +257,7 @@ export class SalesKpiService {
     }));
   }
 
-  /** ?�정 매장???�리즈별 KPI */
+  /** ?�정 매장???�리즈별 KPI */
   async calculateStoreSeriesKpi(storeId: string, year: number, month: number, dataMode: DataMode = 'ORDER') {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 1);
@@ -290,7 +290,7 @@ export class SalesKpiService {
 
     const map: Record<string, { amount: number; itemNames: Set<string> }> = {};
     for (const row of activeRows) {
-      const key = row.seriesCode?.trim() || '기�?';
+      const key = row.seriesCode?.trim() || '기�?';
       if (!map[key]) map[key] = { amount: 0, itemNames: new Set() };
       map[key].amount += Number(row.orderAmount);
       if (row.itemName) map[key].itemNames.add(row.itemName);
@@ -319,7 +319,7 @@ export class SalesKpiService {
     };
   }
 
-  /** ?�체 매장�?KPI */
+  /** ?�체 매장�?KPI */
   async calculateAllStoresKpi(year: number, month: number): Promise<StoreKpiResult[]> {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 1);
@@ -368,7 +368,7 @@ export class SalesKpiService {
         select: { orderAmount: true, orderNumber: true },
       });
 
-      // distinct orderNumber 기�? 금액 ?�산 (같�? ?�주번호????번만)
+      // distinct orderNumber 기�? 금액 ?�산 (같�? ?�주번호????번만)
       const sumDistinct = (rows: { orderAmount: any; orderNumber: string }[]) => {
         const seen = new Map<string, number>();
         for (const r of rows) {

@@ -63,11 +63,13 @@ export class HqDashboardController {
     @Query('year') year: string,
     @Query('month') month: string,
     @Query('dataMode') dataMode?: string,
+    @Query('endMonth') endMonth?: string,
   ) {
     const now = new Date();
     const y = year ? parseInt(year, 10) : now.getFullYear();
     const m = month ? parseInt(month, 10) : now.getMonth() + 1;
-    return this.dashboardService.getSeriesTop(y, m, dataMode as any);
+    const em = endMonth ? parseInt(endMonth, 10) : undefined;
+    return this.dashboardService.getSeriesTop(y, m, dataMode as any, em);
   }
 
   // 품목별 매장 breakdown (시리즈별 매장 순위)
@@ -77,11 +79,13 @@ export class HqDashboardController {
     @Query('year') year: string,
     @Query('month') month: string,
     @Query('dataMode') dataMode?: string,
+    @Query('endMonth') endMonth?: string,
   ) {
     const now = new Date();
     const y = year ? parseInt(year, 10) : now.getFullYear();
     const m = month ? parseInt(month, 10) : now.getMonth() + 1;
-    return this.dashboardService.getSeriesStoreBreakdown(y, m, dataMode as any);
+    const em = endMonth ? parseInt(endMonth, 10) : undefined;
+    return this.dashboardService.getSeriesStoreBreakdown(y, m, dataMode as any, em);
   }
 }
 
