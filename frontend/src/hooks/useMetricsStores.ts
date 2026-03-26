@@ -25,33 +25,49 @@ function saveIds(ids: Set<string>) {
 export function useMetricsStores() {
   const [includedIds, setIncludedIds] = useState<Set<string>>(loadIds);
 
-  // 다른 컴포넌트(탭)에서 변경 시 동기화
   useEffect(() => {
-    const handler = () => {
-      setIncludedIds(loadIds());
-    };
+    setIncludedIds(loadIds());
+  }, []);
+
+  useEffect(() => {
+    const handler = () => { setIncludedIds(loadIds()); };
     window.addEventListener('storage', handler);
-    // 탭 포커스 시에도 재동기화 (같은 탭 내 탭 전환 대응)
     window.addEventListener('focus', handler);
+    window.addEventListener('metrics-stores-changed', handler);
     return () => {
       window.removeEventListener('storage', handler);
       window.removeEventListener('focus', handler);
+      window.removeEventListener('metrics-stores-changed', handler);
     };
   }, []);
+
+  const notify = () => window.dispatchEvent(new CustomEvent('metrics-stores-changed'));
 
   const toggle = useCallback((storeId: string) => {
     setIncludedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(storeId)) next.delete(storeId);
-      else next.add(storeId);
+      if (next.has(storeId)) next.delete(storeId); else next.add(storeId);
       saveIds(next);
-      // 같은 탭 내 다른 컴포넌트에 알림
-      window.dispatchEvent(new Event('storage'));
+      notify();
       return next;
     });
   }, []);
 
+  const clearAll = useCallback(() => {
+    const empty = new Set<string>();
+    setIncludedIds(empty);
+    saveIds(empty);
+    notify();
+  }, []);
+
+  const selectAll = useCallback((storeIds: string[]) => {
+    const next = new Set(storeIds);
+    setIncludedIds(next);
+    saveIds(next);
+    notify();
+  }, []);
+
   const isIncluded = useCallback((storeId: string) => includedIds.has(storeId), [includedIds]);
 
-  return { includedIds, toggle, isIncluded, count: includedIds.size };
+  return { includedIds, toggle, isIncluded, clearAll, selectAll, count: includedIds.size };
 }

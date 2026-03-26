@@ -32,7 +32,7 @@ function ChannelBadge({ channel }: { channel: string }) {
 
 // ─── 실적 반영 매장 섹터 ───
 function MetricsStoresSection() {
-  const { includedIds, toggle, isIncluded } = useMetricsStores();
+  const { includedIds, toggle, isIncluded, clearAll, selectAll } = useMetricsStores();
   const [search, setSearch] = useState('');
   const { data: stores = [], isLoading } = useQuery({
     queryKey: ['admin-stores'],
@@ -42,6 +42,8 @@ function MetricsStoresSection() {
   const filtered = activeStores.filter((s: any) =>
     s.name.toLowerCase().includes(search.toLowerCase()) || s.code.toLowerCase().includes(search.toLowerCase())
   );
+  const allSelected = activeStores.length > 0 && activeStores.every((s: any) => includedIds.has(s.id));
+
   return (
     <div className="glass" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
       <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -49,6 +51,17 @@ function MetricsStoresSection() {
           <span style={{ fontWeight: 600 }}>실적 반영 매장</span>
           <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>{includedIds.size}개 선택됨</span>
           <span className="hide-mobile" style={{ fontSize: 11, color: 'var(--text-muted)' }}>— 브랜드 실적 탭 KPI에 반영되는 매장</span>
+          <button onClick={() => selectAll(activeStores.map((s: any) => s.id))} style={{
+            fontSize: 11, padding: '3px 10px', borderRadius: 8, border: '1px solid var(--glass-border)',
+            background: allSelected ? 'var(--accent)' : '#f4f6f1',
+            color: allSelected ? '#fff' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 600,
+          }}>전체 선택</button>
+          {includedIds.size > 0 && (
+            <button onClick={clearAll} style={{
+              fontSize: 11, padding: '3px 10px', borderRadius: 8, border: '1px solid var(--glass-border)',
+              background: '#f4f6f1', color: '#ef4444', cursor: 'pointer', fontWeight: 600,
+            }}>전체 해제</button>
+          )}
         </div>
         <input placeholder="매장명 / 코드 검색" value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 180, fontSize: 12, padding: '6px 10px' }} />
       </div>
