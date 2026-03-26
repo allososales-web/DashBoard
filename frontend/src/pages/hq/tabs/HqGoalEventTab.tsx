@@ -96,10 +96,48 @@ export default function HqGoalEventTab() {
   });
 
   const delKey = `${delYear}-${pad2(delMonth)}`;
-  const { data: savedDelCal } = useQuery({
-    queryKey: ["delivery-calendar-hq", delYear, delMonth],
-    queryFn: () => api.get(`/hq/delivery-calendar?year=${delYear}&month=${delMonth}`).then(r => r.data).catch(() => ({})),
+
+  // 3개월치 서버 데이터를 각각 쿼리 (기준 월 변경 시 각 월 데이터 유지)
+  const delMonths = useMemo(() => {
+    const result = [];
+    for (let offset = 0; offset <= 2; offset++) {
+      let y = delYear, m = delMonth + offset;
+      if (m > 12) { y++; m -= 12; }
+      result.push({ year: y, month: m });
+    }
+    return result;
+  }, [delYear, delMonth]);
+
+  const { data: savedDelCal0 } = useQuery({
+    queryKey: ["delivery-calendar-hq", delMonths[0]?.year, delMonths[0]?.month],
+    queryFn: () => api.get(`/hq/delivery-calendar?year=${delMonths[0]?.year}&month=${delMonths[0]?.month}`).then(r => r.data).catch(() => ({})),
+    enabled: !!delMonths[0],
   });
+  const { data: savedDelCal1 } = useQuery({
+    queryKey: ["delivery-calendar-hq", delMonths[1]?.year, delMonths[1]?.month],
+    queryFn: () => api.get(`/hq/delivery-calendar?year=${delMonths[1]?.year}&month=${delMonths[1]?.month}`).then(r => r.data).catch(() => ({})),
+    enabled: !!delMonths[1],
+  });
+  const { data: savedDelCal2 } = useQuery({
+    queryKey: ["delivery-calendar-hq", delMonths[2]?.year, delMonths[2]?.month],
+    queryFn: () => api.get(`/hq/delivery-calendar?year=${delMonths[2]?.year}&month=${delMonths[2]?.month}`).then(r => r.data).catch(() => ({})),
+    enabled: !!delMonths[2],
+  });
+
+  // 월별 서버 데이터 맵
+  const savedDelCalMap = useMemo(() => {
+    const map: Record<string, Record<number, string>> = {};
+    [savedDelCal0, savedDelCal1, savedDelCal2].forEach((data, i) => {
+      if (delMonths[i]) {
+        const k = `${delMonths[i].year}-${pad2(delMonths[i].month)}`;
+        map[k] = (data ?? {}) as Record<number, string>;
+      }
+    });
+    return map;
+  }, [savedDelCal0, savedDelCal1, savedDelCal2, delMonths]);
+
+  // 당월 savedDelCal (기존 호환성)
+  const savedDelCal = savedDelCalMap[delKey] ?? {};
 
   const { data: annualGoals, refetch: refetchGoals } = useQuery({
     queryKey: ["hq-annual-goals", goalYear],
@@ -125,14 +163,14 @@ export default function HqGoalEventTab() {
 
   // 납기 캘린더 현재 상태 (저장값 우선, 없으면 기본값)
   const currentDelStatuses = useMemo(() => {
-    const saved = (savedDelCal ?? {}) as Record<number, string>;
+    const saved = (savedDelCalMap[delKey] ?? {}) as Record<number, string>;
     const result: Record<number, DeliveryStatus> = {};
     const daysInMonth = new Date(delYear, delMonth, 0).getDate();
     for (let d = 1; d <= daysInMonth; d++) {
       result[d] = (delStatuses[delKey]?.[d] ?? saved[d] ?? getDefaultStatus(delYear, delMonth, d)) as DeliveryStatus;
     }
     return result;
-  }, [delYear, delMonth, delStatuses, savedDelCal, delKey]);
+  }, [delYear, delMonth, delStatuses, savedDelCalMap, delKey]);
 
   // ── 이벤트 뮤테이션 ──
   const createEvent = useMutation({
@@ -185,17 +223,6 @@ export default function HqGoalEventTab() {
   const cells = buildCalendar(calYear, calMonth);
   const todayStr = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
   const selectedEvents = selectedDay ? (eventDates[selectedDay] ?? []) : [];
-
-  // 납기 캘린더 3개월 (당월 + 익월 + 익익월)
-  const delMonths = useMemo(() => {
-    const result = [];
-    for (let offset = 0; offset <= 2; offset++) {
-      let y = delYear, m = delMonth + offset;
-      if (m > 12) { y++; m -= 12; }
-      result.push({ year: y, month: m });
-    }
-    return result;
-  }, [delYear, delMonth]);
 
   function toggleDelStatus(day: number) {
     const cur = currentDelStatuses[day];
@@ -525,7 +552,7 @@ export default function HqGoalEventTab() {
             const daysInMonth = new Date(year, month, 0).getDate();
             const statuses: Record<number, DeliveryStatus> = {};
             for (let d = 1; d <= daysInMonth; d++) {
-              statuses[d] = (delStatuses[k]?.[d] ?? (savedDelCal && k === delKey ? (savedDelCal as any)[d] : undefined) ?? getDefaultStatus(year, month, d)) as DeliveryStatus;
+              statuses[d] = (delStatuses[k]?.[d] ?? savedDelCalMap[k]?.[d] ?? getDefaultStatus(year, month, d)) as DeliveryStatus;
             }
             const isCurrent = year === delYear && month === delMonth;
             return (
