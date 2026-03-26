@@ -44,6 +44,18 @@ function MetricsStoresSection() {
   );
   const allSelected = activeStores.length > 0 && activeStores.every((s: any) => includedIds.has(s.id));
 
+  // 운영 매장 목록이 로드되면 유효하지 않은 ID 자동 제거
+  useEffect(() => {
+    if (isLoading || activeStores.length === 0) return;
+    const validIds = new Set(activeStores.map((s: any) => s.id));
+    const hasInvalid = [...includedIds].some(id => !validIds.has(id));
+    if (hasInvalid) {
+      const cleaned = [...includedIds].filter(id => validIds.has(id));
+      selectAll(cleaned);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, activeStores.length]);
+
   return (
     <div className="glass" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
       <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
