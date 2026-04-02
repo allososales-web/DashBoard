@@ -312,24 +312,26 @@ export class SalesKpiService {
     const orderRows = await this.prisma.salesRawData.findMany({
       where: {
         ...baseFilter,
+        orderAmount: { gt: 0 },
         OR: [
           { orderDate: { gte: startDate, lt: endDate } },
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment`n          // @ts-ignore`n          { orderDate: null, confirmedDate: { gte: startDate, lt: endDate } },
         ],
       },
-      select: { orderAmount: true, quantity: true, seriesCode: true, itemName: true },
+      select: { orderAmount: true, seriesCode: true, itemName: true, orderNumber: true },
     });
 
     const salesRows = await this.prisma.salesRawData.findMany({
-      where: { ...baseFilter, confirmedDate: { gte: startDate, lt: endDate } },
-      select: { orderAmount: true, quantity: true, seriesCode: true, itemName: true },
+      where: { ...baseFilter, orderAmount: { gt: 0 }, confirmedDate: { gte: startDate, lt: endDate } },
+      select: { orderAmount: true, seriesCode: true, itemName: true, orderNumber: true },
     });
 
     const activeRows = dataMode === 'SALES' ? salesRows : orderRows;
 
+    // 시리즈별 집계 (비중 계산용 — 행 단위 합산)
     const map: Record<string, { amount: number; itemNames: Set<string> }> = {};
     for (const row of activeRows) {
-      const key = row.seriesCode?.trim() || '기�?';
+      const key = row.seriesCode?.trim() || '기타';
       if (!map[key]) map[key] = { amount: 0, itemNames: new Set() };
       map[key].amount += Number(row.orderAmount);
       if (row.itemName) map[key].itemNames.add(row.itemName);
@@ -344,17 +346,23 @@ export class SalesKpiService {
       }))
       .sort((a, b) => b.amount - a.amount);
 
-    const sumAmount = (rows: { orderAmount: any }[]) =>
-      rows.reduce((acc, r) => acc + Number(r.orderAmount), 0);
-    const distinctCount = (rows: { itemName: string | null }[]) =>
-      new Set(rows.map((r) => r.itemName).filter(Boolean)).size;
+    // 총 수주금액/건수: distinct orderNumber 기준 (DashboardPage와 동일)
+    const sumDistinct = (rows: { orderAmount: any; orderNumber: string }[]) => {
+      const seen = new Map<string, number>();
+      for (const r of rows) {
+        if (!seen.has(r.orderNumber)) seen.set(r.orderNumber, Number(r.orderAmount));
+      }
+      return [...seen.values()].reduce((s, v) => s + v, 0);
+    };
+    const countDistinct = (rows: { orderNumber: string }[]) =>
+      new Set(rows.map(r => r.orderNumber).filter(Boolean)).size;
 
     return {
       series,
-      orderAmount: sumAmount(orderRows),
-      salesAmount: sumAmount(salesRows),
-      orderCount: distinctCount(orderRows),
-      salesCount: distinctCount(salesRows),
+      orderAmount: sumDistinct(orderRows),
+      salesAmount: sumDistinct(salesRows),
+      orderCount: countDistinct(orderRows),
+      salesCount: countDistinct(salesRows),
     };
   }
 
