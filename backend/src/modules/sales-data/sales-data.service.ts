@@ -4,6 +4,7 @@ import * as iconv from 'iconv-lite';
 import { parse } from 'csv-parse/sync';
 import { v4 as uuidv4 } from 'uuid';
 import { CreateStoreMappingDto } from './dto/upload-result.dto';
+import { PushSalesBatchDto } from './dto/push-sales.dto';
 
 interface ParsedRow {
   orderNumber: string;
@@ -140,8 +141,8 @@ export class SalesDataService {
         update: {
           uploadBatchId: batchId,
           storeAlias: row.storeAlias,
-          orderDate: row.orderDate ?? undefined,
-          confirmedDate: row.confirmedDate ?? undefined,
+          orderDate: row.orderDate as any,
+          confirmedDate: row.confirmedDate as any,
           seriesCode: row.seriesCode,
           orderAmount: row.orderAmount,
           quantity: row.quantity,
@@ -152,8 +153,8 @@ export class SalesDataService {
           orderNumber: row.orderNumber,
           itemCode: row.itemCode,
           storeAlias: row.storeAlias,
-          orderDate: row.orderDate ?? undefined,
-          confirmedDate: row.confirmedDate ?? undefined,
+          orderDate: row.orderDate as any,
+          confirmedDate: row.confirmedDate as any,
           seriesCode: row.seriesCode,
           orderAmount: row.orderAmount,
           quantity: row.quantity,
@@ -358,5 +359,79 @@ export class SalesDataService {
       }),
     ]);
     return { recentRows: rows, mappings };
+  }
+
+  /** 사내 호스트 서버에서 JSON으로 수주 데이터를 직접 push */
+  async pushSalesBatch(dto: PushSalesBatchDto) {
+    const batchId = uuidv4();
+    const source = dto.source ?? 'inhouse-push';
+
+    await this.prisma.salesUploadHistory.create({
+      data: {
+        id: batchId,
+        fileName: `push:${source}:${new Date().toISOString()}`,
+        uploadedBy: null,
+        totalRows: dto.rows.length,
+        savedRows: 0,
+        skippedRows: 0,
+      },
+    });
+
+    const mappings = await this.prisma.storeAliasMapping.findMany({
+      select: { aliasName: true },
+    });
+    const mappedAliases = new Set(mappings.map((m) => m.aliasName));
+
+    let savedRows = 0;
+    let skippedRows = 0;
+    const unmappedAliases = new Set<string>();
+
+    for (const row of dto.rows) {
+      if (!row.orderNumber || !row.itemCode) { skippedRows++; continue; }
+
+      if (row.storeAlias && !mappedAliases.has(row.storeAlias)) {
+        unmappedAliases.add(row.storeAlias);
+      }
+
+      await this.prisma.salesRawData.upsert({
+        where: { orderNumber_itemCode: { orderNumber: row.orderNumber, itemCode: row.itemCode } },
+        update: {
+          uploadBatchId: batchId,
+          storeAlias: row.storeAlias,
+          orderDate: row.orderDate ? new Date(row.orderDate) : undefined,
+          confirmedDate: row.confirmedDate ? new Date(row.confirmedDate) : undefined,
+          seriesCode: row.seriesCode ?? null,
+          orderAmount: row.orderAmount,
+          quantity: row.quantity ?? 1,
+          itemName: row.itemName ?? null,
+        },
+        create: {
+          uploadBatchId: batchId,
+          orderNumber: row.orderNumber,
+          itemCode: row.itemCode,
+          storeAlias: row.storeAlias,
+          orderDate: row.orderDate ? (new Date(row.orderDate) as any) : undefined,
+          confirmedDate: row.confirmedDate ? (new Date(row.confirmedDate) as any) : undefined,
+          seriesCode: row.seriesCode ?? null,
+          orderAmount: row.orderAmount,
+          quantity: row.quantity ?? 1,
+          itemName: row.itemName ?? null,
+        },
+      });
+      savedRows++;
+    }
+
+    await this.prisma.salesUploadHistory.update({
+      where: { id: batchId },
+      data: { savedRows, skippedRows },
+    });
+
+    return {
+      batchId,
+      savedRows,
+      skippedRows,
+      totalRows: dto.rows.length,
+      unmappedAliases: [...unmappedAliases],
+    };
   }
 }

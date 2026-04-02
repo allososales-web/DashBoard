@@ -9,6 +9,8 @@ import {
   UseInterceptors,
   UploadedFile,
   Request,
+  Headers,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -18,6 +20,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { Role } from '../../common/types/roles.enum';
 import { SalesDataService } from './sales-data.service';
 import { CreateStoreMappingDto } from './dto/upload-result.dto';
+import { PushSalesBatchDto } from './dto/push-sales.dto';
 
 @Controller('sales-data')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -63,6 +66,24 @@ export class SalesDataController {
   @Get('unmapped-aliases')
   getUnmappedAliases() {
     return this.salesDataService.getUnmappedAliases();
+  }
+
+  /**
+   * 사내 호스트 서버 전용 push 엔드포인트
+   * 인증: X-Api-Key 헤더 (환경변수 SALES_PUSH_API_KEY)
+   * JWT 인증 불필요 — @Public() 처리
+   */
+  @Post('push')
+  @Public()
+  pushSalesBatch(
+    @Headers('x-api-key') apiKey: string,
+    @Body() dto: PushSalesBatchDto,
+  ) {
+    const expected = process.env.SALES_PUSH_API_KEY;
+    if (!expected || apiKey !== expected) {
+      throw new UnauthorizedException('Invalid API key');
+    }
+    return this.salesDataService.pushSalesBatch(dto);
   }
 }
 
