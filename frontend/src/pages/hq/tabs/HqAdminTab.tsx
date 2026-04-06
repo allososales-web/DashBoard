@@ -239,6 +239,104 @@ function StoreUrlSection() {
   );
 }
 
+// ─── 사내 호스트 서버 연동 섹터 ───
+function InhousePushSection() {
+  const [copied, setCopied] = useState(false);
+  const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || '/api';
+  const pushUrl = `${window.location.origin}${apiBase}/sales-data/push`;
+
+  const examplePayload = JSON.stringify({
+    source: 'inhouse-erp',
+    rows: [
+      {
+        orderNumber: 'SO-2026-001234',
+        itemCode: 'SATI-3S-GRY',
+        storeAlias: '알로소청담',
+        orderDate: '2026-04-01',
+        confirmedDate: '2026-04-15',
+        seriesCode: 'SATI',
+        orderAmount: 3200000,
+        quantity: 1,
+        itemName: 'SATI 3인 소파 그레이',
+      },
+    ],
+  }, null, 2);
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(pushUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="glass" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 600 }}>🏢 사내 호스트 서버 연동</span>
+        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: 'rgba(16,185,129,0.12)', color: '#059669', fontWeight: 600 }}>준비 완료</span>
+        <span className="hide-mobile" style={{ fontSize: 11, color: 'var(--text-muted)' }}>— 사내 ERP에서 JSON으로 수주 데이터를 직접 push</span>
+      </div>
+      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Push 엔드포인트 */}
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Push 엔드포인트</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <code style={{ flex: 1, fontSize: 12, padding: '8px 12px', background: 'rgba(0,0,0,0.04)', borderRadius: 8, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+              POST {pushUrl}
+            </code>
+            <button className="btn btn-ghost" style={{ fontSize: 11, padding: '5px 10px', whiteSpace: 'nowrap' }} onClick={copyUrl}>
+              {copied ? '✓ 복사됨' : '복사'}
+            </button>
+          </div>
+        </div>
+
+        {/* 인증 방식 */}
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>인증 헤더</div>
+          <code style={{ display: 'block', fontSize: 12, padding: '8px 12px', background: 'rgba(0,0,0,0.04)', borderRadius: 8, fontFamily: 'monospace' }}>
+            X-Api-Key: {'<SALES_PUSH_API_KEY 환경변수 값>'}
+          </code>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+            Render 환경변수에 <code style={{ fontSize: 11 }}>SALES_PUSH_API_KEY</code>를 설정하세요.
+          </div>
+        </div>
+
+        {/* 요청 예시 */}
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>요청 예시 (JSON)</div>
+          <pre style={{ fontSize: 11, padding: '12px', background: 'rgba(0,0,0,0.04)', borderRadius: 8, fontFamily: 'monospace', overflow: 'auto', maxHeight: 200, margin: 0 }}>
+            {examplePayload}
+          </pre>
+        </div>
+
+        {/* 필드 설명 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8 }}>
+          {[
+            { field: 'orderNumber', req: true, desc: '수주번호 (고유 키)' },
+            { field: 'itemCode', req: true, desc: '단품코드 (고유 키)' },
+            { field: 'storeAlias', req: true, desc: '대리점명 (별칭 매핑 필요)' },
+            { field: 'orderAmount', req: true, desc: '수주금액 (원 단위)' },
+            { field: 'orderDate', req: false, desc: '수주일자 YYYY-MM-DD' },
+            { field: 'confirmedDate', req: false, desc: '확정납기 YYYY-MM-DD' },
+            { field: 'seriesCode', req: false, desc: 'SATI / QUERENCIA 등' },
+            { field: 'itemName', req: false, desc: '단품명칭' },
+          ].map(f => (
+            <div key={f.field} style={{ padding: '6px 10px', background: 'rgba(0,0,0,0.03)', borderRadius: 6, fontSize: 11 }}>
+              <span style={{ fontFamily: 'monospace', color: 'var(--accent)', fontWeight: 600 }}>{f.field}</span>
+              {f.req && <span style={{ marginLeft: 4, fontSize: 10, color: '#ef4444', fontWeight: 700 }}>필수</span>}
+              <div style={{ color: 'var(--text-muted)', marginTop: 2 }}>{f.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ padding: '10px 14px', background: 'rgba(16,185,129,0.06)', borderRadius: 8, border: '1px solid rgba(16,185,129,0.2)', fontSize: 12, color: 'var(--text-muted)' }}>
+          💡 <strong>중복 처리:</strong> orderNumber + itemCode 조합이 이미 존재하면 자동으로 업데이트(upsert)됩니다. 동일 데이터를 여러 번 push해도 안전합니다.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── 매출 실적 / 납기일정 동기화 섹터 ───
 function SyncSection() {
   const qc = useQueryClient();
@@ -931,6 +1029,7 @@ export default function HqAdminTab() {
 
       <MetricsStoresSection />
       <StoreUrlSection />
+      <InhousePushSection />
       <SyncSection />
       <AliasMappingSection />
       <StoreOpsSection />
