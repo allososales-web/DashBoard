@@ -105,11 +105,12 @@ type SortDir = 'asc' | 'desc';
 type UrlSectionKey = 'deliveryUrl' | 'loginInfoUrl' | 'salesUrl' | 'salesScriptUrl' | 'deliveryScriptUrl';
 
 function UrlCard({
-  icon, title, desc, urlKey, currentValue, onSave,
+  icon, title, desc, urlKey, currentValue, onSave, placeholder,
 }: {
   icon: string; title: string; desc: string;
   urlKey: UrlSectionKey; currentValue: string | null;
   onSave: (key: UrlSectionKey, val: string | null) => Promise<void>;
+  placeholder?: string;
 }) {
   const [val, setVal] = useState(currentValue ?? '');
   const [saved, setSaved] = useState(false);
@@ -147,7 +148,7 @@ function UrlCard({
             <input
               value={val}
               onChange={(e) => setVal(e.target.value)}
-              placeholder="https://docs.google.com/spreadsheets/..."
+              placeholder={placeholder ?? 'https://...'}
               style={{ flex: 1, fontSize: 12 }}
             />
             {val && (
@@ -189,36 +190,27 @@ function StoreUrlSection() {
     await saveMutation.mutateAsync({ [key]: val });
   };
 
-  const URL_CONFIGS: { icon: string; title: string; desc: string; key: UrlSectionKey }[] = [
+  const URL_CONFIGS: { icon: string; title: string; desc: string; key: UrlSectionKey; placeholder?: string }[] = [
     {
       icon: '📦',
       title: '납기 일정 URL',
       desc: '전체 매장의 납기 일정이 담긴 구글 시트 URL (공개 시트)',
       key: 'deliveryUrl',
+      placeholder: 'https://docs.google.com/spreadsheets/...',
     },
     {
       icon: '🔑',
       title: '매장별 로그인 URL',
       desc: '전체 매장의 로그인 정보(ID/PW 등)가 담긴 구글 시트 URL',
       key: 'loginInfoUrl',
-    },
-    {
-      icon: '📊',
-      title: '매출 실적 URL',
-      desc: '전체 매장의 매출 실적 데이터가 담긴 구글 시트 URL (공개 시트) — 본사 실적 탭에 연동됩니다',
-      key: 'salesUrl',
+      placeholder: 'https://docs.google.com/spreadsheets/...',
     },
     {
       icon: '⚡',
       title: '매출 실적 Apps Script URL',
-      desc: '비공개 시트 연동용 — Google Apps Script Web App URL 입력 시 공개 설정 없이 동기화 가능 (아래 가이드 참고)',
+      desc: 'Google Apps Script Web App URL — 비공개 시트에서 매출 데이터를 가져옵니다',
       key: 'salesScriptUrl',
-    },
-    {
-      icon: '⚡',
-      title: '납기 일정 Apps Script URL',
-      desc: '비공개 시트 연동용 — Google Apps Script Web App URL 입력 시 공개 설정 없이 동기화 가능',
-      key: 'deliveryScriptUrl',
+      placeholder: 'https://script.google.com/macros/s/...',
     },
   ];
 
@@ -241,6 +233,7 @@ function StoreUrlSection() {
               urlKey={cfg.key}
               currentValue={data?.[cfg.key] ?? null}
               onSave={handleSave}
+              placeholder={cfg.placeholder}
             />
           ))}
           {/* 마지막 border 제거용 */}
@@ -1049,7 +1042,6 @@ export default function HqAdminTab() {
 
       <MetricsStoresSection />
       <StoreUrlSection />
-      <InhousePushSection />
       <SyncSection />
       <AliasMappingSection />
       <StoreOpsSection />
