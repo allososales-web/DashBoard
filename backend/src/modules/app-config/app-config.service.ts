@@ -94,17 +94,19 @@ export class AppConfigService implements OnModuleInit {
       this.logger.log('[SalesSync] Apps Script URL로 fetch 시도');
       try {
         const apiKey = process.env.SALES_PUSH_API_KEY ?? '';
-        const res = await fetch(scriptConfig.value, {
-          headers: { 'X-Api-Key': apiKey },
-          redirect: 'follow',
-        });
+        const fetchOptions: RequestInit = { redirect: 'follow' };
+        if (apiKey) fetchOptions.headers = { 'X-Api-Key': apiKey };
+        const res = await fetch(scriptConfig.value, fetchOptions);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const contentType = res.headers.get('content-type') ?? '';
 
         if (contentType.includes('application/json')) {
-          // Apps Script가 JSON 배열로 반환하는 경우 → CSV 변환
-          const json = await res.json() as Record<string, any>[];
-          buffer = this.jsonToCsvBuffer(json);
+          // Apps Script가 { data: [...] } 또는 [...] 형식으로 반환
+          const json = await res.json() as any;
+          const rows: Record<string, any>[] = Array.isArray(json)
+            ? json
+            : (Array.isArray(json?.data) ? json.data : []);
+          buffer = this.jsonToCsvBuffer(rows);
         } else {
           // CSV 직접 반환
           const arrayBuffer = await res.arrayBuffer();
@@ -196,15 +198,17 @@ export class AppConfigService implements OnModuleInit {
       this.logger.log('[DeliverySync] Apps Script URL로 fetch 시도');
       try {
         const apiKey = process.env.SALES_PUSH_API_KEY ?? '';
-        const res = await fetch(scriptConfig.value, {
-          headers: { 'X-Api-Key': apiKey },
-          redirect: 'follow',
-        });
+        const fetchOptions: RequestInit = { redirect: 'follow' };
+        if (apiKey) fetchOptions.headers = { 'X-Api-Key': apiKey };
+        const res = await fetch(scriptConfig.value, fetchOptions);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const contentType = res.headers.get('content-type') ?? '';
         if (contentType.includes('application/json')) {
-          const json = await res.json() as Record<string, any>[];
-          buffer = this.jsonToCsvBuffer(json);
+          const json = await res.json() as any;
+          const rows: Record<string, any>[] = Array.isArray(json)
+            ? json
+            : (Array.isArray(json?.data) ? json.data : []);
+          buffer = this.jsonToCsvBuffer(rows);
         } else {
           const arrayBuffer = await res.arrayBuffer();
           buffer = Buffer.from(arrayBuffer);
