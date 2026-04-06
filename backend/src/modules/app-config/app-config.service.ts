@@ -131,32 +131,27 @@ export class AppConfigService implements OnModuleInit {
     return Buffer.from(lines.join('\n'), 'utf-8');
   }
 
-  /** 구글 시트 매출 실적 CSV 컬럼 미리보기 (디버그용) */
+  /** 매출 실적 Apps Script 컬럼 미리보기 (디버그용) */
   async previewSalesCsvColumns() {
-    const config = await this.prisma.appConfig.findUnique({ where: { key: 'salesUrl' } });
-    if (!config?.value) throw new BadRequestException('매출 실적 URL이 설정되지 않았습니다');
+    const scriptConfig = await this.prisma.appConfig.findUnique({ where: { key: 'salesScriptUrl' } });
+    if (!scriptConfig?.value) throw new BadRequestException('매출 실적 Apps Script URL이 설정되지 않았습니다');
 
-    const csvUrl = toGoogleSheetCsvUrl(config.value);
-    const res = await fetch(csvUrl);
-    if (!res.ok) throw new BadRequestException(`HTTP ${res.status}`);
-    const arrayBuffer = await res.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // EUC-KR 시도
     let text: string;
     try {
-      const iconv = await import('iconv-lite');
-      text = iconv.decode(buffer, 'euc-kr');
-      if (!text.includes('수주') && !text.includes('대리점')) {
-        text = buffer.toString('utf-8');
-      }
-    } catch {
-      text = buffer.toString('utf-8');
+      const res = await fetch(scriptConfig.value, { redirect: 'follow' });
+      if (!res.ok) throw new BadRequestException(`HTTP ${res.status}`);
+      const rawText = await res.text();
+      // JSONP 또는 JSON 파싱
+      const jsonText = rawText.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '');
+      const json = JSON.parse(jsonText) as any;
+      const rows: Record<string, any>[] = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : []);
+      if (rows.length === 0) return { firstLine: '(데이터 없음)', secondLine: '', csvUrl: scriptConfig.value };
+      const headers = Object.keys(rows[0]).join(', ');
+      const firstRow = Object.values(rows[0]).join(', ');
+      return { firstLine: headers, secondLine: firstRow, csvUrl: scriptConfig.value };
+    } catch (e: any) {
+      throw new BadRequestException(`Apps Script 미리보기 실패: ${e.message}`);
     }
-
-    const firstLine = text.split('\n')[0];
-    const secondLine = text.split('\n')[1] ?? '';
-    return { firstLine, secondLine, csvUrl };
   }
 
   /** 구글 시트 납기일정 URL 반환 (프론트에서 iframe/링크로 사용) */

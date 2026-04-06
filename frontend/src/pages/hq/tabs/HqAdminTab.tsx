@@ -393,14 +393,14 @@ function SyncSection() {
     <div className="glass" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
       <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-border)' }}>
         <span style={{ fontWeight: 600 }}>데이터 동기화</span>
-        <span className="hide-mobile" style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>— 구글 시트 URL에서 데이터를 가져옵니다</span>
+        <span className="hide-mobile" style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>— 설정된 URL에서 데이터를 가져와 DB에 저장합니다</span>
       </div>
       <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* 매출 실적 동기화 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600 }}>📊 매출 실적 동기화</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>매출 실적 URL의 구글 시트 → DB 저장 (수주금액/매출금액 반영)</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>매출 실적 Apps Script URL → DB 저장 (수주금액/매출금액 반영)</div>
             {salesMsg && <div style={{ fontSize: 11, marginTop: 4, color: salesMsg.startsWith('오류') ? '#ef4444' : '#059669' }}>{salesMsg}</div>}
             {csvPreview && (
               <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(0,0,0,0.04)', borderRadius: 8, fontSize: 11, fontFamily: 'monospace', wordBreak: 'break-all' }}>
