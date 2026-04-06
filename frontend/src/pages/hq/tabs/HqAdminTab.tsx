@@ -102,7 +102,7 @@ type SortKey = 'name' | 'code' | 'showOnLogin' | 'defaultChannel';
 type SortDir = 'asc' | 'desc';
 
 // ─── 데이터 연동 URL 섹터 ───
-type UrlSectionKey = 'deliveryUrl' | 'loginInfoUrl' | 'salesUrl';
+type UrlSectionKey = 'deliveryUrl' | 'loginInfoUrl' | 'salesUrl' | 'salesScriptUrl' | 'deliveryScriptUrl';
 
 function UrlCard({
   icon, title, desc, urlKey, currentValue, onSave,
@@ -193,7 +193,7 @@ function StoreUrlSection() {
     {
       icon: '📦',
       title: '납기 일정 URL',
-      desc: '전체 매장의 납기 일정이 담긴 구글 시트 URL — 매장 대시보드 납기 탭에 연동됩니다',
+      desc: '전체 매장의 납기 일정이 담긴 구글 시트 URL (공개 시트)',
       key: 'deliveryUrl',
     },
     {
@@ -205,8 +205,20 @@ function StoreUrlSection() {
     {
       icon: '📊',
       title: '매출 실적 URL',
-      desc: '전체 매장의 매출 실적 데이터가 담긴 구글 시트 URL — 본사 실적 탭에 연동됩니다',
+      desc: '전체 매장의 매출 실적 데이터가 담긴 구글 시트 URL (공개 시트) — 본사 실적 탭에 연동됩니다',
       key: 'salesUrl',
+    },
+    {
+      icon: '⚡',
+      title: '매출 실적 Apps Script URL',
+      desc: '비공개 시트 연동용 — Google Apps Script Web App URL 입력 시 공개 설정 없이 동기화 가능 (아래 가이드 참고)',
+      key: 'salesScriptUrl',
+    },
+    {
+      icon: '⚡',
+      title: '납기 일정 Apps Script URL',
+      desc: '비공개 시트 연동용 — Google Apps Script Web App URL 입력 시 공개 설정 없이 동기화 가능',
+      key: 'deliveryScriptUrl',
     },
   ];
 
@@ -233,6 +245,14 @@ function StoreUrlSection() {
           ))}
           {/* 마지막 border 제거용 */}
           <div style={{ height: 1 }} />
+          {/* Apps Script 가이드 안내 */}
+          <div style={{ padding: '12px 20px', background: 'rgba(139,124,248,0.04)', borderTop: '1px solid var(--glass-border)' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              ⚡ <strong>비공개 시트 연동</strong> — Apps Script URL을 사용하면 구글 시트를 공개 설정 없이 연동할 수 있습니다.
+              설정 방법: 구글 시트 → 확장 프로그램 → Apps Script → Web App 배포 후 URL 입력.
+              자세한 가이드는 <code style={{ fontSize: 11 }}>deploy/google-apps-script-guide.md</code> 참고.
+            </div>
+          </div>
         </div>
       )}
     </div>

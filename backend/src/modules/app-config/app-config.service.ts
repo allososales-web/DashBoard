@@ -2,19 +2,22 @@ import { Injectable, BadRequestException, Logger, OnModuleInit } from '@nestjs/c
 import { PrismaService } from '../../prisma/prisma.service';
 import { SalesDataService } from '../sales-data/sales-data.service';
 
-const URL_KEYS = ['deliveryUrl', 'loginInfoUrl', 'salesUrl'] as const;
+const URL_KEYS = ['deliveryUrl', 'loginInfoUrl', 'salesUrl', 'salesScriptUrl', 'deliveryScriptUrl'] as const;
 type UrlKey = typeof URL_KEYS[number];
 
 /** 구글 시트 URL → 공개 CSV export URL 변환 */
 function toGoogleSheetCsvUrl(url: string): string {
-  // https://docs.google.com/spreadsheets/d/{id}/edit#gid={gid}
-  // → https://docs.google.com/spreadsheets/d/{id}/export?format=csv&gid={gid}
   const match = url.match(/\/spreadsheets\/d\/([^/]+)/);
   if (!match) throw new BadRequestException('유효하지 않은 구글 시트 URL입니다');
   const id = match[1];
   const gidMatch = url.match(/[#&?]gid=(\d+)/);
   const gid = gidMatch ? gidMatch[1] : '0';
   return `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+}
+
+/** Apps Script Web App URL 여부 판별 */
+function isAppsScriptUrl(url: string): boolean {
+  return url.includes('script.google.com/macros/s/');
 }
 
 @Injectable()
@@ -55,6 +58,8 @@ export class AppConfigService implements OnModuleInit {
       deliveryUrl: null,
       loginInfoUrl: null,
       salesUrl: null,
+      salesScriptUrl: null,
+      deliveryScriptUrl: null,
     };
     configs.forEach((c) => { map[c.key] = c.value ?? null; });
     return map;
@@ -73,29 +78,74 @@ export class AppConfigService implements OnModuleInit {
     return this.getUrls();
   }
 
-  /** 구글 시트 매출 실적 URL → CSV fetch → salesRawData 저장 */
+  /** 구글 시트 매출 실적 동기화 — Apps Script URL 우선, 없으면 공개 CSV URL */
   async syncSalesFromSheet(userId?: string) {
-    const config = await this.prisma.appConfig.findUnique({ where: { key: 'salesUrl' } });
-    if (!config?.value) throw new BadRequestException('매출 실적 URL이 설정되지 않았습니다');
+    // Apps Script URL 우선 사용 (비공개 시트 지원)
+    const scriptConfig = await this.prisma.appConfig.findUnique({ where: { key: 'salesScriptUrl' } });
+    const sheetConfig = await this.prisma.appConfig.findUnique({ where: { key: 'salesUrl' } });
 
-    const csvUrl = toGoogleSheetCsvUrl(config.value);
-    console.log('[SalesSync] Fetching CSV from:', csvUrl);
+    const targetUrl = scriptConfig?.value || sheetConfig?.value;
+    if (!targetUrl) throw new BadRequestException('매출 실적 URL 또는 Apps Script URL이 설정되지 않았습니다');
 
     let buffer: Buffer;
-    try {
-      const res = await fetch(csvUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const arrayBuffer = await res.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
-    } catch (e: any) {
-      throw new BadRequestException(`구글 시트 fetch 실패: ${e.message}. 시트가 공개(공유) 설정인지 확인하세요.`);
+
+    if (scriptConfig?.value && isAppsScriptUrl(scriptConfig.value)) {
+      // Apps Script Web App 호출 — JSON 응답을 CSV로 변환
+      this.logger.log('[SalesSync] Apps Script URL로 fetch 시도');
+      try {
+        const apiKey = process.env.SALES_PUSH_API_KEY ?? '';
+        const res = await fetch(scriptConfig.value, {
+          headers: { 'X-Api-Key': apiKey },
+          redirect: 'follow',
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const contentType = res.headers.get('content-type') ?? '';
+
+        if (contentType.includes('application/json')) {
+          // Apps Script가 JSON 배열로 반환하는 경우 → CSV 변환
+          const json = await res.json() as Record<string, any>[];
+          buffer = this.jsonToCsvBuffer(json);
+        } else {
+          // CSV 직접 반환
+          const arrayBuffer = await res.arrayBuffer();
+          buffer = Buffer.from(arrayBuffer);
+        }
+      } catch (e: any) {
+        throw new BadRequestException(`Apps Script fetch 실패: ${e.message}`);
+      }
+    } else {
+      // 기존 공개 CSV URL 방식
+      const csvUrl = toGoogleSheetCsvUrl(targetUrl);
+      this.logger.log('[SalesSync] 공개 CSV URL로 fetch:', csvUrl);
+      try {
+        const res = await fetch(csvUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const arrayBuffer = await res.arrayBuffer();
+        buffer = Buffer.from(arrayBuffer);
+      } catch (e: any) {
+        throw new BadRequestException(`구글 시트 fetch 실패: ${e.message}. 시트가 공개(공유) 설정인지 확인하세요.`);
+      }
     }
 
-    // 첫 500자 로깅으로 실제 CSV 내용 확인
     const preview = buffer.slice(0, 500).toString('utf-8');
-    console.log('[SalesSync] CSV preview (utf-8):', preview);
-
+    this.logger.log('[SalesSync] CSV preview:', preview.substring(0, 200));
     return this.salesDataService.uploadCsv(buffer, 'google-sheet-sync.csv', userId);
+  }
+
+  /** JSON 배열 → CSV Buffer 변환 */
+  private jsonToCsvBuffer(rows: Record<string, any>[]): Buffer {
+    if (rows.length === 0) return Buffer.from('');
+    const headers = Object.keys(rows[0]);
+    const lines = [
+      headers.join(','),
+      ...rows.map(row =>
+        headers.map(h => {
+          const val = String(row[h] ?? '').replace(/"/g, '""');
+          return val.includes(',') || val.includes('\n') ? `"${val}"` : val;
+        }).join(',')
+      ),
+    ];
+    return Buffer.from(lines.join('\n'), 'utf-8');
   }
 
   /** 구글 시트 매출 실적 CSV 컬럼 미리보기 (디버그용) */
@@ -132,21 +182,46 @@ export class AppConfigService implements OnModuleInit {
     return { url: config?.value ?? null };
   }
 
-  /** 구글 시트 납기일정 URL → CSV fetch → salesRawData 저장 */
+  /** 구글 시트 납기일정 동기화 — Apps Script URL 우선, 없으면 공개 CSV URL */
   async syncDeliveryFromSheet(userId?: string) {
-    const config = await this.prisma.appConfig.findUnique({ where: { key: 'deliveryUrl' } });
-    if (!config?.value) throw new BadRequestException('납기일정 URL이 설정되지 않았습니다');
+    const scriptConfig = await this.prisma.appConfig.findUnique({ where: { key: 'deliveryScriptUrl' } });
+    const sheetConfig = await this.prisma.appConfig.findUnique({ where: { key: 'deliveryUrl' } });
 
-    const csvUrl = toGoogleSheetCsvUrl(config.value);
+    const targetUrl = scriptConfig?.value || sheetConfig?.value;
+    if (!targetUrl) throw new BadRequestException('납기일정 URL이 설정되지 않았습니다');
 
     let buffer: Buffer;
-    try {
-      const res = await fetch(csvUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const arrayBuffer = await res.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
-    } catch (e: any) {
-      throw new BadRequestException(`구글 시트 fetch 실패: ${e.message}. 시트가 공개(공유) 설정인지 확인하세요.`);
+
+    if (scriptConfig?.value && isAppsScriptUrl(scriptConfig.value)) {
+      this.logger.log('[DeliverySync] Apps Script URL로 fetch 시도');
+      try {
+        const apiKey = process.env.SALES_PUSH_API_KEY ?? '';
+        const res = await fetch(scriptConfig.value, {
+          headers: { 'X-Api-Key': apiKey },
+          redirect: 'follow',
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const contentType = res.headers.get('content-type') ?? '';
+        if (contentType.includes('application/json')) {
+          const json = await res.json() as Record<string, any>[];
+          buffer = this.jsonToCsvBuffer(json);
+        } else {
+          const arrayBuffer = await res.arrayBuffer();
+          buffer = Buffer.from(arrayBuffer);
+        }
+      } catch (e: any) {
+        throw new BadRequestException(`Apps Script fetch 실패: ${e.message}`);
+      }
+    } else {
+      const csvUrl = toGoogleSheetCsvUrl(targetUrl);
+      try {
+        const res = await fetch(csvUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const arrayBuffer = await res.arrayBuffer();
+        buffer = Buffer.from(arrayBuffer);
+      } catch (e: any) {
+        throw new BadRequestException(`구글 시트 fetch 실패: ${e.message}. 시트가 공개(공유) 설정인지 확인하세요.`);
+      }
     }
 
     return this.salesDataService.uploadDeliveryCsv(buffer, 'delivery-sheet-sync.csv', userId);
