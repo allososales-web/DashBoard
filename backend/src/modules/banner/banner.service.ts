@@ -1,14 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as https from 'https';
+import * as http from 'http';
 
-// Fallback images (current Alloso CDN URLs)
+// Fallback images (updated periodically)
 const FALLBACK_IMAGES = [
   'https://cdn.alloso.co.kr/AllosoUpload/contents/20251210/_34691fc6-6124-4523-8821-93e43e1e6059.jpg',
   'https://cdn.alloso.co.kr/AllosoUpload/contents/20251210/_8681a295-e64f-4d3b-8945-38a7c368a750.jpg',
   'https://cdn.alloso.co.kr/AllosoUpload/contents/20240725/_7a16dfb3-88f1-45e6-8d96-993354815469.jpg',
 ];
 
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30분 — 홈페이지 업데이트 시 빠른 반영
 
 @Injectable()
 export class BannerService {
@@ -21,78 +22,91 @@ export class BannerService {
     if (this.cachedImages.length > 0 && now - this.cacheTime < CACHE_TTL_MS) {
       return this.cachedImages;
     }
+    return this.refreshCache();
+  }
 
+  /** 캐시 강제 갱신 */
+  async refreshCache(): Promise<string[]> {
     try {
       const html = await this.fetchHtml('https://www.alloso.co.kr/');
-      const images = this.parseVisualBannerImages(html);
+      const images = this.extractBannerImages(html);
       if (images.length > 0) {
         this.cachedImages = images;
-        this.cacheTime = now;
-        this.logger.log(`Fetched ${images.length} banner images from alloso.co.kr`);
+        this.cacheTime = Date.now();
+        this.logger.log(`[Banner] ${images.length}개 이미지 추출 성공`);
         return images;
       }
-    } catch (err) {
-      this.logger.warn(`Failed to fetch alloso.co.kr banner: ${err.message}`);
+    } catch (err: any) {
+      this.logger.warn(`[Banner] HTML fetch 실패: ${err.message}`);
     }
 
-    // Return fallback if scraping fails or returns nothing
+    // 전략 2: 폴백 이미지 반환
+    this.logger.log('[Banner] 폴백 이미지 사용');
     return FALLBACK_IMAGES;
   }
 
   private fetchHtml(url: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const req = https.get(
+      const client = url.startsWith('https') ? https : http;
+      const req = (client as typeof https).get(
         url,
         {
           headers: {
-            'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36',
-            Accept: 'text/html,application/xhtml+xml',
-            'Accept-Language': 'ko-KR,ko;q=0.9',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Cache-Control': 'no-cache',
           },
-          timeout: 8000,
+          timeout: 10000,
         },
         (res) => {
-          // Follow redirects
           if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
             this.fetchHtml(res.headers.location).then(resolve).catch(reject);
             return;
           }
           const chunks: Buffer[] = [];
-          res.on('data', (chunk) => chunks.push(chunk));
+          res.on('data', (chunk: Buffer) => chunks.push(chunk));
           res.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
           res.on('error', reject);
         },
       );
       req.on('error', reject);
-      req.on('timeout', () => { req.destroy(); reject(new Error('Request timeout')); });
+      req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
     });
   }
 
-  private parseVisualBannerImages(html: string): string[] {
-    const images: string[] = [];
+  private extractBannerImages(html: string): string[] {
+    const cdnPattern = /https:\/\/cdn\.alloso\.co\.kr\/AllosoUpload\/[^"'\s)>\]]+\.(?:jpg|jpeg|png|webp)/gi;
+    const allUrls = [...new Set((html.match(cdnPattern) || []) as string[])];
 
-    // Strategy 1: look for visual banner section img tags with CDN URLs
-    // The banner section typically contains AllosoUpload images
-    const bannerSectionMatch = html.match(/비주얼\s*배너[\s\S]{0,3000}/i);
-    const searchArea = bannerSectionMatch ? bannerSectionMatch[0] : html;
-
-    // Extract all CDN image URLs from the page
-    const cdnPattern = /https:\/\/cdn\.alloso\.co\.kr\/AllosoUpload\/[^"'\s)>]+\.(?:jpg|jpeg|png|webp)/gi;
-    const allCdnUrls = [...new Set(html.match(cdnPattern) || [])];
-
-    // Filter: prefer banner/contents images, exclude small icons/thumbnails
-    const bannerUrls = allCdnUrls.filter((url) => {
+    // 배너/콘텐츠 이미지만 필터 (아이콘, 로고, 버튼 제외)
+    const bannerUrls = allUrls.filter((url) => {
       const lower = url.toLowerCase();
-      // Exclude obvious non-banner images
-      if (lower.includes('icon') || lower.includes('logo') || lower.includes('btn')) return false;
-      // Prefer contents/ path which is where banner images live
-      return lower.includes('/contents/');
+      return (
+        lower.includes('/contents/') &&
+        !lower.includes('icon') &&
+        !lower.includes('logo') &&
+        !lower.includes('btn') &&
+        !lower.includes('thumb') &&
+        !lower.includes('small')
+      );
     });
 
-    // Take up to 5 images
-    images.push(...bannerUrls.slice(0, 5));
+    // script/data 속성에서 추가 이미지 URL 추출 (JS 번들 내 하드코딩된 URL)
+    const scriptPattern = /["']https:\/\/cdn\.alloso\.co\.kr\/AllosoUpload\/contents\/[^"'\s]+\.(?:jpg|jpeg|png|webp)["']/gi;
+    const scriptMatches = html.match(scriptPattern) || [];
+    const scriptUrls = scriptMatches.map(m => m.replace(/["']/g, '').trim());
 
-    return images;
+    const combined = [...new Set([...bannerUrls, ...scriptUrls])];
+
+    // 날짜 기반 정렬 — 최신 이미지 우선 (URL에 날짜 포함: /YYYYMMDD/)
+    combined.sort((a, b) => {
+      const dateA = a.match(/\/(\d{8})\//)?.[1] ?? '0';
+      const dateB = b.match(/\/(\d{8})\//)?.[1] ?? '0';
+      return dateB.localeCompare(dateA);
+    });
+
+    return combined.slice(0, 5);
   }
 }

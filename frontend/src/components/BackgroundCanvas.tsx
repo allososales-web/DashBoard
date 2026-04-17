@@ -62,17 +62,26 @@ export default function BackgroundCanvas() {
   const [fading, setFading]   = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch live banner images from backend (which scrapes alloso.co.kr)
+  // Fetch live banner images — 앱 로드 시 + 30분마다 갱신
   useEffect(() => {
-    fetch(`${API_BASE}/banner/images`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data.images) && data.images.length > 0) {
-          setSlides(data.images);
-          setCurrent(0);
-        }
-      })
-      .catch(() => { /* silently use fallback */ });
+    let cancelled = false;
+
+    const load = () => {
+      fetch(`${API_BASE}/banner/images`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (!cancelled && Array.isArray(data.images) && data.images.length > 0) {
+            setSlides(data.images);
+            setCurrent(0);
+          }
+        })
+        .catch(() => { /* silently use fallback */ });
+    };
+
+    load();
+    // 30분마다 자동 갱신 (홈페이지 이미지 변경 반영)
+    const interval = setInterval(load, 30 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
   useEffect(() => {
